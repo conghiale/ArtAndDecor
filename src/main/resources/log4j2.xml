@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Properties>
+<!--        <Property name="basePath">${sys:jboss.server.log.dir}/</Property>-->
+        <Property name="basePath">${sys:java.io.tmpdir}/ArtAndDecor/</Property>
+<!--        <Property name="basePath">./DVC_TAX_CODE_INFO_RETRIEVAL_TOOL_LOG/</Property>-->
+    </Properties>
+
+    <Appenders>
+        <RollingFile name="logFile" fileName="${basePath}/ArtAndDecor.log" filePattern="${basePath}/tool%d{yyyyMMdd}-%i.log.gz">
+
+            <PatternLayout pattern="[%d{yyyy-MM-dd HH:mm:ss.SSS}][%highlight{%-5level}][%t][%c{7.4}][%M:%L] %msg%n"/>
+            <Policies>
+                <SizeBasedTriggeringPolicy size="100MB"/>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+            </Policies>
+            <DefaultRolloverStrategy >
+                <Delete basePath="${basePath}" maxDepth="30" >
+                    <IfLastModified age="365d"/>
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
+
+        <Console name="consoleLogger">
+            <PatternLayout pattern="${prefix} [%d{yyyy-MM-dd HH:mm:ss.SSS}][%highlight{%-5level}][%t][%c{7.4}][%M:%L] %msg%n"/>
+        </Console>
+    </Appenders>
+
+    <Loggers>
+        <Logger name="org.apache.axis"  additivity="false">
+            <AppenderRef ref="logFile" level="ERROR"/>
+        </Logger>
+        
+        <Logger name="org.apache.http"  additivity="false">
+            <AppenderRef ref="logFile" level="ERROR" />
+        </Logger>
+        
+        <Logger name="org.apache.jackrabbit.spi2davex"  additivity="false">
+            <AppenderRef ref="logFile" level="ERROR"/>
+        </Logger>
+        
+        <Logger name="org.apache.jackrabbit.jcr2spi"  additivity="false">
+            <AppenderRef ref="logFile" level="ERROR"/>
+        </Logger>
+        
+        <Logger name="org.apache.jackrabbit.jcr2spi.state"  additivity="false">
+            <AppenderRef ref="logFile" level="ERROR"/>
+        </Logger>
+        
+        <Logger name="org.apache.jackrabbit.spi2dav"  additivity="false">
+            <AppenderRef ref="logFile" level="ERROR"/>
+        </Logger>
+
+        <Logger name="org.springframework" additivity="false">
+            <AppenderRef ref="logFile" level="INFO"/>
+            <AppenderRef ref="consoleLogger" level="INFO"/>
+        </Logger>
+
+        <Logger name="org.springframework.data" additivity="false">
+            <AppenderRef ref="logFile" level="ERROR"/>
+            <AppenderRef ref="consoleLogger" level="ERROR"/>
+        </Logger>
+
+        <Logger name="org.hibernate" additivity="false">
+            <AppenderRef ref="logFile" level="WARN"/>
+            <AppenderRef ref="consoleLogger" level="WARN"/>
+        </Logger>
+
+        <Root level="DEBUG">
+            <AppenderRef ref="consoleLogger"/>
+            <AppenderRef ref="logFile"/>
+        </Root>
+    </Loggers>
+</Configuration>
