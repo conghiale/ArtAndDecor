@@ -97,15 +97,6 @@ public class UserDto {
     }
 
     /**
-     * Check if user has manager role
-     * @return true if user is manager
-     */
-    public boolean isManager() {
-        return userRole != null && 
-               "MANAGER".equalsIgnoreCase(userRole.getUserRoleName());
-    }
-
-    /**
      * Check if user has customer role
      * @return true if user is customer
      */

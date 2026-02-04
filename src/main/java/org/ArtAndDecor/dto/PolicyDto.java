@@ -25,6 +25,9 @@ public class PolicyDto {
     @Size(max = 64, message = "Policy name must not exceed 64 characters")
     private String policyName;
     
+    @Size(max = 64, message = "Policy slug must not exceed 64 characters")
+    private String policySlug;
+    
     @NotBlank(message = "Policy value is required")
     private String policyValue;
     

@@ -12,14 +12,12 @@ USE `ART_AND_DECOR`;
 -- =============================================
 
 INSERT INTO `USER` (`USER_PROVIDER_ID`, `USER_ROLE_ID`, `USER_ENABLED`, `USER_NAME`, `PASSWORD`, `FIRST_NAME`, `LAST_NAME`, `PHONE_NUMBER`, `EMAIL`, `IMAGE_AVATAR_NAME`, `SOCIAL_MEDIA`, `LAST_LOGIN_DT`) VALUES
-(1, 1, TRUE, 'admin', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqyPw5TCGb2/nX8stqZqIvK', 'Admin', 'System', '0901234567', 'admin@artdecor.com', 'A1B2C3D4E5F6789012345678901234567890ABCD', '{"facebook": "admin.artdecor", "instagram": "artdecor_admin"}', '2026-01-21 09:15:00'),
-(1, 2, TRUE, 'manager01', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqyPw5TCGb2/nX8stqZqIvK', 'John', 'Manager', '0902345678', 'manager@artdecor.com', 'B2C3D4E5F6789012345678901234567890ABCDE', '{"facebook": "john.manager"}', '2026-01-20 14:30:00'),
-(1, 3, TRUE, 'staff01', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqyPw5TCGb2/nX8stqZqIvK', 'Jane', 'Staff', '0903456789', 'staff@artdecor.com', 'C3D4E5F6789012345678901234567890ABCDEF', NULL, '2026-01-20 10:45:00'),
-(1, 4, TRUE, 'customer01', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqyPw5TCGb2/nX8stqZqIvK', 'Nguyen', 'Van A', '0904567890', 'customer1@gmail.com', 'D4E5F6789012345678901234567890ABCDEF12', '{"instagram": "nguyenvana_art"}', '2026-01-19 16:20:00'),
-(1, 4, TRUE, 'customer02', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqyPw5TCGb2/nX8stqZqIvK', 'Tran', 'Thi B', '0905678901', 'customer2@gmail.com', 'E5F6789012345678901234567890ABCDEF123', NULL, '2026-01-19 11:10:00'),
-(2, 4, TRUE, 'google_user01', NULL, 'Alice', 'Johnson', NULL, 'alice.johnson@gmail.com', 'F6789012345678901234567890ABCDEF1234', '{"google": "alice.johnson.art"}', '2026-01-18 20:15:00'),
-(3, 4, TRUE, 'facebook_user01', NULL, 'Bob', 'Smith', NULL, 'bob.smith@facebook.com', '789012345678901234567890ABCDEF12345', '{"facebook": "bob.smith.artist"}', '2026-01-18 08:30:00'),
-(1, 4, TRUE, 'customer03', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqyPw5TCGb2/nX8stqZqIvK', 'Le', 'Van C', '0906789012', 'customer3@yahoo.com', '89012345678901234567890ABCDEF123456', NULL, '2026-01-17 16:25:00');
+(1, 2, TRUE, 'admin', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqyPw5TCGb2/nX8stqZqIvK', 'Admin', 'System', '0901234567', 'admin@artdecor.com', 'A1B2C3D4E5F6789012345678901234567890ABCD', '{"facebook": "admin.artdecor", "instagram": "artdecor_admin"}', '2026-01-21 09:15:00'),
+(1, 1, TRUE, 'customer01', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqyPw5TCGb2/nX8stqZqIvK', 'Nguyen', 'Van A', '0904567890', 'customer1@gmail.com', 'D4E5F6789012345678901234567890ABCDEF12', '{"instagram": "nguyenvana_art"}', '2026-01-19 16:20:00'),
+(1, 1, TRUE, 'customer02', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqyPw5TCGb2/nX8stqZqIvK', 'Tran', 'Thi B', '0905678901', 'customer2@gmail.com', 'E5F6789012345678901234567890ABCDEF123', NULL, '2026-01-19 11:10:00'),
+(2, 1, TRUE, 'google_user01', NULL, 'Alice', 'Johnson', NULL, 'alice.johnson@gmail.com', 'F6789012345678901234567890ABCDEF1234', '{"google": "alice.johnson.art"}', '2026-01-18 20:15:00'),
+(3, 1, TRUE, 'facebook_user01', NULL, 'Bob', 'Smith', NULL, 'bob.smith@facebook.com', '789012345678901234567890ABCDEF12345', '{"facebook": "bob.smith.artist"}', '2026-01-18 08:30:00'),
+(1, 1, TRUE, 'customer03', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqyPw5TCGb2/nX8stqZqIvK', 'Le', 'Van C', '0906789012', 'customer3@yahoo.com', '89012345678901234567890ABCDEF123456', NULL, '2026-01-17 16:25:00');
 
 -- =============================================
 -- INSERT SAMPLE IMAGES

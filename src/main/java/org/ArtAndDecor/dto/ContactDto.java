@@ -25,7 +25,6 @@ public class ContactDto {
     @Size(max = 64, message = "Contact name must not exceed 64 characters")
     private String contactName;
     
-    @NotBlank(message = "Contact slug is required")
     @Size(max = 64, message = "Contact slug must not exceed 64 characters")
     private String contactSlug;
     
@@ -54,6 +53,8 @@ public class ContactDto {
     
     @Size(max = 256, message = "Remark must not exceed 256 characters")
     private String contactRemark;
+    
+    private Long seoMetaId;
     
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdDt;

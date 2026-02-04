@@ -64,26 +64,36 @@ public class SecurityConfiguration {
                                 "/products/**", "/categories/**",
                                 "/blogs/**", "/images/**").permitAll()
                         
+                        // Contact endpoints - public read by slug, admin for others
+                        .requestMatchers(HttpMethod.GET, "/contacts/slug/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/contacts/public").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/contacts/search").permitAll()
+                        .requestMatchers("/contacts/**").hasRole("ADMIN")
+                        
+                        // Policy endpoints - all require ADMIN role
+                        .requestMatchers(HttpMethod.GET, "/policies/slug/{policySlug}").permitAll()
+                        .requestMatchers("/policies/**").hasRole("ADMIN")
+                        
                         // Health and actuator endpoints
                         .requestMatchers("/actuator/**", "/health").permitAll()
                         
                         // User search by name endpoint - requires authentication
                         .requestMatchers(HttpMethod.GET, "/users/search-by-name").authenticated()
                         
-                        // User search endpoint - requires ADMIN or MANAGER role
-                        .requestMatchers(HttpMethod.GET, "/users/search").hasAnyRole("ADMIN", "MANAGER")
+                        // User search endpoint - requires ADMIN role
+                        .requestMatchers(HttpMethod.GET, "/users/search").hasRole("ADMIN")
                         
-                        // User endpoints by ID - requires ADMIN or MANAGER role for viewing
-                        .requestMatchers(HttpMethod.GET, "/users/{userId}").hasAnyRole("ADMIN", "MANAGER")
+                        // User endpoints by ID - requires ADMIN role for viewing
+                        .requestMatchers(HttpMethod.GET, "/users/{userId}").hasRole("ADMIN")
                         
-                        // Get all users - requires ADMIN or MANAGER role
-                        .requestMatchers(HttpMethod.GET, "/users").hasAnyRole("ADMIN", "MANAGER")
+                        // Get all users - requires ADMIN role
+                        .requestMatchers(HttpMethod.GET, "/users").hasRole("ADMIN")
                         
-                        // Create user - requires ADMIN or MANAGER role
-                        .requestMatchers(HttpMethod.POST, "/users").hasAnyRole("ADMIN", "MANAGER")
+                        // Create user - requires ADMIN role
+                        .requestMatchers(HttpMethod.POST, "/users").hasRole("ADMIN")
                         
-                        // Update user - requires ADMIN or MANAGER role
-                        .requestMatchers(HttpMethod.PUT, "/users/{userId}").hasAnyRole("ADMIN", "MANAGER")
+                        // Update user - requires ADMIN role
+                        .requestMatchers(HttpMethod.PUT, "/users/{userId}").hasRole("ADMIN")
                         
                         // Update user status - requires ADMIN role only
                         .requestMatchers(HttpMethod.PATCH, "/users/{userId}/status").hasRole("ADMIN")

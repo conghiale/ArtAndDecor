@@ -12,10 +12,8 @@
 
 | Role ID | Role Name | Description | API Access Level |
 |---------|-----------|-------------|------------------|
-| 1 | ADMIN | System Administrator | Full access to all APIs |
-| 2 | MANAGER | Store Manager | User management (except delete/status) |
-| 3 | STAFF | Store Staff | Read-only access to user data |
-| 4 | CUSTOMER | Customer | Access to own profile and public APIs only |
+| 1 | CUSTOMER | Customer | Access to own profile and public APIs only |
+| 2 | ADMIN | System Administrator | Full access to all user management APIs |
 
 ## Authentication Requirements
 
@@ -31,7 +29,7 @@
 ### 1. Search Users by Criteria
 **Endpoint:** `GET /api/users/search`  
 **Method:** GET  
-**Access:** ADMIN, MANAGER  
+**Access:** ADMIN  
 **Description:** Get users filtered by multiple criteria (all parameters optional)
 
 **Request Parameters:**
@@ -40,7 +38,7 @@
 |-----------|------|----------|---------|-------------|
 | `userId` | Long | No | - | User ID filter |
 | `userProviderId` | Long | No | - | Provider ID (1=LOCAL, 2=GOOGLE, 3=FACEBOOK, 4=GITHUB) |
-| `userRoleId` | Long | No | - | Role ID (1=CUSTOMER, 2=ADMIN, 3=MANAGER, 4=STAFF) |
+| `userRoleId` | Long | No | - | Role ID (1=CUSTOMER, 2=ADMIN) |
 | `userEnabled` | Boolean | No | - | User enabled status |
 | `userName` | String | No | - | Username filter (exact match) |
 
@@ -92,7 +90,7 @@ Authorization: Bearer <jwt_token>
 ### 2. Get User by ID
 **Endpoint:** `GET /api/users/{userId}`  
 **Method:** GET  
-**Access:** ADMIN, MANAGER, STAFF, SELF  
+**Access:** ADMIN, SELF  
 **Description:** Get detailed user information by ID
 
 **Request Parameters:**
@@ -147,7 +145,7 @@ Authorization: Bearer <jwt_token>
 ### 3. Get All Users (Paginated)
 **Endpoint:** `GET /api/users`  
 **Method:** GET  
-**Access:** ADMIN, MANAGER  
+**Access:** ADMIN  
 **Description:** Get paginated list of all users
 
 **Request Parameters:**
@@ -182,11 +180,11 @@ Authorization: Bearer <jwt_token>
     },
     {
       "userId": 2,
-      "userName": "manager01",
-      "firstName": "John",
-      "lastName": "Manager",
-      "emailAddress": "manager@artdecor.com",
-      "userRoleName": "MANAGER",
+      "userName": "customer01",
+      "firstName": "Nguyen",
+      "lastName": "Van A",
+      "emailAddress": "customer1@gmail.com",
+      "userRoleName": "CUSTOMER",
       "userEnabled": true
     }
   ],
@@ -199,7 +197,7 @@ Authorization: Bearer <jwt_token>
 ### 4. Create User
 **Endpoint:** `POST /api/users`  
 **Method:** POST  
-**Access:** ADMIN, MANAGER  
+**Access:** ADMIN  
 **Description:** Create new user account
 
 **Request Body (JSON):**
@@ -275,7 +273,7 @@ Authorization: Bearer <jwt_token>
 ### 5. Update User
 **Endpoint:** `PUT /api/users/{userId}`  
 **Method:** PUT  
-**Access:** ADMIN, MANAGER, SELF  
+**Access:** ADMIN, SELF  
 **Description:** Update existing user information
 
 **Request Parameters:**
@@ -324,7 +322,7 @@ Authorization: Bearer <jwt_token>
 ### 6. Update User Status
 **Endpoint:** `PATCH /api/users/{userId}/status`  
 **Method:** PATCH  
-**Access:** ADMIN, MANAGER  
+**Access:** ADMIN  
 **Description:** Enable or disable user account
 
 **Request Parameters:**
@@ -394,7 +392,7 @@ Authorization: Bearer <jwt_token>
 ### 8. Search Users by Name
 **Endpoint:** `GET /api/users/search-by-name`  
 **Method:** GET  
-**Access:** ADMIN, MANAGER, STAFF  
+**Access:** ADMIN  
 **Description:** Search users by first name or last name
 
 **Request Parameters:**
@@ -502,7 +500,7 @@ Content-Type: application/json
 ### 11. Change Password (Self-Service)
 **Endpoint:** `PUT /api/users/change-password`  
 **Method:** PUT  
-**Access:** CUSTOMER, STAFF, MANAGER, ADMIN (Self-service only)  
+**Access:** CUSTOMER, ADMIN (Self-service only)  
 **Description:** Authenticated user changes their own password
 
 **Request Body (JSON):**
@@ -555,7 +553,7 @@ Authorization: Bearer <jwt_token>
 ### 12. Reset Password (Admin)
 **Endpoint:** `PUT /api/users/{userId}/reset-password`  
 **Method:** PUT  
-**Access:** ADMIN, MANAGER  
+**Access:** ADMIN  
 **Description:** Admin resets password for any user (ID-based priority for admin efficiency)
 
 **Request Parameters:**
@@ -606,7 +604,7 @@ Authorization: Bearer <admin_jwt_token>
 ### 13. Change Password by Username (Customer-Friendly)
 **Endpoint:** `PUT /api/users/username/{userName}/change-password`  
 **Method:** PUT  
-**Access:** CUSTOMER (Self-service), ADMIN, MANAGER (with validation)  
+**Access:** CUSTOMER (Self-service), ADMIN (with validation)  
 **Description:** Change password using username (customer-friendly identification)
 
 **Request Parameters:**
@@ -743,7 +741,7 @@ All API responses use `BaseResponseDto` format:
 | `userProviderName` | String | Provider name (LOCAL, GOOGLE, etc.) |
 | `userProviderRemarkEn` | String | Provider English description |
 | `userProviderRemark` | String | Provider Vietnamese description |
-| `userRoleName` | String | Role name (ADMIN, MANAGER, STAFF, CUSTOMER) |
+| `userRoleName` | String | Role name (ADMIN, CUSTOMER) |
 | `userRoleRemarkEn` | String | Role English description |
 | `userRoleRemark` | String | Role Vietnamese description |
 
@@ -766,10 +764,8 @@ All API responses use `BaseResponseDto` format:
 - `4` - GITHUB (GitHub OAuth)
 
 **Role Types:**
-- `1` - ADMIN (System Administrator)
-- `2` - MANAGER (Store Manager)
-- `3` - STAFF (Store Staff)
-- `4` - CUSTOMER (Regular Customer)
+- `1` - CUSTOMER (Regular Customer)
+- `2` - ADMIN (System Administrator)
 
 **Password Management Extensions:**
 - `PASSWORD_RESET_AT` DATETIME - Timestamp of last password reset

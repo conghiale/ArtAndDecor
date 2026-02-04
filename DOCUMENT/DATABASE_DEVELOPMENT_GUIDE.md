@@ -46,8 +46,6 @@ Database **ART_AND_DECOR** là hệ thống quản lý e-commerce cho cửa hàn
 
 **Dữ liệu mẫu:**
 - Name: ADMIN - Description: System Administrator (Quản trị viên hệ thống)
-- Name: MANAGER - Description: Store Manager (Quản lý cửa hàng)
-- Name: STAFF - Description: Store Staff (Nhân viên cửa hàng)
 - Name: CUSTOMER - Description: Customer (Khách hàng)
 
 | Column Name | Type | Require | Description |

@@ -764,11 +764,10 @@ INSERT INTO `USER_PROVIDER` (`USER_PROVIDER_NAME`, `USER_PROVIDER_REMARK_EN`, `U
 ('GITHUB', 'GitHub OAuth', 'Đăng nhập qua GitHub', TRUE);
 
 -- Insert User Roles
+-- Website supports only 2 roles: ADMIN and CUSTOMER
 INSERT INTO `USER_ROLE` (`USER_ROLE_NAME`, `USER_ROLE_REMARK_EN`, `USER_ROLE_REMARK`, `USER_ROLE_ENABLED`) VALUES
 ('CUSTOMER', 'Customer', 'Khách hàng', TRUE),
-('ADMIN', 'System Administrator', 'Quản trị viên hệ thống', TRUE),
-('MANAGER', 'Store Manager', 'Quản lý cửa hàng', TRUE),
-('STAFF', 'Store Staff', 'Nhân viên cửa hàng', TRUE);
+('ADMIN', 'System Administrator', 'Quản trị viên hệ thống', TRUE);
 
 -- Insert Image Categories
 -- IMAGE_CATEGORY sample data removed as per requirements
