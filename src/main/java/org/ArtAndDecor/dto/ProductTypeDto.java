@@ -28,15 +28,18 @@ public class ProductTypeDto {
     @Size(max = 64, message = "Product type slug must not exceed 64 characters")
     private String productTypeSlug;
     
-    @Size(max = 256, message = "English remark must not exceed 256 characters")
-    private String productTypeRemarkEn;
-    
+    @Size(max = 256, message = "Product type display name must not exceed 256 characters")
+    private String productTypeDisplayName;
+
     @Size(max = 256, message = "Remark must not exceed 256 characters")
     private String productTypeRemark;
-    
+
     private Boolean productTypeEnabled;
-    
-    private Boolean productTypeDisplay;
+
+    private Long seoMetaId;
+
+    // Nested related entity
+    private ImageDto image;
     
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdDt;

@@ -6,6 +6,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import jakarta.validation.constraints.*;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import java.time.LocalDateTime;
 
 /**
  * OrderState DTO for API requests and responses
@@ -20,13 +22,24 @@ public class OrderStateDto {
     private Long orderStateId;
     
     @NotBlank(message = "Order state name is required")
-    @Size(max = 50, message = "Order state name must not exceed 50 characters")
+    @Size(max = 64, message = "Order state name must not exceed 64 characters")
     private String orderStateName;
     
-    private String remark;
+    @Size(max = 256, message = "Order state display name must not exceed 256 characters")
+    private String orderStateDisplayName;
+    
+    @NotBlank(message = "Order state remark is required")
+    @Size(max = 256, message = "Order state remark must not exceed 256 characters")
+    private String orderStateRemark;
     
     @NotNull(message = "Order state enabled flag is required")
     private Boolean orderStateEnabled;
+    
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime orderStateCreatedDate;
+    
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime orderStateModifiedDate;
     
     // Additional information for reporting
     private Long orderCount;

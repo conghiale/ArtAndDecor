@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import jakarta.validation.constraints.*;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
@@ -21,27 +22,54 @@ public class ShipmentDto {
     
     private Long shipmentId;
     
-    @NotBlank(message = "Shipment slug is required")
-    @Size(max = 64, message = "Shipment slug must not exceed 64 characters")
-    private String shipmentSlug;
+    // Order reference
+    private Long orderId;
     
-    @NotBlank(message = "Phone is required")
+    @NotBlank(message = "Shipment code is required")
+    @Size(max = 64, message = "Shipment code must not exceed 64 characters")
+    private String shipmentCode;
+    
+    // Receiver information snapshot
+    @NotBlank(message = "Receiver name is required")
+    @Size(max = 150, message = "Receiver name must not exceed 150 characters")
+    private String receiverName;
+    
+    @NotBlank(message = "Receiver phone is required")
     @Pattern(regexp = "^(\\+84|0)(3[2-9]|5[689]|7[06-9]|8[1-689]|9[0-46-9])[0-9]{7}$", 
              message = "Invalid phone number format")
-    @Size(max = 20, message = "Phone must not exceed 20 characters")
-    private String phone;
+    @Size(max = 20, message = "Receiver phone must not exceed 20 characters")
+    private String receiverPhone;
     
-    @NotBlank(message = "Address is required")
-    @Size(max = 256, message = "Address must not exceed 256 characters")
-    private String address;
+    @Email(message = "Invalid receiver email format")
+    @Size(max = 150, message = "Receiver email must not exceed 150 characters")
+    private String receiverEmail;
     
-    @Size(max = 256, message = "English remark must not exceed 256 characters")
-    private String shipmentRemarkEn;
+    // Address information
+    @NotBlank(message = "Address line is required")
+    @Size(max = 255, message = "Address line must not exceed 255 characters")
+    private String addressLine;
     
-    @Size(max = 256, message = "Remark must not exceed 256 characters")
+    @NotBlank(message = "City is required")
+    @Size(max = 100, message = "City must not exceed 100 characters")
+    private String city;
+    
+    @Size(max = 100, message = "District must not exceed 100 characters")
+    private String district;
+    
+    @Size(max = 100, message = "Ward must not exceed 100 characters")
+    private String ward;
+    
+    @NotBlank(message = "Country is required")
+    @Size(max = 100, message = "Country must not exceed 100 characters")
+    private String country;
+    
+    // Shipping fee snapshot
+    @NotNull(message = "Shipping fee amount is required")
+    @DecimalMin(value = "0.0", message = "Shipping fee amount must not be negative")
+    private BigDecimal shippingFeeAmount;
+    
+    @Size(max = 256, message = "Shipment remark must not exceed 256 characters")
     private String shipmentRemark;
-    
-    private Boolean shipmentEnabled;
     
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdDt;
@@ -57,9 +85,24 @@ public class ShipmentDto {
     
     // Nested related entities following clean architecture
     private OrderDto order;
-    private ShippingFeeDto shippingFee;
     private ShipmentStateDto shipmentState;
-    private SeoMetaDto seoMeta;
+    
+    // Computed fields for display
+    private String fullAddress;
+    private Long deliveryDurationInDays;
+    
+    /**
+     * Get full formatted address
+     */
+    public String getFullAddressValue() {
+        StringBuilder sb = new StringBuilder();
+        if (addressLine != null) sb.append(addressLine);
+        if (ward != null) sb.append(", ").append(ward);
+        if (district != null) sb.append(", ").append(district);
+        if (city != null) sb.append(", ").append(city);
+        if (country != null) sb.append(", ").append(country);
+        return sb.toString();
+    }
     
     /**
      * Check if shipment is being prepared

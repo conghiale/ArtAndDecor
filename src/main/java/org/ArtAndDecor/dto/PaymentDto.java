@@ -34,10 +34,8 @@ public class PaymentDto {
     @Size(max = 100, message = "Transaction ID must not exceed 100 characters")
     private String transactionId;
     
-    @Size(max = 256, message = "English remark must not exceed 256 characters")
-    private String paymentRemarkEn;
-    
-    @Size(max = 256, message = "Remark must not exceed 256 characters")
+    @NotBlank(message = "Payment remark is required")
+    @Size(max = 256, message = "Payment remark must not exceed 256 characters")
     private String paymentRemark;
     
     private Boolean paymentEnabled;
@@ -52,7 +50,6 @@ public class PaymentDto {
     private OrderDto order;
     private PaymentMethodDto paymentMethod;
     private PaymentStateDto paymentState;
-    private SeoMetaDto seoMeta;
     
     /**
      * Check if payment is pending

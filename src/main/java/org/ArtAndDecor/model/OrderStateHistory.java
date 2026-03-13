@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 /**
  * OrderStateHistory Entity
  * Represents history of order state changes
+ * Matches database schema exactly
  */
 @Entity
 @Table(name = "ORDER_STATE_HISTORY")
@@ -29,10 +30,7 @@ public class OrderStateHistory {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "ORDER_ID", nullable = false)
-    private Orders order;
-
-    @Column(name = "ORDER_STATE_HISTORY_SLUG", nullable = false, unique = true, length = 64)
-    private String orderStateHistorySlug;
+    private Order order;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "OLD_STATE_ID", nullable = false)
@@ -42,27 +40,12 @@ public class OrderStateHistory {
     @JoinColumn(name = "NEW_STATE_ID", nullable = false)
     private OrderState newState;
 
-    @Column(name = "ORDER_STATE_HISTORY_NOTE", columnDefinition = "TEXT")
-    private String orderStateHistoryNote;
-
-    @Column(name = "ORDER_STATE_HISTORY_REMARK_EN", length = 256)
-    private String orderStateHistoryRemarkEn;
-
-    @Column(name = "ORDER_STATE_HISTORY_REMARK", nullable = false, length = 256)
-    private String orderStateHistoryRemark;
-
-    @Column(name = "SEO_META_ID")
-    private Long seoMetaId;
-
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "SEO_META_ID", referencedColumnName = "SEO_META_ID", insertable = false, updatable = false)
-    private SeoMeta seoMeta;
+    @JoinColumn(name = "CHANGED_BY_USER_ID")
+    private User changedByUser;
 
     @Column(name = "CREATED_DT", nullable = false, updatable = false)
     private LocalDateTime createdDt;
-
-    @Column(name = "MODIFIED_DT", nullable = false)
-    private LocalDateTime modifiedDt;
 
     @PrePersist
     protected void onCreate() {
@@ -70,14 +53,25 @@ public class OrderStateHistory {
                     order != null ? order.getOrderId() : null,
                     oldState != null ? oldState.getOrderStateName() : null,
                     newState != null ? newState.getOrderStateName() : null);
-        LocalDateTime now = LocalDateTime.now();
-        this.createdDt = now;
-        this.modifiedDt = now;
+        this.createdDt = LocalDateTime.now();
     }
 
-    @PreUpdate
-    protected void onUpdate() {
-        logger.debug("Updating OrderStateHistory ID: {}", orderStateHistoryId);
-        this.modifiedDt = LocalDateTime.now();
+    // Helper methods for backward compatibility with service layer
+    public LocalDateTime getStateChangeDate() {
+        return this.createdDt;
+    }
+
+    public void setStateChangeDate(LocalDateTime stateChangeDate) {
+        this.createdDt = stateChangeDate;
+    }
+
+    public Long getChangedByUserId() {
+        return changedByUser != null ? changedByUser.getUserId() : null;
+    }
+
+    public String getChangedByUserName() {
+        return changedByUser != null ? 
+            (changedByUser.getFirstName() != null ? changedByUser.getFirstName() + " " + changedByUser.getLastName() : changedByUser.getUsername()) 
+            : null;
     }
 }

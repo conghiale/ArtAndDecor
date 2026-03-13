@@ -31,8 +31,8 @@ public class ShipmentState {
     @Column(name = "SHIPMENT_STATE_NAME", nullable = false, unique = true, length = 64)
     private String shipmentStateName;
 
-    @Column(name = "SHIPMENT_STATE_REMARK_EN", length = 256)
-    private String shipmentStateRemarkEn;
+    @Column(name = "SHIPMENT_STATE_DISPLAY_NAME", length = 256)
+    private String shipmentStateDisplayName;
 
     @Column(name = "SHIPMENT_STATE_REMARK", nullable = false, length = 256)
     private String shipmentStateRemark;

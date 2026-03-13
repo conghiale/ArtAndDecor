@@ -62,10 +62,6 @@ public class Review {
     @Column(name = "IS_DELETED", nullable = false)
     private Boolean isDeleted = false;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "CREATED_BY_ROLE_ID", nullable = false)
-    private UserRole createdByRole;
-
     @Column(name = "CREATED_DT", nullable = false, updatable = false)
     private LocalDateTime createdDt;
 

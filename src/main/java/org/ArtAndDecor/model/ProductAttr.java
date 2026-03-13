@@ -34,8 +34,8 @@ public class ProductAttr {
     @Column(name = "PRODUCT_ATTR_ENABLED", nullable = false)
     private Boolean productAttrEnabled = true;
 
-    @Column(name = "PRODUCT_ATTR_REMARK_EN", length = 256)
-    private String productAttrRemarkEn;
+    @Column(name = "PRODUCT_ATTR_DISPLAY_NAME", length = 256)
+    private String productAttrDisplayName;
 
     @Column(name = "PRODUCT_ATTR_REMARK", nullable = false, length = 256)
     private String productAttrRemark;

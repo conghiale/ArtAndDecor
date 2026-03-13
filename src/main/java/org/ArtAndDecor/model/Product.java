@@ -29,23 +29,28 @@ public class Product {
     @Column(name = "PRODUCT_ID")
     private Long productId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "PRODUCT_CATEGORY_ID", nullable = false)
-    private ProductCategory productCategory;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "PRODUCT_TYPE_ID", nullable = false)
-    private ProductType productType;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "PRODUCT_STATE_ID", nullable = false)
-    private ProductState productState;
-
     @Column(name = "PRODUCT_NAME", nullable = false, unique = true, length = 100)
     private String productName;
 
     @Column(name = "PRODUCT_SLUG", nullable = false, unique = true, length = 64)
     private String productSlug;
+
+    @Column(name = "PRODUCT_CODE", nullable = false, unique = true, length = 64)
+    private String productCode;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "PRODUCT_CATEGORY_ID", nullable = false)
+    private ProductCategory productCategory;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "PRODUCT_STATE_ID", nullable = false)
+    private ProductState productState;
+
+    @Column(name = "SOLD_QUANTITY", nullable = false)
+    private Integer soldQuantity = 0;
+
+    @Column(name = "STOCK_QUANTITY", nullable = false)
+    private Integer stockQuantity = 0;
 
     @Column(name = "PRODUCT_DESCRIPTION", nullable = false, columnDefinition = "TEXT")
     private String productDescription;
@@ -53,20 +58,14 @@ public class Product {
     @Column(name = "PRODUCT_PRICE", nullable = false, precision = 15, scale = 2)
     private BigDecimal productPrice;
 
-    @Column(name = "STOCK_QUANTITY", nullable = false)
-    private Integer stockQuantity = 0;
-
-    @Column(name = "SOLD_QUANTITY", nullable = false)
-    private Integer soldQuantity = 0;
-
-    @Column(name = "PRODUCT_REMARK_EN", length = 256)
-    private String productRemarkEn;
-
-    @Column(name = "PRODUCT_REMARK", length = 256, nullable = false)
-    private String productRemark;
-
     @Column(name = "PRODUCT_ENABLED", nullable = false)
     private Boolean productEnabled = true;
+
+    @Column(name = "PRODUCT_FEATURED", nullable = false)
+    private Boolean productFeatured = false;
+
+    @Column(name = "PRODUCT_HIGHLIGHTED", nullable = false)
+    private Boolean productHighlighted = false;
 
     @Column(name = "SEO_META_ID")
     private Long seoMetaId;

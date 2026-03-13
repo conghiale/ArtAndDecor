@@ -32,8 +32,8 @@ public class Policy {
     @Column(name = "POLICY_VALUE", columnDefinition = "TEXT", nullable = false)
     private String policyValue;
 
-    @Column(name = "POLICY_REMARK_EN", length = 256)
-    private String policyRemarkEn;
+    @Column(name = "POLICY_DISPLAY_NAME", length = 256)
+    private String policyDisplayName;
 
     @Column(name = "POLICY_REMARK", length = 256, nullable = false)
     private String policyRemark;

@@ -32,8 +32,8 @@ public class PagePosition {
     @Column(name = "PAGE_POSITION_ENABLED", nullable = false)
     private Boolean pagePositionEnabled = true;
 
-    @Column(name = "PAGE_POSITION_REMARK_EN", length = 256)
-    private String pagePositionRemarkEn;
+    @Column(name = "PAGE_POSITION_DISPLAY_NAME", length = 256)
+    private String pagePositionDisplayName;
 
     @Column(name = "PAGE_POSITION_REMARK", length = 256, nullable = false)
     private String pagePositionRemark;

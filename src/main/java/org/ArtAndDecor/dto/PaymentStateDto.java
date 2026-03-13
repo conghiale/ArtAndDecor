@@ -25,10 +25,11 @@ public class PaymentStateDto {
     @Size(max = 64, message = "Payment state name must not exceed 64 characters")
     private String paymentStateName;
     
-    @Size(max = 256, message = "English remark must not exceed 256 characters")
-    private String paymentStateRemarkEn;
+    @Size(max = 256, message = "Payment state display name must not exceed 256 characters")
+    private String paymentStateDisplayName;
     
-    @Size(max = 256, message = "Remark must not exceed 256 characters")
+    @NotBlank(message = "Payment state remark is required")
+    @Size(max = 256, message = "Payment state remark must not exceed 256 characters")
     private String paymentStateRemark;
     
     @NotNull(message = "Payment state enabled flag is required")

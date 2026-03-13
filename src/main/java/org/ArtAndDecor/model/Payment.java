@@ -30,7 +30,7 @@ public class Payment {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "ORDER_ID", nullable = false)
-    private Orders order;
+    private Order order;
 
     @Column(name = "PAYMENT_SLUG", length = 64, nullable = false, unique = true)
     private String paymentSlug;
@@ -49,18 +49,8 @@ public class Payment {
     @Column(name = "TRANSACTION_ID", nullable = false, length = 100)
     private String transactionId;
 
-    @Column(name = "PAYMENT_REMARK_EN", length = 256)
-    private String paymentRemarkEn;
-
     @Column(name = "PAYMENT_REMARK", length = 256, nullable = false)
     private String paymentRemark;
-
-    @Column(name = "SEO_META_ID")
-    private Long seoMetaId;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "SEO_META_ID", referencedColumnName = "SEO_META_ID", insertable = false, updatable = false)
-    private SeoMeta seoMeta;
 
     @Column(name = "CREATED_DT", nullable = false, updatable = false)
     private LocalDateTime createdDt;

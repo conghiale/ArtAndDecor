@@ -1,12 +1,13 @@
 package org.ArtAndDecor.repository;
 
 import org.ArtAndDecor.model.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,6 +23,20 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * @return Optional User
      */
     Optional<User> findByUserNameAndUserEnabled(String userName, Boolean userEnabled);
+
+    /**
+     * Check if user exists by username
+     * @param userName Username to check
+     * @return true if exists
+     */
+    boolean existsByUserName(String userName);
+
+    /**
+     * Check if user exists by email
+     * @param email Email to check
+     * @return true if exists
+     */
+    boolean existsByEmail(String email);
 
     /**
      * Find enabled user by username with eager-loaded relationships (for authentication)
@@ -57,44 +72,18 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmailAndUserEnabledWithDetails(@Param("email") String email, @Param("userEnabled") Boolean userEnabled);
 
     /**
-     * Check if username exists
-     * @param userName Username to check
-     * @return true if exists
-     */
-    boolean existsByUserName(String userName);
-
-    /**
-     * Check if email exists
-     * @param email Email to check
-     * @return true if exists
-     */
-    boolean existsByEmail(String email);
-
-    /**
-     * Find users by enabled status
-     * @param userEnabled Enabled status
-     * @return List of users
-     */
-    List<User> findByUserEnabled(Boolean userEnabled);
-
-    /**
-     * Search users by name (first name or last name contains search term)
-     * @param searchTerm Search term
-     * @return List of users
-     */
-    @Query("SELECT u FROM User u WHERE " +
-           "LOWER(u.firstName) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
-           "LOWER(u.lastName) LIKE LOWER(CONCAT('%', :searchTerm, '%'))")
-    List<User> searchByName(@Param("searchTerm") String searchTerm);
-
-    /**
      * Find users by multiple criteria with JOIN FETCH for performance
      * All parameters are optional (nullable)
      * @param userId User ID filter
-     * @param userProviderId Provider ID filter  
+     * @param userProviderId Provider ID filter
+     * @param userProviderName Provider name filter
+     * @param userProviderDisplayName Provider display name filter
      * @param userRoleId Role ID filter
-     * @param userEnabled Enabled status filter
+     * @param userRoleName Role name filter
+     * @param userRoleDisplayName Role display name filter
+     * @param textSearch Text search in userName, firstName, lastName, phoneNumber, email (contains, case-insensitive)
      * @param userName Username filter (exact match)
+     * @param userEnabled User enabled status filter
      * @return List of users with eagerly loaded provider and role
      */
     @Query("SELECT DISTINCT u FROM User u " +
@@ -102,16 +91,67 @@ public interface UserRepository extends JpaRepository<User, Long> {
            "LEFT JOIN FETCH u.userRole ur " +
            "WHERE (:userId IS NULL OR u.userId = :userId) " +
            "AND (:userProviderId IS NULL OR u.userProvider.userProviderId = :userProviderId) " +
+           "AND (:userProviderName IS NULL OR LOWER(u.userProvider.userProviderName) LIKE LOWER(CONCAT('%', :userProviderName, '%'))) " +
+           "AND (:userProviderDisplayName IS NULL OR LOWER(u.userProvider.userProviderDisplayName) LIKE LOWER(CONCAT('%', :userProviderDisplayName, '%'))) " +
            "AND (:userRoleId IS NULL OR u.userRole.userRoleId = :userRoleId) " +
+           "AND (:userRoleName IS NULL OR LOWER(u.userRole.userRoleName) LIKE LOWER(CONCAT('%', :userRoleName, '%'))) " +
+           "AND (:userRoleDisplayName IS NULL OR LOWER(u.userRole.userRoleDisplayName) LIKE LOWER(CONCAT('%', :userRoleDisplayName, '%'))) " +
+           "AND (:userName IS NULL OR u.userName = :userName) " +
            "AND (:userEnabled IS NULL OR u.userEnabled = :userEnabled) " +
-           "AND (:userName IS NULL OR u.userName = :userName)")
-    List<User> findUsersByCriteria(
+           "AND (:textSearch IS NULL OR (" +
+           "     LOWER(u.userName) LIKE LOWER(CONCAT('%', :textSearch, '%')) OR " +
+           "     LOWER(u.firstName) LIKE LOWER(CONCAT('%', :textSearch, '%')) OR " +
+           "     LOWER(u.lastName) LIKE LOWER(CONCAT('%', :textSearch, '%')) OR " +
+           "     LOWER(u.phoneNumber) LIKE LOWER(CONCAT('%', :textSearch, '%')) OR " +
+           "     LOWER(u.email) LIKE LOWER(CONCAT('%', :textSearch, '%'))" +
+           "))")
+    List<User> findUsersAdvancedCriteria(
         @Param("userId") Long userId,
         @Param("userProviderId") Long userProviderId,
+        @Param("userProviderName") String userProviderName,
+        @Param("userProviderDisplayName") String userProviderDisplayName,
         @Param("userRoleId") Long userRoleId,
-        @Param("userEnabled") Boolean userEnabled,
-        @Param("userName") String userName
+        @Param("userRoleName") String userRoleName,
+        @Param("userRoleDisplayName") String userRoleDisplayName,
+        @Param("textSearch") String textSearch,
+        @Param("userName") String userName,
+        @Param("userEnabled") Boolean userEnabled
     );
+
+    /**
+     * Find users by multiple criteria with pagination
+     * Enhanced textSearch includes USER_PROVIDER_DISPLAY_NAME and USER_ROLE_DISPLAY_NAME
+     */
+    @Query("SELECT DISTINCT u FROM User u " +
+           "LEFT JOIN FETCH u.userProvider up " +
+           "LEFT JOIN FETCH u.userRole ur " +
+           "WHERE (:userProviderName IS NULL OR LOWER(u.userProvider.userProviderName) LIKE LOWER(CONCAT('%', :userProviderName, '%'))) " +
+           "AND (:userProviderDisplayName IS NULL OR LOWER(u.userProvider.userProviderDisplayName) LIKE LOWER(CONCAT('%', :userProviderDisplayName, '%'))) " +
+           "AND (:userRoleName IS NULL OR LOWER(u.userRole.userRoleName) LIKE LOWER(CONCAT('%', :userRoleName, '%'))) " +
+           "AND (:userRoleDisplayName IS NULL OR LOWER(u.userRole.userRoleDisplayName) LIKE LOWER(CONCAT('%', :userRoleDisplayName, '%'))) " +
+           "AND (:userName IS NULL OR u.userName = :userName) " +
+           "AND (:userEnabled IS NULL OR u.userEnabled = :userEnabled) " +
+           "AND (:textSearch IS NULL OR (" +
+           "     LOWER(u.userName) LIKE LOWER(CONCAT('%', :textSearch, '%')) OR " +
+           "     LOWER(u.firstName) LIKE LOWER(CONCAT('%', :textSearch, '%')) OR " +
+           "     LOWER(u.lastName) LIKE LOWER(CONCAT('%', :textSearch, '%')) OR " +
+           "     LOWER(u.phoneNumber) LIKE LOWER(CONCAT('%', :textSearch, '%')) OR " +
+           "     LOWER(u.email) LIKE LOWER(CONCAT('%', :textSearch, '%')) OR " +
+           "     LOWER(u.userProvider.userProviderDisplayName) LIKE LOWER(CONCAT('%', :textSearch, '%')) OR " +
+           "     LOWER(u.userRole.userRoleDisplayName) LIKE LOWER(CONCAT('%', :textSearch, '%'))" +
+           "))")
+    Page<User> findUsersAdvancedCriteriaPaginated(
+        @Param("userProviderName") String userProviderName,
+        @Param("userProviderDisplayName") String userProviderDisplayName,
+        @Param("userRoleName") String userRoleName,
+        @Param("userRoleDisplayName") String userRoleDisplayName,
+        @Param("textSearch") String textSearch,
+        @Param("userName") String userName,
+        @Param("userEnabled") Boolean userEnabled,
+        Pageable pageable
+    );
+
+
 
     /**
      * Find single user by ID with related entities
@@ -133,26 +173,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
            "LEFT JOIN FETCH u.userRole")
     List<User> findAllWithDetails();
 
-    /**
-     * Search users by name with eagerly loaded related entities
-     * @param searchTerm Search term for first or last name
-     * @return List of users with provider and role data
-     */
-    @Query("SELECT DISTINCT u FROM User u " +
-           "LEFT JOIN FETCH u.userProvider " +
-           "LEFT JOIN FETCH u.userRole " +
-           "WHERE LOWER(u.firstName) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
-           "LOWER(u.lastName) LIKE LOWER(CONCAT('%', :searchTerm, '%'))")
-    List<User> searchByNameWithDetails(@Param("searchTerm") String searchTerm);
 
-    /**
-     * Find user by ID with details (alias for backward compatibility)
-     * @param userId User ID
-     * @return Optional User with all related entities eager loaded
-     */
-    @Query("SELECT u FROM User u " +
-           "LEFT JOIN FETCH u.userProvider " +
-           "LEFT JOIN FETCH u.userRole " +
-           "WHERE u.userId = :userId")
-    Optional<User> findByUserIdWithDetails(@Param("userId") Long userId);
+
+
 }

@@ -37,10 +37,11 @@ public class ShippingFeeDto {
     @DecimalMin(value = "0.0", message = "Shipping fee value must not be negative")
     private BigDecimal shippingFeeValue;
     
-    @Size(max = 256, message = "English remark must not exceed 256 characters")
-    private String shippingFeeRemarkEn;
+    @Size(max = 256, message = "Shipping fee display name must not exceed 256 characters")
+    private String shippingFeeDisplayName;
     
-    @Size(max = 256, message = "Remark must not exceed 256 characters")
+    @NotBlank(message = "Shipping fee remark is required")
+    @Size(max = 256, message = "Shipping fee remark must not exceed 256 characters")
     private String shippingFeeRemark;
     
     @NotNull(message = "Shipping fee enabled flag is required")

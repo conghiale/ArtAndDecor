@@ -1,21 +1,22 @@
 # IMAGE MANAGEMENT API DEVELOPMENT GUIDE
 
 **Project:** Art & Decor E-commerce Platform  
-**Date:** February 3, 2026  
+**Date:** February 25, 2026  
 **Author:** Development Team  
-**Version:** 1.0  
-**Features:** Complete Image Management APIs with Batch Upload, Update, and File Hashing  
+**Version:** 2.0  
+**Features:** Enhanced Image Management APIs with OpenAPI Documentation and Comprehensive File Processing  
 
 ---
 
 ## Overview
 
-The Image Management API provides comprehensive functionality for handling image uploads, downloads, updates, and retrieval. All uploaded images are processed with:
+The Image Management API provides comprehensive functionality for handling image uploads, downloads, updates, and retrieval with enhanced documentation and developer experience. All uploaded images are processed with:
 
 - **File Security:** SHA-256 hashing of file content + timestamp for unique filenames
 - **Image Analysis:** Automatic dimension detection (width x height)
 - **Batch Processing:** Support for uploading multiple images in a single request
 - **Error Handling:** Detailed error reporting for failed uploads with recovery information
+- **OpenAPI Documentation:** Complete API documentation with parameter descriptions, response schemas, and interactive testing capabilities
 
 ---
 
@@ -32,7 +33,7 @@ The Image Management API provides comprehensive functionality for handling image
 - **IMAGE_DISPLAY_NAME:** User-friendly name (e.g., "Product Photo")
 - **IMAGE_SLUG:** URL-friendly identifier (e.g., "product-photo")
 - **IMAGE_SIZE:** Dimensions in format "widthxheight" (e.g., "2048x1024")
-- **IMAGE_REMARK_EN:** English description/remarks (optional)
+- **IMAGE_FORMAT:** File format/extension (e.g., "JPG", "PNG", "WEBP")
 - **IMAGE_REMARK:** Vietnamese description/remarks (optional)
 
 ### Storage Location
@@ -70,13 +71,116 @@ The Image Management API provides comprehensive functionality for handling image
 
 ---
 
+## API Overview
+
+### Image Management APIs
+
+| Endpoint | Method | Access | Description |
+|----------|--------|--------|-------------|
+| `/api/images` | GET | PUBLIC | Get images with advanced filtering and pagination |
+| `/api/images/slug/{imageSlug}` | GET | PUBLIC | Get image metadata by URL-friendly slug |
+| `/api/images/{imageId}` | GET | PUBLIC | Get specific image metadata by ID |
+| `/api/images/download/{imageName}` | GET | PUBLIC | Download image file by filename |
+| `/api/images/upload` | POST | ADMIN | Upload single image with metadata |
+| `/api/images/batch-upload` | POST | ADMIN | Upload multiple images in batch |
+| `/api/images/{imageId}` | PUT | ADMIN | Update image metadata |
+| `/api/images/{imageId}` | DELETE | ADMIN | Delete image file and metadata |
+| `/api/images/bulk-delete` | DELETE | ADMIN | Delete multiple images in batch |
+
+### Key Features
+
+- **Secure File Processing:** SHA-256 hashing with timestamp for unique naming
+- **Image Analysis:** Automatic dimension detection and format validation
+- **Batch Operations:** Support for multiple file uploads and bulk deletions
+- **Advanced Filtering:** Search by size, format, and text across metadata fields
+- **File Security:** MIME type validation and size limit enforcement
+- **SEO Support:** URL-friendly slugs for image identification
+- **Performance:** Optimized storage with flat directory structure
+- **Error Handling:** Detailed error reporting for failed operations
+
+### Supported Image Formats
+- **JPEG** (.jpg, .jpeg) - Most common web format
+- **PNG** (.png) - Lossless compression with transparency
+- **GIF** (.gif) - Animation support
+- **WebP** (.webp) - Modern format with superior compression
+- **BMP** (.bmp) - Bitmap format
+- **TIFF** (.tiff, .tif) - High-quality format for professional use
+
+---
+
 ## API Endpoints
 
-### 1. Get Image by Slug
-**Endpoint:** `GET /images/slug/{imageSlug}`  
+**Documentation:** All endpoints are fully documented with OpenAPI 3.0 annotations, providing:
+- Comprehensive parameter descriptions with examples
+- Response schema definitions
+- Error code explanations  
+- Interactive API testing capabilities via Swagger UI
+- Security requirement specifications
+
+### 1. Get Images by Criteria with Pagination
+**Endpoint:** `GET /api/images`  
 **Method:** GET  
 **Access:** PUBLIC (No authentication required)  
-**Description:** Retrieve image metadata by URL-friendly slug (customer-friendly endpoint)
+**OpenAPI Summary:** "Get images with advanced filtering and pagination"
+**Description:** Retrieve images using comprehensive filtering options including size, format, and text search. Supports pagination and custom sorting. When no filters are provided, returns all images with pagination.
+
+**Query Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `imageSize` | String | No | Image size filter (partial match, case-insensitive) |
+| `imageFormat` | String | No | Image format filter (exact match, case-insensitive) |
+| `textSearch` | String | No | Text search in imageName, imageDisplayName, imageSlug, imageRemark |
+| `page` | Integer | No | Page number (default: 0, zero-based) |
+| `size` | Integer | No | Page size (default: 10) |
+| `sort` | String | No | Sort field (default: createdDt) |
+| `direction` | String | No | Sort direction: ASC or DESC (default: DESC) |
+
+**Example Request:**
+```bash
+curl -X GET "http://localhost:8080/images?imageFormat=JPG&page=0&size=5&sort=createdDt&direction=DESC" \
+  -H "Content-Type: application/json"
+```
+
+**Example Response (Success - 200):**
+```json
+{
+  "code": 200,
+  "message": "Images retrieved successfully",
+  "data": {
+    "content": [
+      {
+        "imageId": 1,
+        "imageName": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6.jpg",
+        "imageDisplayName": "Premium Sofa Photo",
+        "imageSlug": "premium-sofa-photo",
+        "imageSize": "2048x1024",
+        "imageFormat": "JPG",
+        "imageRemark": "Hình ảnh sofa cao cấp cho phòng khách",
+        "createdDt": "2026-02-03 10:30:00",
+        "modifiedDt": "2026-02-03 10:30:00"
+      }
+    ],
+    "pageable": {
+      "page": 0,
+      "size": 5,
+      "sort": "createdDt,DESC"
+    },
+    "totalElements": 15,
+    "totalPages": 3,
+    "first": true,
+    "last": false
+  },
+  "timestamp": "2026-02-03 10:35:20"
+}
+```
+
+### 2. Get Image by Slug
+**Endpoint:** `GET /api/images/slug/{imageSlug}`  
+**Method:** GET  
+**Access:** PUBLIC (No authentication required)  
+**OpenAPI Summary:** "Get image by URL-friendly slug"
+**Description:** Retrieve detailed image metadata using the URL-friendly slug identifier. This is the primary customer-facing endpoint for image retrieval, providing complete information including file details, dimensions, format, and upload timestamps.
 
 **Request Parameters:**
 
@@ -93,7 +197,7 @@ The Image Management API provides comprehensive functionality for handling image
 | `imageDisplayName` | String | User-friendly display name |
 | `imageSlug` | String | URL-friendly slug identifier |
 | `imageSize` | String | Image dimensions (widthxheight format) |
-| `imageRemarkEn` | String | English description/remarks |
+| `imageFormat` | String | File format/extension (JPG, PNG, WEBP, etc.) |
 | `imageRemark` | String | Vietnamese description/remarks |
 | `createdDt` | String | Image upload timestamp |
 | `modifiedDt` | String | Last modification timestamp |
@@ -136,11 +240,12 @@ curl -X GET "http://localhost:8080/images/slug/premium-sofa-photo" \
 
 ---
 
-### 2. Get Image by ID
-**Endpoint:** `GET /images/{imageId}`  
+### 3. Get Image by ID
+**Endpoint:** `GET /api/images/{imageId}`  
 **Method:** GET  
 **Access:** PUBLIC (No authentication required)  
-**Description:** Retrieve image metadata by image ID (admin/system reference)
+**OpenAPI Summary:** "Get image by database ID"
+**Description:** Retrieve detailed image metadata using the internal database identifier. Primarily used for administrative purposes and system integrations that require direct database ID access.
 
 **Request Parameters:**
 
@@ -188,12 +293,13 @@ curl -X GET "http://localhost:8080/images/1" \
 
 ---
 
-### 3. Upload Multiple Images (Batch)
-**Endpoint:** `POST /images/upload`  
+### 4. Upload Multiple Images (Batch)
+**Endpoint:** `POST /api/images/upload`  
 **Method:** POST  
 **Content-Type:** `multipart/form-data`  
 **Access:** PUBLIC (No authentication required)  
-**Description:** Upload multiple images with optional metadata (batch processing)
+**OpenAPI Summary:** "Upload multiple images with metadata"
+**Description:** Upload one or more images with optional metadata. Each image is processed with SHA-256 hashing for unique filename generation, automatic dimension detection, format validation, and comprehensive metadata storage. Supports parallel arrays for batch metadata assignment.
 
 **Request Parameters (Form Data):**
 
@@ -201,8 +307,8 @@ curl -X GET "http://localhost:8080/images/1" \
 |-----------|------|----------|-------------|
 | `imageFiles` | File[] | Yes | Array of image files to upload |
 | `imageDisplayNames` | String[] | No | Display names for each image (parallel array) |
-| `imageSizes` | String[] | No | Custom image sizes (e.g., "1024x768") - if not provided, auto-detected |
-| `imageRemarksEn` | String[] | No | English remarks for each image (parallel array) |
+| `imageSizes` | String[] | No | Custom image dimensions (e.g., "2048x1024") - if not provided, auto-detected |
+| `imageFormats` | String[] | No | Custom image formats (e.g., "JPG", "PNG") - if not provided, extracted from file extension |
 | `imageRemarks` | String[] | No | Vietnamese remarks for each image (parallel array) |
 | `imageSlugs` | String[] | No | Custom slugs for each image - if not provided, auto-generated from displayName |
 
@@ -308,7 +414,7 @@ fetch('http://localhost:8080/images/upload', {
         "imageDisplayName": "Sofa Front View",
         "imageSlug": "sofa-front-view",
         "imageSize": "2048x1024",
-        "imageRemarkEn": "Front angle of premium sofa",
+        "imageFormat": "JPG",
         "imageRemark": "Góc nhìn phía trước",
         "createdDt": "2026-02-03 10:45:30",
         "modifiedDt": "2026-02-03 10:45:30"
@@ -319,7 +425,7 @@ fetch('http://localhost:8080/images/upload', {
         "imageDisplayName": "Sofa Side View",
         "imageSlug": "sofa-side-view",
         "imageSize": "1920x1080",
-        "imageRemarkEn": "Side angle showing depth",
+        "imageFormat": "JPG",
         "imageRemark": "Góc nhìn bên cạnh",
         "createdDt": "2026-02-03 10:45:30",
         "modifiedDt": "2026-02-03 10:45:30"
@@ -330,7 +436,7 @@ fetch('http://localhost:8080/images/upload', {
         "imageDisplayName": "Sofa Detail",
         "imageSlug": "sofa-detail",
         "imageSize": "1024x1024",
-        "imageRemarkEn": null,
+        "imageFormat": "PNG",
         "imageRemark": null,
         "createdDt": "2026-02-03 10:45:30",
         "modifiedDt": "2026-02-03 10:45:30"
@@ -359,7 +465,7 @@ fetch('http://localhost:8080/images/upload', {
         "imageDisplayName": "Chair Front",
         "imageSlug": "chair-front",
         "imageSize": "1920x1080",
-        "imageRemarkEn": "Front view",
+        "imageFormat": "JPG",
         "imageRemark": "Góc phía trước",
         "createdDt": "2026-02-03 11:00:15",
         "modifiedDt": "2026-02-03 11:00:15"
@@ -370,7 +476,7 @@ fetch('http://localhost:8080/images/upload', {
         "imageDisplayName": "Chair Side",
         "imageSlug": "chair-side",
         "imageSize": "1024x768",
-        "imageRemarkEn": "Side view",
+        "imageFormat": "PNG",
         "imageRemark": "Góc bên cạnh",
         "createdDt": "2026-02-03 11:00:15",
         "modifiedDt": "2026-02-03 11:00:15"
@@ -406,36 +512,44 @@ fetch('http://localhost:8080/images/upload', {
 
 ---
 
-### 4. Update Image with New File
-**Endpoint:** `POST /images/{imageId}/upload`  
+### 5. Update Image with New File and Metadata
+**Endpoint:** `POST /api/images/{imageId}/upload`  
 **Method:** POST  
 **Content-Type:** `multipart/form-data`  
 **Access:** PUBLIC (No authentication required)  
-**Description:** Replace existing image file and optionally update metadata
+**OpenAPI Summary:** "Update existing image with new file"
+**Description:** Replace an existing image file while maintaining the same database record. Updates both the file content and associated metadata. The new file undergoes the same processing as new uploads including SHA-256 hashing and dimension detection.
 
 **Request Parameters:**
 
 | Parameter | Type | Required | Location | Description |
 |-----------|------|----------|----------|-------------|
 | `imageId` | Long | Yes | Path | Image ID to update |
-| `imageFiles` | File | Yes | Form | New image file (first file used if multiple provided) |
+| `imageFiles` | File | Yes | Form | New image file (exactly one file required) |
 | `imageDisplayNames` | String | No | Form | New display name for the image |
+| `imageSizes` | String | No | Form | Custom image dimensions (e.g., \"2048x1024\") |
+| `imageFormats` | String | No | Form | Custom image format (e.g., \"JPG\", \"PNG\") |
+| `imageRemarks` | String | No | Form | Vietnamese remarks for the image |
+| `imageSlugs` | String | No | Form | Custom slug for the image |
 
 **Behavior:**
 - Old file is deleted from disk after successful upload
 - New file hash is generated with current timestamp
-- Image dimensions are automatically re-detected
-- All other metadata remains unchanged unless specifically updated
+- All metadata can be updated in single operation
+- Auto-detection used if optional parameters not provided
 - If displayName not provided, extracted from new filename
-
-**Response Fields:** Same as ImageDto
+- If slug not provided, auto-generated from displayName
 
 **Example Request (cURL):**
 ```bash
 curl -X POST "http://localhost:8080/images/5/upload" \
   -H "Accept: application/json" \
   -F "imageFiles=@new_sofa_photo.jpg" \
-  -F "imageDisplayNames=Updated Sofa Front View"
+  -F "imageDisplayNames=Updated Premium Sofa" \
+  -F "imageSizes=2048x1536" \
+  -F "imageFormats=JPG" \
+  -F "imageRemarks=Ảnh sofa cao cấp đã cập nhật với góc chụp mới" \
+  -F "imageSlugs=updated-premium-sofa"
 ```
 
 **Example Request (JavaScript/Fetch):**
@@ -494,11 +608,12 @@ fetch('http://localhost:8080/images/5/upload', {
 
 ---
 
-### 5. Get Total Image Count (Admin Dashboard)
-**Endpoint:** `GET /images/admin/total-count`  
+### 6. Get Total Image Count (Admin Dashboard)
+**Endpoint:** `GET /api/images/admin/total-count`  
 **Method:** GET  
 **Access:** ADMIN, MANAGER (Role-based access control)  
-**Description:** Get total count of images in the system (for dashboard/analytics)
+**OpenAPI Summary:** "Get total image count for dashboard"
+**Description:** Retrieve the total number of images stored in the system. Used for administrative dashboards and system monitoring. Requires Admin or Manager role access.
 
 **Security Requirements:**
 - JWT authentication required
@@ -543,6 +658,141 @@ curl -X GET "http://localhost:8080/images/admin/total-count" \
   "timestamp": "2026-02-03 11:25:30"
 }
 ```
+
+---
+
+### 6. Search Images with Filters and Pagination
+**Endpoint:** `GET /api/images/search`  
+**Method:** GET  
+**Access:** PUBLIC (No authentication required)  
+**Description:** Search images using multiple filters with pagination support (IMAGE_SIZE, IMAGE_FORMAT, text search)
+
+**Request Parameters:**
+
+| Parameter | Type | Required | Location | Description |
+|-----------|------|----------|----------|-------------|
+| `imageSize` | String | No | Query | Filter by image dimensions (e.g., "2048x1024") |
+| `imageFormat` | String | No | Query | Filter by image format (JPG, PNG, WEBP, etc.) |
+| `textSearch` | String | No | Query | Search across IMAGE_NAME, IMAGE_DISPLAY_NAME, IMAGE_SLUG, IMAGE_REMARK |
+| `page` | Integer | No | Query | Page number (0-based, default: 0) |
+| `size` | Integer | No | Query | Page size (default: 10, max: 100) |
+| `sortBy` | String | No | Query | Sort field (default: createdDt) |
+| `sortDirection` | String | No | Query | Sort direction: ASC/DESC (default: DESC) |
+
+**Example Request:**
+```bash
+curl -X GET "http://localhost:8080/images/search?imageFormat=JPG&textSearch=sofa&page=0&size=5&sortBy=imageDisplayName&sortDirection=ASC" \
+  -H "Content-Type: application/json"
+```
+
+**Example Response (Success - 200):**
+```json
+{
+  "code": 200,
+  "message": "Images found successfully",
+  "data": {
+    "content": [
+      {
+        "imageId": 1,
+        "imageName": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6.jpg",
+        "imageDisplayName": "Premium Sofa Photo",
+        "imageSlug": "premium-sofa-photo",
+        "imageSize": "2048x1024",
+        "imageFormat": "JPG",
+        "imageRemark": "Ảnh chất lượng cao của sản phẩm",
+        "createdDt": "2026-02-03 10:30:45",
+        "modifiedDt": "2026-02-03 10:30:45"
+      }
+    ],
+    "pageable": {
+      "pageNumber": 0,
+      "pageSize": 5,
+      "sort": {
+        "sorted": true,
+        "ascending": true
+      }
+    },
+    "totalElements": 15,
+    "totalPages": 3,
+    "first": true,
+    "last": false,
+    "size": 5,
+    "number": 0,
+    "numberOfElements": 1
+  },
+  "timestamp": "2026-02-03 10:35:20"
+}
+```
+
+---
+
+### 7. Get All Image Sizes (UI Support)
+**Endpoint:** `GET /api/images/sizes`  
+**Method:** GET  
+**Access:** PUBLIC (No authentication required)  
+**OpenAPI Summary:** "Get all distinct image sizes"  
+**Description:** Retrieve all distinct image sizes available in the system. This endpoint is typically used to populate dropdown/combobox options in the UI for filtering images by size. Returns a list of unique size values from the IMAGE_SIZE column.
+
+**Example Request:**
+```bash
+curl -X GET "http://localhost:8080/images/sizes" \
+  -H "Content-Type: application/json"
+```
+
+**Example Response (Success - 200):**
+```json
+{
+  "code": 200,
+  "message": "Image sizes retrieved successfully",
+  "data": [
+    "1024x768",
+    "1920x1080", 
+    "2048x1024",
+    "800x600",
+    "640x480"
+  ],
+  "timestamp": "2026-02-03 10:35:20"
+}
+```
+
+**Error Responses:**
+- **500 Internal Server Error:** Database connection issues or server error
+
+---
+
+### 8. Get All Image Formats (UI Support)
+**Endpoint:** `GET /api/images/formats`  
+**Method:** GET  
+**Access:** PUBLIC (No authentication required)  
+**OpenAPI Summary:** "Get all distinct image formats"  
+**Description:** Retrieve all distinct image formats available in the system. This endpoint is typically used to populate dropdown/combobox options in the UI for filtering images by format. Returns a list of unique format values from the IMAGE_FORMAT column.
+
+**Example Request:**
+```bash
+curl -X GET "http://localhost:8080/images/formats" \
+  -H "Content-Type: application/json"
+```
+
+**Example Response (Success - 200):**
+```json
+{
+  "code": 200,
+  "message": "Image formats retrieved successfully",
+  "data": [
+    "JPG",
+    "PNG", 
+    "WEBP",
+    "GIF",
+    "BMP"
+  ],
+  "timestamp": "2026-02-03 10:35:20"
+}
+```
+
+**Error Responses:**
+- **500 Internal Server Error:** Database connection issues or server error
+
+---
 
 ---
 
@@ -842,7 +1092,7 @@ When uploading multiple files:
    - Prevents direct file enumeration attacks
 
 4. **Access Control**
-   - Public endpoints: GET /images endpoints (read-only)
+   - Public endpoints: GET /api/images endpoints (read-only)
    - Protected endpoints: Total count requires ADMIN/MANAGER role
    - Private storage: Files served via Java app, not direct HTTP
 
@@ -1012,6 +1262,35 @@ logging.level.org.ArtAndDecor.services.impl.ImageServiceImpl=DEBUG
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0 | 2026-02-03 | Initial release with 5 API endpoints, batch upload support, automatic dimension detection |
+---
+
+## OpenAPI Documentation Integration
+
+### Enhanced Developer Experience
+
+The Image Management API now includes comprehensive OpenAPI 3.0 documentation providing:
+
+**Interactive Features:**
+- **Swagger UI Integration:** Access interactive API documentation at `/swagger-ui.html`
+- **Try It Out Functionality:** Test APIs directly from the documentation interface
+- **Real-time Response Validation:** Immediate feedback on API calls and responses
+
+**Detailed Documentation:**
+- **Parameter Descriptions:** Each parameter includes detailed descriptions, examples, and validation requirements
+- **Response Schemas:** Complete response structure definitions with field explanations
+- **Error Code Documentation:** Comprehensive error response explanations with resolution guidance
+- **Security Requirements:** Clear authentication and authorization requirements for each endpoint
+
+**Developer Benefits:**
+- **Faster Integration:** Reduced development time with comprehensive examples and schemas
+- **Reduced Support Tickets:** Self-service documentation reduces need for developer support
+- **API Discovery:** Easy exploration of available endpoints and capabilities
+- **Code Generation:** OpenAPI specs can be used to generate client SDKs in multiple languages
+
+**Access Information:**
+- **Documentation URL:** `http://localhost:8080/swagger-ui.html` (development)
+- **OpenAPI Spec:** `http://localhost:8080/v3/api-docs` (JSON format)
+- **Production URL:** Update base URL for production environment
 
 ---
 

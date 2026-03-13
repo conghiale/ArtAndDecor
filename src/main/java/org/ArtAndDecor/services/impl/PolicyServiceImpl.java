@@ -29,14 +29,6 @@ public class PolicyServiceImpl implements PolicyService {
     
     @Override
     @Transactional(readOnly = true)
-    public Optional<PolicyDto> findPolicyByName(String policyName) {
-        logger.debug("Finding policy by name: {}", policyName);
-        return policyRepository.findByPolicyName(policyName)
-                .map(this::mapToDto);
-    }
-    
-    @Override
-    @Transactional(readOnly = true)
     public Optional<PolicyDto> findPolicyById(Long policyId) {
         logger.debug("Finding policy by ID: {}", policyId);
         return policyRepository.findById(policyId)
@@ -49,42 +41,6 @@ public class PolicyServiceImpl implements PolicyService {
         logger.debug("Finding policy by slug: {}", policySlug);
         return policyRepository.findByPolicySlug(policySlug)
                 .map(this::mapToDto);
-    }
-    
-    @Override
-    @Transactional(readOnly = true)
-    public List<PolicyDto> findAllEnabledPolicies() {
-        logger.debug("Finding all enabled policies");
-        return policyRepository.findByPolicyEnabledTrue()
-                .stream()
-                .map(this::mapToDto)
-                .collect(Collectors.toList());
-    }
-    
-    @Override
-    @Transactional(readOnly = true)
-    public List<PolicyDto> searchPoliciesByName(String namePattern) {
-        logger.debug("Searching policies by name pattern: {}", namePattern);
-        if (namePattern == null || namePattern.isBlank()) {
-            return List.of();
-        }
-        return policyRepository.findByPolicyNameContainingIgnoreCase(namePattern)
-                .stream()
-                .map(this::mapToDto)
-                .collect(Collectors.toList());
-    }
-    
-    @Override
-    @Transactional(readOnly = true)
-    public List<PolicyDto> searchPoliciesByValue(String valuePattern) {
-        logger.debug("Searching policies by value pattern: {}", valuePattern);
-        if (valuePattern == null || valuePattern.isBlank()) {
-            return List.of();
-        }
-        return policyRepository.findByPolicyValueContaining(valuePattern)
-                .stream()
-                .map(this::mapToDto)
-                .collect(Collectors.toList());
     }
     
     @Override
@@ -109,7 +65,7 @@ public class PolicyServiceImpl implements PolicyService {
         policy.setPolicyName(policyDto.getPolicyName());
         policy.setPolicySlug(slug);
         policy.setPolicyValue(policyDto.getPolicyValue());
-        policy.setPolicyRemarkEn(policyDto.getPolicyRemarkEn());
+        policy.setPolicyDisplayName(policyDto.getPolicyDisplayName());
         policy.setPolicyRemark(policyDto.getPolicyRemark());
         policy.setPolicyEnabled(policyDto.getPolicyEnabled() != null ? policyDto.getPolicyEnabled() : true);
         
@@ -148,7 +104,7 @@ public class PolicyServiceImpl implements PolicyService {
         policy.setPolicyName(policyDto.getPolicyName());
         policy.setPolicySlug(slug);
         policy.setPolicyValue(policyDto.getPolicyValue());
-        policy.setPolicyRemarkEn(policyDto.getPolicyRemarkEn());
+        policy.setPolicyDisplayName(policyDto.getPolicyDisplayName());
         policy.setPolicyRemark(policyDto.getPolicyRemark());
         if (policyDto.getPolicyEnabled() != null) {
             policy.setPolicyEnabled(policyDto.getPolicyEnabled());
@@ -199,22 +155,27 @@ public class PolicyServiceImpl implements PolicyService {
     }
     
     @Override
-    public void deletePolicy(Long policyId) {
-        logger.info("Deleting policy with ID: {}", policyId);
-        
-        if (!policyRepository.existsById(policyId)) {
-            logger.error("Policy not found with ID: {}", policyId);
-            throw new IllegalArgumentException("Policy not found with ID: " + policyId);
-        }
-        
-        policyRepository.deleteById(policyId);
-        logger.info("Policy deleted successfully with ID: {}", policyId);
+    @Transactional(readOnly = true)
+    public long getTotalPolicyCount() {
+        return policyRepository.count();
     }
     
     @Override
     @Transactional(readOnly = true)
-    public long getTotalPolicyCount() {
-        return policyRepository.count();
+    public List<PolicyDto> findPoliciesByCriteria(String policyName, Boolean policyEnabled, String textSearch) {
+        logger.debug("Finding policies by criteria - name: {}, enabled: {}, textSearch: {}", 
+                    policyName, policyEnabled, textSearch);
+        return policyRepository.findPoliciesByCriteria(policyName, policyEnabled, textSearch)
+                .stream()
+                .map(this::mapToDto)
+                .collect(Collectors.toList());
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public List<String> getAllPolicyNames() {
+        logger.debug("Getting all policy names");
+        return policyRepository.findAllPolicyNames();
     }
     
     // =============================================
@@ -236,7 +197,7 @@ public class PolicyServiceImpl implements PolicyService {
                 .policyName(policy.getPolicyName())
                 .policySlug(policy.getPolicySlug())
                 .policyValue(policy.getPolicyValue())
-                .policyRemarkEn(policy.getPolicyRemarkEn())
+                .policyDisplayName(policy.getPolicyDisplayName())
                 .policyRemark(policy.getPolicyRemark())
                 .policyEnabled(policy.getPolicyEnabled())
                 .createdDt(policy.getCreatedDt())

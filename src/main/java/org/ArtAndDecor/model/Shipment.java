@@ -7,11 +7,12 @@ import lombok.NoArgsConstructor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
  * Shipment Entity
- * Represents shipment information for orders
+ * Represents shipment information for orders - Updated to match database schema
  */
 @Entity
 @Table(name = "SHIPMENT")
@@ -29,37 +30,54 @@ public class Shipment {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "ORDER_ID", nullable = false)
-    private Orders order;
+    private Order order;
 
-    @Column(name = "SHIPMENT_SLUG", length = 64, nullable = false, unique = true)
-    private String shipmentSlug;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "SHIPPING_FEE_ID", nullable = false)
-    private ShippingFee shippingFee;
+    @Column(name = "SHIPMENT_CODE", length = 64, nullable = false, unique = true)
+    private String shipmentCode;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "SHIPMENT_STATE_ID", nullable = false)
     private ShipmentState shipmentState;
 
-    @Column(name = "PHONE", nullable = false, length = 20)
-    private String phone;
+    // Receiver information snapshot
+    @Column(name = "RECEIVER_NAME", nullable = false, length = 150)
+    private String receiverName;
 
-    @Column(name = "ADDRESS", nullable = false, length = 256)
-    private String address;
+    @Column(name = "RECEIVER_PHONE", nullable = false, length = 20)
+    private String receiverPhone;
 
-    @Column(name = "SHIPMENT_REMARK_EN", length = 256)
-    private String shipmentRemarkEn;
+    @Column(name = "RECEIVER_EMAIL", length = 150)
+    private String receiverEmail;
 
-    @Column(name = "SHIPMENT_REMARK", length = 256, nullable = false)
+    // Address fields
+    @Column(name = "ADDRESS_LINE", nullable = false, length = 255)
+    private String addressLine;
+
+    @Column(name = "CITY", nullable = false, length = 100)
+    private String city;
+
+    @Column(name = "DISTRICT", length = 100)
+    private String district;
+
+    @Column(name = "WARD", length = 100)
+    private String ward;
+
+    @Column(name = "COUNTRY", nullable = false, length = 100)
+    private String country;
+
+    // Shipping fee snapshot
+    @Column(name = "SHIPPING_FEE_AMOUNT", nullable = false, precision = 15, scale = 2)
+    private BigDecimal shippingFeeAmount = BigDecimal.ZERO;
+
+    // Timeline
+    @Column(name = "SHIPPED_AT")
+    private LocalDateTime shippedAt;
+
+    @Column(name = "DELIVERED_AT")
+    private LocalDateTime deliveredAt;
+
+    @Column(name = "SHIPMENT_REMARK", length = 256)
     private String shipmentRemark;
-
-    @Column(name = "SEO_META_ID")
-    private Long seoMetaId;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "SEO_META_ID", referencedColumnName = "SEO_META_ID", insertable = false, updatable = false)
-    private SeoMeta seoMeta;
 
     @Column(name = "CREATED_DT", nullable = false, updatable = false)
     private LocalDateTime createdDt;
@@ -69,8 +87,8 @@ public class Shipment {
 
     @PrePersist
     protected void onCreate() {
-        logger.debug("Creating new Shipment for order ID: {}", 
-                    order != null ? order.getOrderId() : null);
+        logger.debug("Creating new Shipment for order ID: {}, code: {}", 
+                    order != null ? order.getOrderId() : null, shipmentCode);
         LocalDateTime now = LocalDateTime.now();
         this.createdDt = now;
         this.modifiedDt = now;
@@ -78,7 +96,37 @@ public class Shipment {
 
     @PreUpdate
     protected void onUpdate() {
-        logger.debug("Updating Shipment ID: {}", shipmentId);
+        logger.debug("Updating Shipment ID: {}, code: {}", shipmentId, shipmentCode);
         this.modifiedDt = LocalDateTime.now();
+    }
+
+    /**
+     * Get full formatted address
+     * @return Complete address string
+     */
+    public String getFullAddress() {
+        StringBuilder sb = new StringBuilder();
+        if (addressLine != null) sb.append(addressLine);
+        if (ward != null) sb.append(", ").append(ward);
+        if (district != null) sb.append(", ").append(district);
+        if (city != null) sb.append(", ").append(city);
+        if (country != null) sb.append(", ").append(country);
+        return sb.toString();
+    }
+
+    /**
+     * Check if shipment has been shipped
+     * @return true if shipped
+     */
+    public boolean isShipped() {
+        return shippedAt != null;
+    }
+
+    /**
+     * Check if shipment has been delivered
+     * @return true if delivered
+     */
+    public boolean isDelivered() {
+        return deliveredAt != null;
     }
 }

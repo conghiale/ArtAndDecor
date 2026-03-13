@@ -1,24 +1,30 @@
 package org.ArtAndDecor.controllers;
 
+import lombok.RequiredArgsConstructor;
 import org.ArtAndDecor.dto.UserRoleDto;
 import org.ArtAndDecor.dto.UserProviderDto;
-import org.ArtAndDecor.model.UserRole;
-import org.ArtAndDecor.model.UserProvider;
-import org.ArtAndDecor.repository.UserRoleRepository;
-import org.ArtAndDecor.repository.UserProviderRepository;
-
 import org.ArtAndDecor.dto.BaseResponseDto;
 import org.ArtAndDecor.dto.ChangePasswordRequest;
-import org.ArtAndDecor.dto.ResetPasswordRequest;
 import org.ArtAndDecor.dto.UserDto;
 import org.ArtAndDecor.services.UserService;
+import org.ArtAndDecor.services.UserRoleService;
+import org.ArtAndDecor.services.UserProviderService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 import jakarta.validation.Valid;
 import java.util.List;
@@ -26,99 +32,284 @@ import java.util.Optional;
 
 /**
  * User Management REST Controller
- * Handles all USER MANAGEMENT API operations
+ * Handles all USER MANAGEMENT API operations with role-based access control
  */
 @RestController
-@RequestMapping("/users")
+@RequiredArgsConstructor
+@RequestMapping("/api/users")
 @CrossOrigin(origins = "*")
+@Tag(name = "User Management", description = "APIs for managing users, user roles, and user providers with advanced filtering and search capabilities")
 public class UserController {
 
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
-    @Autowired
-    private UserService userService;
+    private final UserService userService;
 
-    @Autowired
-    private UserRoleRepository userRoleRepository;
+    private final UserRoleService userRoleService;
 
-    @Autowired
-    private UserProviderRepository userProviderRepository;
+    private final UserProviderService userProviderService;
+
+     /*=============================================
+     USER ROLE MANAGEMENT APIs
+     =============================================*/
 
     /**
-     * Get all enabled user roles (USER_ROLE)
+     * Get user roles with optional filtering
+     * Returns all roles if no filters are provided, or filtered results based on criteria
+     * 
+     * @param userRoleName Role name filter (optional) 
+     * @param textSearch Text search in role name, display name, or remark (optional)
+     * @param userRoleEnabled Enabled status filter (optional)
+     * @return List of roles matching criteria
      */
     @GetMapping("/roles")
-    public ResponseEntity<BaseResponseDto<List<UserRoleDto>>> getAllUserRoles() {
-        logger.info("Getting all enabled user roles");
+    @Operation(summary = "Retrieve user roles with optional filtering",
+               description = "Get all user roles or filter by specific criteria. Returns all roles when no parameters are provided. Supports text search across role name, display name, and remark fields.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Roles retrieved successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid request parameters"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<BaseResponseDto<List<UserRoleDto>>> getRolesByCriteria(
+            @Parameter(description = "Filter by exact role name") @RequestParam(value = "roleName", required = false) String userRoleName,
+            @Parameter(description = "Search text in role name, display name, or remark (case-insensitive)")
+            @RequestParam(value = "textSearch", required = false) String textSearch,
+            @Parameter(description = "Filter by enabled status (true/false/null for all)") @RequestParam(value = "enabled", required = false) Boolean userRoleEnabled) {
+        
+        logger.info("Getting roles by criteria - roleName: {}, textSearch: {}, enabled: {}", 
+                   userRoleName, textSearch, userRoleEnabled);
+        
         try {
-            List<UserRole> roles = userRoleRepository.findAllEnabledOrderByName();
-            List<UserRoleDto> dtos = roles.stream().map(role -> UserRoleDto.builder()
-                    .userRoleId(role.getUserRoleId())
-                    .userRoleName(role.getUserRoleName())
-                    .userRoleRemark(role.getUserRoleRemark())
-                    .userRoleRemarkEn(role.getUserRoleRemarkEn())
-                    .userRoleEnabled(role.getUserRoleEnabled())
-                    .build()).toList();
-            return ResponseEntity.ok(BaseResponseDto.success("User roles retrieved successfully", dtos));
+            List<UserRoleDto> roles = userRoleService.findRolesByCriteria(userRoleName, textSearch, userRoleEnabled);
+            
+            logger.info("Found {} roles matching criteria", roles.size());
+            return ResponseEntity.ok(BaseResponseDto.success("Roles retrieved successfully", roles));
+            
         } catch (Exception e) {
-            logger.error("Error getting user roles: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to retrieve user roles: " + e.getMessage()));
+            logger.error("Error getting roles by criteria: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to retrieve roles: " + e.getMessage()));
         }
     }
 
     /**
-     * Get all enabled user providers (USER_PROVIDER)
+     * Get detailed information for a specific user role
+     * 
+     * @param roleId Role ID to retrieve
+     * @return Role details with complete information
+     */
+    @GetMapping("/roles/{roleId}")
+    @Operation(summary = "Get user role by ID",
+               description = "Retrieve detailed information for a specific user role including role name, display name, remark, and enabled status.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Role retrieved successfully"),
+        @ApiResponse(responseCode = "404", description = "Role not found with provided ID"),
+        @ApiResponse(responseCode = "400", description = "Invalid role ID format"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<BaseResponseDto<UserRoleDto>> getRoleById(
+            @Parameter(description = "Unique identifier of the role to retrieve")
+            @PathVariable Long roleId) {
+        logger.info("Getting role by ID: {}", roleId);
+        
+        try {
+            Optional<UserRoleDto> roleOpt = userRoleService.findRoleById(roleId);
+
+            return roleOpt.map(userRoleDto -> ResponseEntity.ok(BaseResponseDto.success("Role retrieved successfully", userRoleDto)))
+                    .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body(BaseResponseDto.notFound("Role not found with ID: " + roleId)));
+
+        } catch (Exception e) {
+            logger.error("Error getting role by ID {}: {}", roleId, e.getMessage(), e);
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to retrieve role: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Get all user role names for dropdown/combobox
+     * 
+     * @return List of role names
+     */
+    @GetMapping("/roles/names")
+    @Operation(summary = "Get all user role names",
+               description = "Retrieve list of all enabled user role names for dropdown/combobox usage in UI.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Role names retrieved successfully"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<BaseResponseDto<List<String>>> getAllRoleNames() {
+        logger.info("Getting all role names");
+        
+        try {
+            List<String> roleNames = userRoleService.getAllRoleNames();
+            
+            logger.info("Found {} role names", roleNames.size());
+            return ResponseEntity.ok(BaseResponseDto.success("Role names retrieved successfully", roleNames));
+            
+        } catch (Exception e) {
+            logger.error("Error getting all role names: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(BaseResponseDto.serverError("Failed to retrieve role names: " + e.getMessage()));
+        }
+    }
+
+    /* =============================================
+     USER PROVIDER MANAGEMENT APIs
+     =============================================*/
+
+    /**
+     * Get user providers with optional filtering
+     * Returns all providers if no filters are provided, or filtered results based on criteria
+     * 
+     * @param userProviderName Provider name filter (optional) 
+     * @param textSearch Text search in provider name, display name, or remark (optional)
+     * @param userProviderEnabled Enabled status filter (optional)
+     * @return List of providers matching criteria
      */
     @GetMapping("/providers")
-    public ResponseEntity<BaseResponseDto<List<UserProviderDto>>> getAllUserProviders() {
-        logger.info("Getting all enabled user providers");
+    @Operation(summary = "Retrieve user providers with optional filtering",
+               description = "Get all user providers or filter by specific criteria. Returns all providers when no parameters are provided. Supports text search across provider name, display name, and remark fields.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Providers retrieved successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid request parameters"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<BaseResponseDto<List<UserProviderDto>>> getProvidersByCriteria(
+            @Parameter(description = "Filter by exact provider name") @RequestParam(value = "providerName", required = false) String userProviderName,
+            @Parameter(description = "Search text in provider name, display name, or remark (case-insensitive)")
+            @RequestParam(value = "textSearch", required = false) String textSearch,
+            @Parameter(description = "Filter by enabled status (true/false/null for all)") @RequestParam(value = "enabled", required = false) Boolean userProviderEnabled) {
+        
+        logger.info("Getting providers by criteria - providerName: {}, textSearch: {}, enabled: {}", 
+                   userProviderName, textSearch, userProviderEnabled);
+        
         try {
-            List<UserProvider> providers = userProviderRepository.findAllEnabledOrderByName();
-            List<UserProviderDto> dtos = providers.stream().map(provider -> UserProviderDto.builder()
-                    .userProviderId(provider.getUserProviderId())
-                    .userProviderName(provider.getUserProviderName())
-                    .userProviderRemark(provider.getUserProviderRemark())
-                    .userProviderRemarkEn(provider.getUserProviderRemarkEn())
-                    .userProviderEnabled(provider.getUserProviderEnabled())
-                    .build()).toList();
-            return ResponseEntity.ok(BaseResponseDto.success("User providers retrieved successfully", dtos));
+            List<UserProviderDto> providers = userProviderService.findProvidersByCriteria(userProviderName, textSearch, userProviderEnabled);
+            
+            logger.info("Found {} providers matching criteria", providers.size());
+            return ResponseEntity.ok(BaseResponseDto.success("Providers retrieved successfully", providers));
+            
         } catch (Exception e) {
-            logger.error("Error getting user providers: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to retrieve user providers: " + e.getMessage()));
+            logger.error("Error getting providers by criteria: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to retrieve providers: " + e.getMessage()));
         }
     }
 
     /**
-     * Get users by multiple criteria (all parameters optional)
-     * Returns complete user information including USER_ROLE and USER_PROVIDER details
+     * Get detailed information for a specific user provider
      * 
-     * @param userId User ID filter (optional)
-     * @param userProviderId Provider ID filter (optional)
-     * @param userRoleId Role ID filter (optional)
-     * @param userEnabled Enabled status filter (optional, default true)
-     * @param userName Username filter (optional)
-     * @return List of users matching criteria with full details
+     * @param providerId Provider ID to retrieve
+     * @return Provider details with complete information
      */
-    @GetMapping("/search")
-    public ResponseEntity<BaseResponseDto<List<UserDto>>> getUsersByCriteria(
-            @RequestParam(value = "userId", required = false) Long userId,
-            @RequestParam(value = "userProviderId", required = false) Long userProviderId,
-            @RequestParam(value = "userRoleId", required = false) Long userRoleId,
-            @RequestParam(value = "userEnabled", required = false) Boolean userEnabled,
-            @RequestParam(value = "userName", required = false) String userName) {
-        
-        logger.info("Getting users by criteria - userId: {}, providerId: {}, roleId: {}, enabled: {}, userName: {}", 
-                   userId, userProviderId, userRoleId, userEnabled, userName);
+    @GetMapping("/providers/{providerId}")
+    @Operation(summary = "Get user provider by ID",
+               description = "Retrieve detailed information for a specific user provider including provider name, display name, remark, and enabled status.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Provider retrieved successfully"),
+        @ApiResponse(responseCode = "404", description = "Provider not found with provided ID"),
+        @ApiResponse(responseCode = "400", description = "Invalid provider ID format"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<BaseResponseDto<UserProviderDto>> getProviderById(
+            @Parameter(description = "Unique identifier of the provider to retrieve")
+            @PathVariable Long providerId) {
+        logger.info("Getting provider by ID: {}", providerId);
         
         try {
-            List<UserDto> users = userService.findUsersByCriteria(userId, userProviderId, userRoleId, userEnabled, userName);
+            Optional<UserProviderDto> providerOpt = userProviderService.findProviderById(providerId);
+
+            return providerOpt.map(userProviderDto -> ResponseEntity.ok(BaseResponseDto.success("Provider retrieved successfully", userProviderDto)))
+                    .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body(BaseResponseDto.notFound("Provider not found with ID: " + providerId)));
+
+        } catch (Exception e) {
+            logger.error("Error getting provider by ID {}: {}", providerId, e.getMessage(), e);
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to retrieve provider: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Get all user provider names for dropdown/combobox
+     * 
+     * @return List of provider names
+     */
+    @GetMapping("/providers/names")
+    @Operation(summary = "Get all user provider names",
+               description = "Retrieve list of all enabled user provider names for dropdown/combobox usage in UI.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Provider names retrieved successfully"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<BaseResponseDto<List<String>>> getAllProviderNames() {
+        logger.info("Getting all provider names");
+        
+        try {
+            List<String> providerNames = userProviderService.getAllProviderNames();
+            
+            logger.info("Found {} provider names", providerNames.size());
+            return ResponseEntity.ok(BaseResponseDto.success("Provider names retrieved successfully", providerNames));
+            
+        } catch (Exception e) {
+            logger.error("Error getting all provider names: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(BaseResponseDto.serverError("Failed to retrieve provider names: " + e.getMessage()));
+        }
+    }
+
+    /* =============================================
+     USER MANAGEMENT APIs
+     =============================================*/
+
+    /**
+     * Get users with advanced filtering and pagination
+     * Returns complete user information including USER_ROLE and USER_PROVIDER details
+     * Returns all users if no search criteria are provided
+     * Enhanced textSearch includes USER_PROVIDER_DISPLAY_NAME and USER_ROLE_DISPLAY_NAME
+     * 
+     * @param providerName Provider name filter (optional)
+     * @param providerDisplayName Provider display name filter (optional)
+     * @param roleName Role name filter (optional) 
+     * @param roleDisplayName Role display name filter (optional)
+     * @param searchText Text search across multiple fields including user details and provider/role display names (optional)
+     * @param userName Username filter (optional)
+     * @param userEnabled User enabled status filter (optional)
+     * @param pageable Pagination and sorting information
+     * @return Paginated list of users matching criteria with full details
+     */
+    @GetMapping
+    @Operation(summary = "Get users with advanced filtering and pagination",
+               description = "Retrieve users by multiple criteria with pagination support. Returns all users when no filters are provided. Enhanced textSearch includes USER_PROVIDER_DISPLAY_NAME and USER_ROLE_DISPLAY_NAME for comprehensive searching.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Users retrieved successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid request parameters"),
+        @ApiResponse(responseCode = "403", description = "Access denied - Admin role required"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<BaseResponseDto<Page<UserDto>>> getUsersByCriteria(
+            @Parameter(description = "Filter by provider name (partial match, case-insensitive)") @RequestParam(value = "providerName", required = false) String providerName,
+            @Parameter(description = "Filter by provider display name (partial match, case-insensitive)") @RequestParam(value = "providerDisplayName", required = false) String providerDisplayName,
+            @Parameter(description = "Filter by role name (partial match, case-insensitive)") @RequestParam(value = "roleName", required = false) String roleName,
+            @Parameter(description = "Filter by role display name (partial match, case-insensitive)") @RequestParam(value = "roleDisplayName", required = false) String roleDisplayName,
+            @Parameter(description = "Enhanced search text across username, first name, last name, phone number, email, provider display name, and role display name (partial match, case-insensitive)") @RequestParam(value = "searchText", required = false) String searchText,
+            @Parameter(description = "Filter by exact username match") @RequestParam(value = "userName", required = false) String userName,
+            @Parameter(description = "Filter by user enabled status (true/false/null for all)") @RequestParam(value = "userEnabled", required = false) Boolean userEnabled,
+            @Parameter(description = "Pagination parameters - page number (0-based), size, sort field, and direction")
+            @PageableDefault(page = 0, size = 10, sort = "userId",
+                            direction = org.springframework.data.domain.Sort.Direction.ASC)
+            Pageable pageable) {
+        
+        logger.info("Getting users by enhanced criteria - providerName: {}, roleName: {}, searchText: {}, page: {}, size: {}", 
+                   providerName, roleName, searchText, pageable.getPageNumber(), pageable.getPageSize());
+        
+        try {
+            Page<UserDto> users = userService.findUsersByCriteria(
+                providerName, providerDisplayName, roleName, roleDisplayName, 
+                searchText, userName, userEnabled, pageable);
             
             if (users.isEmpty()) {
                 logger.info("No users found matching criteria");
                 return ResponseEntity.ok(BaseResponseDto.success("No users found matching criteria", users));
             }
             
-            logger.info("Found {} users matching criteria", users.size());
+            logger.info("Found {} users matching criteria on page {}", users.getContent().size(), pageable.getPageNumber());
             return ResponseEntity.ok(BaseResponseDto.success("Users retrieved successfully", users));
             
         } catch (Exception e) {
@@ -128,13 +319,25 @@ public class UserController {
     }
 
     /**
-     * Get user by ID with full details
+     * Get detailed information for a specific user
      * 
-     * @param userId User ID
+     * @param userId User ID to retrieve
      * @return User details including provider and role information
      */
     @GetMapping("/{userId}")
-    public ResponseEntity<BaseResponseDto<UserDto>> getUserById(@PathVariable Long userId) {
+    @Operation(summary = "Get user by ID",
+               description = "Retrieve detailed information for a specific user including user profile, role details, provider information, and account status.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "User retrieved successfully"),
+        @ApiResponse(responseCode = "404", description = "User not found with provided ID"),
+        @ApiResponse(responseCode = "400", description = "Invalid user ID format"),
+        @ApiResponse(responseCode = "403", description = "Access denied - Admin role required"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<BaseResponseDto<UserDto>> getUserById(
+            @Parameter(description = "Unique identifier of the user to retrieve")
+            @PathVariable Long userId) {
         logger.info("Getting user by ID: {}", userId);
         
         try {
@@ -155,38 +358,25 @@ public class UserController {
     }
 
     /**
-     * Get all users with pagination
+     * Create a new user account
      * 
-     * @param page Page number (default 0)
-     * @param size Page size (default 10)
-     * @return Paginated list of users
-     */
-    @GetMapping
-    public ResponseEntity<BaseResponseDto<Page<UserDto>>> getAllUsers(
-            @RequestParam(value = "page", defaultValue = "0") int page,
-            @RequestParam(value = "size", defaultValue = "10") int size) {
-        
-        logger.info("Getting all users - page: {}, size: {}", page, size);
-        
-        try {
-            Page<UserDto> users = userService.getAllUsers(page, size);
-            logger.info("Retrieved {} users from page {}", users.getContent().size(), page);
-            return ResponseEntity.ok(BaseResponseDto.success("Users retrieved successfully", users));
-            
-        } catch (Exception e) {
-            logger.error("Error getting all users: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to retrieve users: " + e.getMessage()));
-        }
-    }
-
-    /**
-     * Create new user
-     * 
-     * @param userDto User data
-     * @return Created user
+     * @param userDto User data for creation
+     * @return Created user with generated ID
      */
     @PostMapping
-    public ResponseEntity<BaseResponseDto<UserDto>> createUser(@Valid @RequestBody UserDto userDto) {
+    @Operation(summary = "Create new user",
+               description = "Create a new user account with provided information. Default provider and role will be assigned if not specified. Password will be encoded before storage.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "User created successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid user data or validation errors"),
+        @ApiResponse(responseCode = "403", description = "Access denied - Admin role required"),
+        @ApiResponse(responseCode = "409", description = "User with username or email already exists"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<BaseResponseDto<UserDto>> createUser(
+            @Parameter(description = "User data including username, email, personal information, role, and provider")
+            @Valid @RequestBody UserDto userDto) {
         logger.info("Creating new user with username: {}", userDto.getUserName());
         
         try {
@@ -204,16 +394,27 @@ public class UserController {
     }
 
     /**
-     * Update existing user
+     * Update an existing user account
      * 
      * @param userId User ID to update
      * @param userDto Updated user data
-     * @return Updated user
+     * @return Updated user information
      */
     @PutMapping("/{userId}")
+    @Operation(summary = "Update existing user",
+               description = "Update user information including personal details, role, provider, and account settings. Only provided fields will be updated.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "User updated successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid user data or validation errors"),
+        @ApiResponse(responseCode = "403", description = "Access denied - Admin role required"),
+        @ApiResponse(responseCode = "404", description = "User not found with provided ID"),
+        @ApiResponse(responseCode = "409", description = "Username or email conflicts with existing user"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<BaseResponseDto<UserDto>> updateUser(
-            @PathVariable Long userId, 
-            @Valid @RequestBody UserDto userDto) {
+            @Parameter(description = "Unique identifier of the user to update") @PathVariable Long userId,
+            @Parameter(description = "Updated user data with new information") @Valid @RequestBody UserDto userDto) {
         
         logger.info("Updating user with ID: {}", userId);
         
@@ -232,16 +433,26 @@ public class UserController {
     }
 
     /**
-     * Update user status (enable/disable)
+     * Update user account status (enable/disable)
      * 
-     * @param userId User ID
-     * @param enabled New enabled status
-     * @return Updated user
+     * @param userId User ID to update status for
+     * @param enabled New enabled status (true to enable, false to disable)
+     * @return Updated user with new status
      */
     @PatchMapping("/{userId}/status")
+    @Operation(summary = "Update user account status",
+               description = "Enable or disable a user account. Disabled accounts cannot authenticate or access the system.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "User status updated successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid request parameters"),
+        @ApiResponse(responseCode = "403", description = "Access denied - Admin role required"),
+        @ApiResponse(responseCode = "404", description = "User not found with provided ID"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<BaseResponseDto<UserDto>> updateUserStatus(
-            @PathVariable Long userId, 
-            @RequestParam Boolean enabled) {
+            @Parameter(description = "Unique identifier of the user to update status") @PathVariable Long userId,
+            @Parameter(description = "New enabled status (true to enable, false to disable)") @RequestParam Boolean enabled) {
         
         logger.info("Updating user status for ID: {} to enabled: {}", userId, enabled);
         
@@ -256,103 +467,31 @@ public class UserController {
         }
     }
 
-    /**
-     * Delete user
-     * 
-     * @param userId User ID to delete
-     * @return Success response
-     */
-    @DeleteMapping("/{userId}")
-    public ResponseEntity<BaseResponseDto<String>> deleteUser(@PathVariable Long userId) {
-        logger.info("Deleting user with ID: {}", userId);
-        
-        try {
-            userService.deleteUser(userId);
-            logger.info("User deleted successfully with ID: {}", userId);
-            return ResponseEntity.ok(BaseResponseDto.success("User deleted successfully"));
-            
-        } catch (Exception e) {
-            logger.error("Error deleting user: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body(BaseResponseDto.serverError("Failed to delete user: " + e.getMessage()));
-        }
-    }
+    /* =============================================
+     PASSWORD MANAGEMENT APIs
+     =============================================*/
 
     /**
-     * Search users by name
+     * Change password for the currently authenticated user (self-service)
      * 
-     * @param searchTerm Search term for first name or last name
-     * @return List of users matching search term
-     */
-    @GetMapping("/search-by-name")
-    public ResponseEntity<BaseResponseDto<List<UserDto>>> searchUsersByName(
-            @RequestParam String searchTerm) {
-        
-        logger.info("Searching users by name: {}", searchTerm);
-        
-        try {
-            List<UserDto> users = userService.searchUsersByName(searchTerm);
-            logger.info("Found {} users matching search term: {}", users.size(), searchTerm);
-            return ResponseEntity.ok(BaseResponseDto.success("Users found successfully", users));
-            
-        } catch (Exception e) {
-            logger.error("Error searching users by name: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to search users: " + e.getMessage()));
-        }
-    }
-
-    /**
-     * Check if username exists
-     * 
-     * @param userName Username to check
-     * @return Boolean response
-     */
-    @GetMapping("/check-username")
-    public ResponseEntity<BaseResponseDto<Boolean>> checkUsernameExists(@RequestParam String userName) {
-        logger.debug("Checking if username exists: {}", userName);
-        
-        try {
-            boolean exists = userService.existsByUserName(userName);
-            return ResponseEntity.ok(BaseResponseDto.success("Username check completed", exists));
-        } catch (Exception e) {
-            logger.error("Error checking username: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to check username: " + e.getMessage()));
-        }
-    }
-
-    /**
-     * Check if email exists
-     * 
-     * @param email Email to check
-     * @return Boolean response
-     */
-    @GetMapping("/check-email")
-    public ResponseEntity<BaseResponseDto<Boolean>> checkEmailExists(@RequestParam String email) {
-        logger.debug("Checking if email exists: {}", email);
-        
-        try {
-            boolean exists = userService.existsByEmail(email);
-            return ResponseEntity.ok(BaseResponseDto.success("Email check completed", exists));
-        } catch (Exception e) {
-            logger.error("Error checking email: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to check email: " + e.getMessage()));
-        }
-    }
-
-    // =============================================
-    // PASSWORD MANAGEMENT APIs
-    // =============================================
-
-    /**
-     * Change password for authenticated user (self-service)
-     * 
-     * @param request Password change request
-     * @param auth Authentication object (contains current user info)
-     * @return Updated user response
+     * @param request Password change request containing current and new passwords
+     * @param auth Authentication object containing current user information
+     * @return Updated user response confirming password change
      */
     @PutMapping("/change-password")
+    @Operation(summary = "Change password for authenticated user",
+               description = "Allow authenticated users to change their own password by providing current password and new password. Current password is validated before change.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Password changed successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid password data or validation errors (current password incorrect, passwords don't match, etc.)"),
+        @ApiResponse(responseCode = "401", description = "Authentication required"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<BaseResponseDto<UserDto>> changePassword(
+            @Parameter(description = "Password change request with current password, new password, and confirmation")
             @Valid @RequestBody ChangePasswordRequest request,
-            Authentication auth) {
+            @Parameter(hidden = true) Authentication auth) {
         
         String currentUsername = auth.getName();
         logger.info("Password change request for user: {}", currentUsername);
@@ -372,69 +511,40 @@ public class UserController {
     }
 
     /**
-     * Admin reset password for any user (ID-based priority for admin efficiency)
+     * Admin reset password for any user (generates random password with email notification)
+     * Generates a secure random password automatically and sends email notification to user
      * 
-     * @param userId User ID to reset password
-     * @param request Password reset request
-     * @param auth Authentication object (admin user)
-     * @return Updated user response
+     * @param userName Username of the account to reset password for
+     * @param auth Authentication object containing admin user information
+     * @return Updated user response confirming password reset
      */
-    @PutMapping("/{userId}/reset-password")
+    @PutMapping("/reset-password/{userName}")
+    @Operation(summary = "Admin reset password for any user",
+               description = "Administrative function to reset any user's password. Generates a secure random password and sends email notification to the user with new credentials.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Password reset successfully with email notification sent"),
+        @ApiResponse(responseCode = "400", description = "Invalid username or user not found"),
+        @ApiResponse(responseCode = "403", description = "Access denied - Admin role required"),
+        @ApiResponse(responseCode = "500", description = "Internal server error or email sending failure")
+    })
+    @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<BaseResponseDto<UserDto>> resetPassword(
-            @PathVariable Long userId,
-            @Valid @RequestBody ResetPasswordRequest request,
-            Authentication auth) {
+            @Parameter(description = "Username of the account to reset password for") @PathVariable String userName,
+            @Parameter(hidden = true) Authentication auth) {
         
-        logger.info("Admin password reset request for user ID: {} by admin: {}", userId, auth.getName());
+        logger.info("Admin password reset request for username: {} by admin: {}", userName, auth.getName());
         
         try {
-            UserDto updatedUser = userService.resetPassword(userId, request);
-            logger.info("Password reset successfully for user ID: {} by admin: {}", userId, auth.getName());
-            return ResponseEntity.ok(BaseResponseDto.success("Password reset successfully", updatedUser));
+            UserDto updatedUser = userService.resetPassword(userName);
+            logger.info("Password reset successfully for username: {} by admin: {}", userName, auth.getName());
+            return ResponseEntity.ok(BaseResponseDto.success("Password reset successfully with email notification sent", updatedUser));
             
         } catch (IllegalArgumentException e) {
-            logger.error("Password reset validation error for user {}: {}", userId, e.getMessage());
+            logger.error("Password reset validation error for user {}: {}", userName, e.getMessage());
             return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(e.getMessage()));
         } catch (Exception e) {
-            logger.error("Error resetting password for user {}: {}", userId, e.getMessage(), e);
+            logger.error("Error resetting password for user {}: {}", userName, e.getMessage(), e);
             return ResponseEntity.badRequest().body(BaseResponseDto.serverError("Failed to reset password"));
-        }
-    }
-
-    /**
-     * Customer change password by username (customer-friendly identification)
-     * 
-     * @param userName Username for password change
-     * @param request Password change request
-     * @param auth Authentication object (for security validation)
-     * @return Updated user response
-     */
-    @PutMapping("/username/{userName}/change-password")
-    public ResponseEntity<BaseResponseDto<UserDto>> changePasswordByUsername(
-            @PathVariable String userName,
-            @Valid @RequestBody ChangePasswordRequest request,
-            Authentication auth) {
-        
-        logger.info("Username-based password change request for: {}", userName);
-        
-        // Security check: verify the authenticated user matches the username (for customers)
-        if (!auth.getName().equals(userName)) {
-            logger.error("Unauthorized password change attempt: {} trying to change password for {}", 
-                        auth.getName(), userName);
-            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Cannot change password for other users"));
-        }
-        
-        try {
-            UserDto updatedUser = userService.changePasswordByUsername(userName, request);
-            logger.info("Password changed successfully for username: {}", userName);
-            return ResponseEntity.ok(BaseResponseDto.success("Password changed successfully", updatedUser));
-            
-        } catch (IllegalArgumentException e) {
-            logger.error("Password change validation error for username {}: {}", userName, e.getMessage());
-            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(e.getMessage()));
-        } catch (Exception e) {
-            logger.error("Error changing password for username {}: {}", userName, e.getMessage(), e);
-            return ResponseEntity.badRequest().body(BaseResponseDto.serverError("Failed to change password"));
         }
     }
 }

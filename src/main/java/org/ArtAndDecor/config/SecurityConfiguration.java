@@ -37,90 +37,167 @@ public class SecurityConfiguration {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final AuthenticationProvider authenticationProvider;
 
+//    @Bean
+//    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+//        logger.info("Configuring Security Filter Chain");
+//
+//        return http
+//                .csrf(AbstractHttpConfigurer::disable)
+//                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+//                .authorizeHttpRequests(auth -> auth
+//                        .requestMatchers(
+//                                "/swagger-ui.html",
+//                                "/swagger-ui/**",
+//                                "/v3/api-docs/**"
+//                        ).permitAll()
+//
+//                        // Static resources
+//                        .requestMatchers("/", "/art-and-decor", "/index.html", "/css/**", "/js/**", "/images/**",
+//                                "/favicon.ico", "/assets/**").permitAll()
+//
+//                        // Authentication endpoints
+//                        .requestMatchers("/api/auth/**").permitAll()
+//
+//                        // Public read-only endpoints for products
+//                        .requestMatchers(HttpMethod.GET,
+//                                "/api/products/**").permitAll()
+//
+//                        // Product creation and management - require ADMIN/MANAGER role
+//                        .requestMatchers(HttpMethod.POST, "/api/products").hasAnyRole("ADMIN", "MANAGER")
+//                        .requestMatchers(HttpMethod.PUT, "/api/products/**").hasAnyRole("ADMIN", "MANAGER")
+//                        .requestMatchers(HttpMethod.PATCH, "/api/products/**").hasAnyRole("ADMIN", "MANAGER")
+//                        .requestMatchers(HttpMethod.DELETE, "/api/products/**").hasAnyRole("ADMIN", "MANAGER")
+//
+//                        // Other public read-only endpoints
+//                        .requestMatchers(HttpMethod.GET,
+//                                "/categories/**", "/blogs/**").permitAll()
+//
+//                        // Cart public endpoints - no authentication required
+//                        .requestMatchers(HttpMethod.GET,
+//                                "/api/carts/states",
+//                                "/api/carts/item-states").permitAll()
+//
+//                        // Cart admin-only endpoints - require ADMIN role
+//                        .requestMatchers(HttpMethod.GET,
+//                                "/api/carts",
+//                                "/api/carts/items",
+//                                "/api/carts/states/{cartStateId:[\\d]+}",
+//                                "/api/carts/item-states/{cartItemStateId:[\\d]+}").hasRole("ADMIN")
+//
+//                        // Cart authenticated endpoints - general access for authenticated users
+//                        .requestMatchers(HttpMethod.GET,
+//                                "/api/carts/slug/**").authenticated()
+//
+//                        // Cart user-specific endpoints with specific authorization
+//                        // These will use method-level @PreAuthorize for owner/admin checks
+//                        .requestMatchers(HttpMethod.GET,
+//                                "/api/carts/{cartId:[\\d]+}",
+//                                "/api/carts/user/{userId:[\\d]+}/active",
+//                                "/api/carts/{cartId:[\\d]+}/items",
+//                                "/api/carts/{cartId:[\\d]+}/items/active").authenticated()
+//
+//                        // All other cart operations require authentication
+//                        .requestMatchers("/api/carts/**").authenticated()
+//
+//                        // Reviews - public read access for review display, authenticated for admin/user-specific endpoints
+//                        .requestMatchers(HttpMethod.GET,
+//                                "/api/reviews",
+//                                "/api/reviews/*/likes/count",
+//                                "/api/reviews/*/likes/user/*/exists",
+//                                "/api/reviews/product/**").permitAll()
+//                        .requestMatchers(HttpMethod.GET, "/api/reviews/{reviewId:[\\d]+}").permitAll()
+//                        .requestMatchers(HttpMethod.GET, "/api/reviews/{reviewId:[\\d]+}/replies").permitAll()
+//                        .requestMatchers(HttpMethod.GET, "/api/reviews/{reviewId:[\\d]+}/likes").permitAll()
+//                        .requestMatchers("/api/reviews/**").authenticated()
+//
+//                        // Images - public read access and upload
+//                        .requestMatchers(HttpMethod.GET, "/api/images/**").permitAll()
+//                        .requestMatchers(HttpMethod.POST, "/api/images/upload", "/api/images/*/upload").permitAll()
+//
+//                        // Contact endpoints - public read by slug and search, admin for others
+//                        .requestMatchers(HttpMethod.GET, "/api/contacts/slug/**").permitAll()
+//                        .requestMatchers(HttpMethod.GET, "/api/contacts").permitAll()
+//                        .requestMatchers("/api/contacts/**").hasRole("ADMIN")
+//
+//                        // Policy endpoints - public read by slug, admin for others
+//                        .requestMatchers(HttpMethod.GET, "/api/policies/slug/**").permitAll()
+//                        .requestMatchers("/api/policies/**").hasRole("ADMIN")
+//
+//                        // Health and actuator endpoints
+//                        .requestMatchers("/actuator/**", "/health").permitAll()
+//
+//                        // User role/provider endpoints - public access (includes search functionality and name lists for UI)
+//                        .requestMatchers(HttpMethod.GET, "/api/users/roles/**", "/api/users/providers/**").permitAll()
+//
+//                        // User management endpoints - requires ADMIN role for all operations
+//                        .requestMatchers(HttpMethod.GET, "/api/users").hasRole("ADMIN")
+//                        .requestMatchers(HttpMethod.GET, "/api/users/{userId}").hasRole("ADMIN")
+//                        .requestMatchers(HttpMethod.POST, "/api/users").hasRole("ADMIN")
+//                        .requestMatchers(HttpMethod.PUT, "/api/users/{userId}").hasRole("ADMIN")
+//                        .requestMatchers(HttpMethod.PATCH, "/api/users/{userId}/status").hasRole("ADMIN")
+//
+//                        // Password management endpoints
+//                        .requestMatchers(HttpMethod.PUT, "/api/users/change-password").authenticated()
+//                        .requestMatchers(HttpMethod.PUT, "/api/users/reset-password/**").hasRole("ADMIN")
+//
+//                        // ORDER API ENDPOINTS - Updated to match actual OrderController endpoints
+//                        // Customer Order endpoints - require CUSTOMER role with @PreAuthorize validation
+//                        .requestMatchers(HttpMethod.POST,
+//                                "/api/orders/checkout").authenticated()
+//                        .requestMatchers(HttpMethod.GET,
+//                                "/api/orders/my-orders",
+//                                "/api/orders/my-orders/{orderId:[\\d]+}").authenticated()
+//                        .requestMatchers(HttpMethod.PUT,
+//                                "/api/orders/my-orders/{orderId:[\\d]+}/cancel").authenticated()
+//
+//                        // Admin/Manager Order endpoints - require ADMIN or MANAGER role
+//                        .requestMatchers(HttpMethod.GET,
+//                                "/api/admin/orders",
+//                                "/api/admin/orders/{orderId:[\\d]+}",
+//                                "/api/orders/{orderId:[\\d]+}/history",
+//                                "/api/admin/order-states").hasAnyRole("ADMIN", "MANAGER")
+//                        .requestMatchers(HttpMethod.POST,
+//                                "/api/admin/orders").hasAnyRole("ADMIN", "MANAGER")
+//                        .requestMatchers(HttpMethod.PUT,
+//                                "/api/admin/orders/{orderId:[\\d]+}/state").hasAnyRole("ADMIN", "MANAGER")
+//
+//                        // Discount endpoints - Public validation, Admin management
+//                        .requestMatchers(HttpMethod.POST,
+//                                "/api/discounts/validate").permitAll() // Public discount validation
+//                        .requestMatchers(HttpMethod.GET,
+//                                "/api/admin/discounts",
+//                                "/api/admin/discount-types").hasAnyRole("ADMIN", "MANAGER")
+//                        .requestMatchers(HttpMethod.POST,
+//                                "/api/admin/discounts").hasAnyRole("ADMIN", "MANAGER")
+//                        .requestMatchers(HttpMethod.PUT,
+//                                "/api/admin/discounts/{id:[\\d]+}").hasAnyRole("ADMIN", "MANAGER")
+//
+//                        // Admin endpoints - require ADMIN role
+//                        .requestMatchers("/admin/**").hasRole("ADMIN")
+//
+//                        // All other requests need authentication
+//                        .anyRequest().authenticated()
+//                )
+//                .sessionManagement(session -> session
+//                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+//                )
+//                .authenticationProvider(authenticationProvider)
+//                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+//                .build();
+//    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        logger.info("Configuring Security Filter Chain");
-        
+
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/swagger-ui.html",
-                                "/swagger-ui/**",
-                                "/v3/api-docs/**"
-                        ).permitAll()
-
-                        // Static resources
-                        .requestMatchers("/", "/index.html", "/css/**", "/js/**", "/images/**",
-                                "/favicon.ico", "/assets/**").permitAll()
-                        
-                        // Authentication endpoints
-                        .requestMatchers("/auth/**").permitAll()
-                        
-                        // Public read-only endpoints
-                        .requestMatchers(HttpMethod.GET,
-                                "/users/check-username", "/users/check-email",
-                                "/products/**", "/categories/**",
-                                "/blogs/**", "/images/**").permitAll()
-                        
-                        // Contact endpoints - public read by slug, admin for others
-                        .requestMatchers(HttpMethod.GET, "/contacts/slug/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/contacts/public").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/contacts/search").permitAll()
-                        .requestMatchers("/contacts/**").hasRole("ADMIN")
-                        
-                        // Policy endpoints - all require ADMIN role
-                        .requestMatchers(HttpMethod.GET, "/policies/slug/{policySlug}").permitAll()
-                        .requestMatchers("/policies/**").hasRole("ADMIN")
-                        
-                        // Health and actuator endpoints
-                        .requestMatchers("/actuator/**", "/health").permitAll()
-                        
-                        // User search by name endpoint - requires authentication
-                        .requestMatchers(HttpMethod.GET, "/users/search-by-name").authenticated()
-                        
-                        // User search endpoint - requires ADMIN role
-                        .requestMatchers(HttpMethod.GET, "/users/search").hasRole("ADMIN")
-                        
-                        // User endpoints by ID - requires ADMIN role for viewing
-                        .requestMatchers(HttpMethod.GET, "/users/{userId}").hasRole("ADMIN")
-                        
-                        // Get all users - requires ADMIN role
-                        .requestMatchers(HttpMethod.GET, "/users").hasRole("ADMIN")
-                        
-                        // Create user - requires ADMIN role
-                        .requestMatchers(HttpMethod.POST, "/users").hasRole("ADMIN")
-                        
-                        // Update user - requires ADMIN role
-                        .requestMatchers(HttpMethod.PUT, "/users/{userId}").hasRole("ADMIN")
-                        
-                        // Update user status - requires ADMIN role only
-                        .requestMatchers(HttpMethod.PATCH, "/users/{userId}/status").hasRole("ADMIN")
-                        
-                        // Delete user - requires ADMIN role only
-                        .requestMatchers(HttpMethod.DELETE, "/users/{userId}").hasRole("ADMIN")
-                        
-                        // Change own password - requires authentication
-                        .requestMatchers(HttpMethod.PUT, "/users/change-password").authenticated()
-                        
-                        // Change password by username - requires authentication (self-service)
-                        .requestMatchers(HttpMethod.PUT, "/users/username/{userName}/change-password").authenticated()
-                        
-                        // Admin reset password - requires ADMIN role
-                        .requestMatchers(HttpMethod.PUT, "/users/{userId}/reset-password").hasRole("ADMIN")
-                        
-                        // Admin endpoints - require ADMIN role
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
-                        
-                        // All other requests need authentication
-                        .anyRequest().authenticated()
+                        .anyRequest().permitAll()
                 )
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
-                .authenticationProvider(authenticationProvider)
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
 

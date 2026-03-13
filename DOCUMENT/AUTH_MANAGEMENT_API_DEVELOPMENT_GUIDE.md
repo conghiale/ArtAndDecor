@@ -22,6 +22,30 @@ This guide covers all authentication-related APIs for the Art & Decor platform. 
 
 ---
 
+## API Overview
+
+### Authentication Management APIs
+
+| Endpoint | Method | Access | Description |
+|----------|--------|--------|-------------|
+| `/api/auth/register` | POST | PUBLIC | Register new user account with immediate authentication |
+| `/api/auth/login` | POST | PUBLIC | Authenticate user credentials and get JWT tokens |
+| `/api/auth/authenticate` | POST | PUBLIC | Alternative authentication endpoint (same as login) |
+| `/api/auth/refresh` | POST | PUBLIC | Get new access token using refresh token |
+| `/api/auth/get_token_pair` | POST | PUBLIC | Alternative token refresh endpoint |
+| `/api/auth/health` | GET | PUBLIC | Check authentication service health status |
+
+### Key Features
+
+- **JWT Token-based Authentication:** Stateless authentication using access and refresh tokens
+- **Dual Login Options:** Support for both username and email as login identifier  
+- **Token Refresh:** Seamless token renewal without re-authentication
+- **Account Validation:** Comprehensive input validation and security checks
+- **Health Monitoring:** Service status endpoint for system monitoring
+- **Role-based Access:** Automatic role assignment for new users (CUSTOMER by default)
+
+---
+
 ## API Endpoints
 
 ### 1. User Registration

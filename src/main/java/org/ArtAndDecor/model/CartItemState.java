@@ -31,8 +31,8 @@ public class CartItemState {
     @Column(name = "CART_ITEM_STATE_NAME", nullable = false, unique = true, length = 64)
     private String cartItemStateName;
 
-    @Column(name = "CART_ITEM_STATE_REMARK_EN", length = 256)
-    private String cartItemStateRemarkEn;
+    @Column(name = "CART_ITEM_STATE_DISPLAY_NAME", length = 256)
+    private String cartItemStateDisplayName;
 
     @Column(name = "CART_ITEM_STATE_REMARK", nullable = false, length = 256)
     private String cartItemStateRemark;

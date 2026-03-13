@@ -4,8 +4,11 @@ import org.ArtAndDecor.dto.ImageDto;
 import org.ArtAndDecor.dto.ImageUploadDto;
 import org.ArtAndDecor.dto.ImageUploadResponseDto;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -23,6 +26,16 @@ public interface ImageService {
      * Priority: slug (customer-friendly URLs)
      */
     Optional<ImageDto> findImageBySlug(String imageSlug);
+
+    /**
+     * Get images by multiple criteria with pagination (all parameters optional)
+     * @param imageSize Image size filter (partial match, case-insensitive) 
+     * @param imageFormat Image format filter (exact match, case-insensitive)
+     * @param textSearch Text search in imageName, imageDisplayName, imageSlug, imageRemark (partial match, case-insensitive)
+     * @param pageable Pagination and sorting information
+     * @return Page of ImageDto matching criteria
+     */
+    Page<ImageDto> getImagesByCriteria(String imageSize, String imageFormat, String textSearch, Pageable pageable);
 
     // =============================================
     // ADMIN-FOCUSED OPERATIONS (ID > name > slug priority)
@@ -50,17 +63,16 @@ public interface ImageService {
     ImageUploadResponseDto uploadImages(ImageUploadDto imageUploadDto) throws IOException;
 
     /**
-     * Update image with new file
+     * Update image with new file and metadata
      * Uploads new file, deletes old one, updates metadata in database
      * File name (imageName) is regenerated with new hash + timestamp
      * 
      * @param imageId Image ID to update
-     * @param imageFile New image file
-     * @param imageDisplayName Display name for the file
+     * @param imageUploadDto Contains file and metadata
      * @return Updated ImageDto
      * @throws IOException If file operations fail
      */
-    ImageDto updateImage(Long imageId, MultipartFile imageFile, String imageDisplayName) throws IOException;
+    ImageDto updateImage(Long imageId, ImageUploadDto imageUploadDto) throws IOException;
 
     /**
      * Delete image by ID (admin)
@@ -75,4 +87,16 @@ public interface ImageService {
      * Get total image count
      */
     long getTotalImageCount();
+
+    /**
+     * Get all distinct image sizes available in database
+     * Used for UI combobox/dropdown options
+     */
+    List<String> getAllImageSizes();
+
+    /**
+     * Get all distinct image formats available in database
+     * Used for UI combobox/dropdown options
+     */
+    List<String> getAllImageFormats();
 }

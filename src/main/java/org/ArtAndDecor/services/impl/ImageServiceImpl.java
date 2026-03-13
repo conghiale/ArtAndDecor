@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -43,9 +44,9 @@ public class ImageServiceImpl implements ImageService {
     private final ImageRepository imageRepository;
     private final ImageFileService imageFileService;
 
-    // =============================================
-    // RETRIEVE OPERATIONS - Used by Controller
-    // =============================================
+     /*=============================================
+     RETRIEVE OPERATIONS - Used by Controller
+     =============================================*/
 
     @Override
     public Optional<ImageDto> findImageBySlug(String imageSlug) {
@@ -63,9 +64,9 @@ public class ImageServiceImpl implements ImageService {
                 .map(this::convertToDto);
     }
 
-    // =============================================
-    // CRUD OPERATIONS - Upload and Update Only
-    // =============================================
+     /*=============================================
+     CRUD OPERATIONS - Upload and Update Only
+     =============================================*/
 
     @Override
     @Transactional
@@ -78,7 +79,7 @@ public class ImageServiceImpl implements ImageService {
         MultipartFile[] imageFiles = imageUploadDto.getImageFiles();
         String[] displayNames = imageUploadDto.getImageDisplayNames();
         String[] imageSizes = imageUploadDto.getImageSizes();
-        String[] remarksEn = imageUploadDto.getImageRemarksEn();
+        String[] imageFormats = imageUploadDto.getImageFormats();
         String[] remarks = imageUploadDto.getImageRemarks();
         String[] slugs = imageUploadDto.getImageSlugs();
 
@@ -121,9 +122,16 @@ public class ImageServiceImpl implements ImageService {
                 image.setImageDisplayName(displayName);
                 image.setImageSlug(slug);
                 image.setImageSize(imageSize);
-                image.setImageRemarkEn((remarksEn != null && remarksEn.length > i && remarksEn[i] != null && !remarksEn[i].trim().isEmpty()) 
-                        ? remarksEn[i].trim() 
-                        : null);
+                // Use provided image format or extract from file extension
+                String imageFormat;
+                if (imageFormats != null && imageFormats.length > i && imageFormats[i] != null && !imageFormats[i].trim().isEmpty()) {
+                    imageFormat = imageFormats[i].trim().toUpperCase();
+                } else {
+                    // Extract file extension for imageFormat
+                    String fileExtension = uploadedFilename.substring(uploadedFilename.lastIndexOf(".") + 1).toUpperCase();
+                    imageFormat = fileExtension;
+                }
+                image.setImageFormat(imageFormat);
                 image.setImageRemark((remarks != null && remarks.length > i && remarks[i] != null && !remarks[i].trim().isEmpty()) 
                         ? remarks[i].trim() 
                         : null);
@@ -167,13 +175,20 @@ public class ImageServiceImpl implements ImageService {
 
     @Override
     @Transactional
-    public ImageDto updateImage(Long imageId, MultipartFile imageFile, String imageDisplayName) throws IOException {
-        logger.info("Updating image with file - ID: {}, displayName: {}", imageId, imageDisplayName);
+    public ImageDto updateImage(Long imageId, ImageUploadDto imageUploadDto) throws IOException {
+        logger.info("Updating image with file - ID: {}", imageId);
         
         Image existingImage = imageRepository.findById(imageId)
                 .orElseThrow(() -> new IllegalArgumentException("Image not found with ID: " + imageId));
         
-//        Validate file
+        // Validate that only one file is provided for update
+        if (imageUploadDto.getImageFiles() == null || imageUploadDto.getImageFiles().length != 1) {
+            throw new IOException("Exactly one file is required for update operation");
+        }
+        
+        MultipartFile imageFile = imageUploadDto.getImageFiles()[0];
+        
+        // Validate file
         if (imageFile == null || imageFile.isEmpty()) {
             throw new IOException("File is empty");
         }
@@ -182,32 +197,70 @@ public class ImageServiceImpl implements ImageService {
             String originalFilename = imageFile.getOriginalFilename();
             String filenameWithoutExt = extractFileNameWithoutExtension(originalFilename);
             
-//            Use provided displayName, or extract from original filename if not provided
-            String displayName = (imageDisplayName != null && !imageDisplayName.trim().isEmpty())
-                    ? imageDisplayName.trim()
+            // Use provided displayName, or extract from original filename if not provided
+            String displayName = (imageUploadDto.getImageDisplayNames() != null && 
+                                imageUploadDto.getImageDisplayNames().length > 0 &&
+                                imageUploadDto.getImageDisplayNames()[0] != null && 
+                                !imageUploadDto.getImageDisplayNames()[0].trim().isEmpty())
+                    ? imageUploadDto.getImageDisplayNames()[0].trim()
                     : filenameWithoutExt;
 
-//            Upload new file
+            // Upload new file
             String newImageName = imageFileService.uploadImage(imageFile, displayName);
             
-//            Delete old file if it exists
+            // Delete old file if it exists
             try {
                 imageFileService.deleteImage(existingImage.getImageName());
             } catch (IOException e) {
                 logger.warn("Failed to delete old image file: {}", e.getMessage());
             }
             
-//            Generate slug from displayName using Utils
-            String slug = Utils.generateSlug(displayName);
+            // Generate slug from displayName or use provided slug
+            String slug = (imageUploadDto.getImageSlugs() != null && 
+                         imageUploadDto.getImageSlugs().length > 0 &&
+                         imageUploadDto.getImageSlugs()[0] != null && 
+                         !imageUploadDto.getImageSlugs()[0].trim().isEmpty())
+                    ? imageUploadDto.getImageSlugs()[0].trim()
+                    : Utils.generateSlug(displayName);
             
-//            Get image dimensions from file (width x height)
-            String imageSize = imageFileService.getImageDimensions(imageFile);
+            // Get image dimensions from file or use provided size
+            String imageSize;
+            if (imageUploadDto.getImageSizes() != null && 
+                imageUploadDto.getImageSizes().length > 0 &&
+                imageUploadDto.getImageSizes()[0] != null && 
+                !imageUploadDto.getImageSizes()[0].trim().isEmpty()) {
+                imageSize = imageUploadDto.getImageSizes()[0].trim();
+            } else {
+                imageSize = imageFileService.getImageDimensions(imageFile);
+            }
             
-//            Update image record
+            // Use provided image format or extract from file extension
+            String imageFormat;
+            if (imageUploadDto.getImageFormats() != null && 
+                imageUploadDto.getImageFormats().length > 0 &&
+                imageUploadDto.getImageFormats()[0] != null && 
+                !imageUploadDto.getImageFormats()[0].trim().isEmpty()) {
+                imageFormat = imageUploadDto.getImageFormats()[0].trim().toUpperCase();
+            } else {
+                String fileExtension = newImageName.substring(newImageName.lastIndexOf(".") + 1).toUpperCase();
+                imageFormat = fileExtension;
+            }
+            
+            // Use provided remark if available
+            String imageRemark = (imageUploadDto.getImageRemarks() != null && 
+                                imageUploadDto.getImageRemarks().length > 0 &&
+                                imageUploadDto.getImageRemarks()[0] != null && 
+                                !imageUploadDto.getImageRemarks()[0].trim().isEmpty())
+                    ? imageUploadDto.getImageRemarks()[0].trim()
+                    : null;
+            
+            // Update image record
             existingImage.setImageName(newImageName);
             existingImage.setImageDisplayName(displayName);
             existingImage.setImageSlug(slug);
             existingImage.setImageSize(imageSize);
+            existingImage.setImageFormat(imageFormat);
+            existingImage.setImageRemark(imageRemark);
             existingImage.setModifiedDt(LocalDateTime.now());
             
             Image updatedImage = imageRepository.save(existingImage);
@@ -241,6 +294,33 @@ public class ImageServiceImpl implements ImageService {
     public long getTotalImageCount() {
         logger.debug("Getting total image count");
         return imageRepository.countTotalImages();
+    }
+
+    @Override
+    public List<String> getAllImageSizes() {
+        logger.debug("Getting all distinct image sizes");
+        return imageRepository.findDistinctImageSizes();
+    }
+
+    @Override
+    public List<String> getAllImageFormats() {
+        logger.debug("Getting all distinct image formats");
+        return imageRepository.findDistinctImageFormats();
+    }
+
+    // =============================================
+    // FILTER OPERATIONS
+    // =============================================
+
+    @Override
+    public Page<ImageDto> getImagesByCriteria(String imageSize, String imageFormat, String textSearch, Pageable pageable) {
+        logger.debug("Getting images with filters (paginated) - size: {}, format: {}, textSearch: {}", 
+                    imageSize, imageFormat, textSearch);
+        
+        Page<Image> imagesPage = imageRepository.findImagesByCriteriaPaginated(
+            imageSize, imageFormat, textSearch, pageable);
+        
+        return imagesPage.map(this::convertToDto);
     }
 
     // =============================================

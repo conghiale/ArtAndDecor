@@ -24,6 +24,7 @@ public class UserDto {
     
     private Boolean userEnabled;
     
+    @NotBlank(message = "Username is required")
     @Size(max = 64, message = "Username must not exceed 64 characters")
     private String userName;
     
@@ -40,6 +41,7 @@ public class UserDto {
              message = "Invalid phone number format")
     private String phoneNumber;
     
+    @NotBlank(message = "Email is required")
     @Email(message = "Invalid email format")
     @Size(max = 100, message = "Email must not exceed 100 characters")
     private String email;

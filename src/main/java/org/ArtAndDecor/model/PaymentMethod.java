@@ -31,8 +31,8 @@ public class PaymentMethod {
     @Column(name = "PAYMENT_METHOD_NAME", nullable = false, unique = true, length = 64)
     private String paymentMethodName;
 
-    @Column(name = "PAYMENT_METHOD_REMARK_EN", length = 256)
-    private String paymentMethodRemarkEn;
+    @Column(name = "PAYMENT_METHOD_DISPLAY_NAME", length = 256)
+    private String paymentMethodDisplayName;
 
     @Column(name = "PAYMENT_METHOD_REMARK", nullable = false, length = 256)
     private String paymentMethodRemark;

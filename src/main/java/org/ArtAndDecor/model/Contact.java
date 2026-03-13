@@ -44,9 +44,6 @@ public class Contact {
     @Column(name = "CONTACT_ENABLED", nullable = false)
     private Boolean contactEnabled = true;
 
-    @Column(name = "CONTACT_REMARK_EN", length = 256)
-    private String contactRemarkEn;
-
     @Column(name = "CONTACT_REMARK", length = 256, nullable = false)
     private String contactRemark;
 

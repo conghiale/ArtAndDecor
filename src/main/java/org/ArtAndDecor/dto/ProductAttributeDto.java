@@ -21,11 +21,9 @@ public class ProductAttributeDto {
     
     private Long productAttributeId;
     
-    @NotBlank(message = "Attribute value is required")
-    @Size(max = 255, message = "Attribute value must not exceed 255 characters")
-    private String attributeValue;
-    
-    private Boolean productAttributeEnabled;
+    @NotBlank(message = "Product attribute value is required")
+    @Size(max = 256, message = "Product attribute value must not exceed 256 characters")
+    private String productAttributeValue;
     
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdDt;
@@ -33,7 +31,6 @@ public class ProductAttributeDto {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime modifiedDt;
     
-    // Nested related entities following clean architecture
-    private ProductDto product;
+    // Nested related entity (only ProductAttr, not Product to avoid circular reference)
     private ProductAttrDto productAttr;
 }

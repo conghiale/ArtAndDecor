@@ -1,787 +1,1007 @@
 # USER MANAGEMENT API DEVELOPMENT GUIDE
 
 **Project:** Art & Decor E-commerce Platform  
-**Date:** January 27, 2026  
+**Date:** February 27, 2026  
 **Author:** Development Team  
-**Version:** 6.0  
-**Features:** Complete User Management APIs with JWT Authentication  
+**Version:** 11.0  
+**Features:** Enhanced User Management APIs - Simplified filtering with enhanced search capabilities and Policy-based email configuration  
 
 ---
 
-## User Roles & API Access
+## API Overview
 
-| Role ID | Role Name | Description | API Access Level |
-|---------|-----------|-------------|------------------|
-| 1 | CUSTOMER | Customer | Access to own profile and public APIs only |
-| 2 | ADMIN | System Administrator | Full access to all user management APIs |
+The User Management API provides comprehensive endpoints for managing users, roles, and authentication providers with enhanced security and filtering capabilities.
 
-## Authentication Requirements
+### Available Endpoints
+
+| Method | Endpoint | Access | Description |
+|--------|----------|--------|-------------|
+| GET | `/api/users` | ADMIN | Retrieve all users with advanced filtering |
+| GET | `/api/users/{id}` | ADMIN, CUSTOMER (own) | Get user details by ID |
+| POST | `/api/users` | ADMIN | Create a new user |
+| PUT | `/api/users/{id}` | ADMIN, CUSTOMER (own) | Update user information |
+| DELETE | `/api/users/{id}` | ADMIN | Soft delete a user |
+| GET | `/api/users/roles` | ADMIN | Get all user roles |
+| GET | `/api/users/roles/names` | ALL | Get role names for dropdown |
+| GET | `/api/users/providers` | ADMIN | Get all user providers |
+| GET | `/api/users/providers/names` | ALL | Get provider names for dropdown |
+| PUT | `/api/users/{id}/password` | ADMIN, CUSTOMER (own) | Update user password |
+| POST | `/api/users/{id}/reset-password` | ADMIN | Reset user password |
+| GET | `/api/users/statistics` | ADMIN | Get user management statistics |
+
+### Key Features
+
+- **Advanced User Search:** Multi-criteria filtering with text search across names, emails, roles, and providers
+- **Role-based Access Control:** Comprehensive permission system for different user types
+- **Provider Management:** Support for multiple authentication sources (LOCAL, GOOGLE, FACEBOOK)
+- **Password Security:** Secure password management with encryption and validation  
+- **Policy-driven Email Config:** Dynamic email configuration through POLICY table
+- **Audit Trail:** Complete tracking of user modifications and access patterns
+- **Data Validation:** Comprehensive input validation with detailed error messages
+- **Dropdown Support:** Simplified endpoints for UI component integration
+
+---
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Database Schema](#database-schema)
+- [API Endpoints](#api-endpoints)  
+  - [User Role Management](#user-role-management)
+  - [User Provider Management](#user-provider-management)
+  - [User Management](#user-management)
+  - [Password Management](#password-management)
+- [DTOs and Validation](#dtos-and-validation)
+- [Error Handling](#error-handling)
+- [Examples](#examples)
+- [Security Considerations](#security-considerations)
+- [Email Configuration](#email-configuration)
+
+## Overview
+
+This guide covers the enhanced User Management API system that handles users, user roles, and user providers in the ArtAndDecor application. The API provides CRUD operations for users with advanced filtering and search capabilities, and read-only operations for roles and providers.
+
+### Key Features (v11.0)
+- **Simplified Filtering**: Removed ID-based filtering for cleaner API design  
+- **Enhanced Search**: Extended textSearch to include USER_PROVIDER_DISPLAY_NAME and USER_ROLE_DISPLAY_NAME
+- **Dropdown APIs**: New endpoints to get role/provider names for UI components
+- **Policy-based Email Config**: Email settings now stored in POLICY table for easy management
+- User management with role-based access control
+- User provider management (authentication sources) - read-only
+- User role management - read-only  
+- Comprehensive validation and error handling
+- Audit logging and security controls
+- OpenAPI 3.0 documentation integration
+
+### Key Changes in v11.0
+1. **UserRole APIs**: Removed `roleId` filter, added `/api/users/roles/names` endpoint
+2. **UserProvider APIs**: Removed `providerId` filter, added `/api/users/providers/names` endpoint  
+3. **User APIs**: Removed ID-based filters (`userId`, `userProviderId`, `userRoleId`), enhanced textSearch
+4. **Email Configuration**: Migrated from configEmail.properties to POLICY table for dynamic configuration
+
+### Authentication Requirements
 
 - **Public APIs:** No authentication required
 - **User APIs:** JWT Bearer token required
-- **Admin APIs:** Admin role verification required
+- **Admin APIs:** Admin role verification required (for reset password)
 - **Self-access:** Users can access/modify their own data
 
----
+## Database Schema
+
+### USER Table
+```sql
+CREATE TABLE USER (
+    USER_ID BIGINT AUTO_INCREMENT PRIMARY KEY,
+    USER_NAME VARCHAR(50) NOT NULL UNIQUE,
+    FIRST_NAME VARCHAR(50),
+    LAST_NAME VARCHAR(50),
+    EMAIL VARCHAR(100) NOT NULL UNIQUE,
+    PASSWORD VARCHAR(255) NOT NULL,
+    USER_ENABLED BOOLEAN DEFAULT TRUE,
+    USER_PROVIDER_ID BIGINT NOT NULL,
+    USER_ROLE_ID BIGINT NOT NULL,
+    CONSTRAINT FK_USER_PROVIDER FOREIGN KEY (USER_PROVIDER_ID) REFERENCES USER_PROVIDER(USER_PROVIDER_ID) ON DELETE RESTRICT,
+    CONSTRAINT FK_USER_ROLE FOREIGN KEY (USER_ROLE_ID) REFERENCES USER_ROLE(USER_ROLE_ID) ON DELETE RESTRICT
+);
+```
+
+### USER_ROLE Table
+```sql
+CREATE TABLE USER_ROLE (
+    USER_ROLE_ID BIGINT AUTO_INCREMENT PRIMARY KEY,
+    USER_ROLE_NAME VARCHAR(50) NOT NULL UNIQUE,
+    USER_ROLE_DISPLAY_NAME VARCHAR(255),
+    USER_ROLE_REMARK TEXT,
+    USER_ROLE_ENABLED BOOLEAN DEFAULT TRUE
+);
+```
+
+### USER_PROVIDER Table
+```sql
+CREATE TABLE USER_PROVIDER (
+    USER_PROVIDER_ID BIGINT AUTO_INCREMENT PRIMARY KEY,
+    USER_PROVIDER_NAME VARCHAR(50) NOT NULL UNIQUE,
+    USER_PROVIDER_DISPLAY_NAME VARCHAR(255),
+    USER_PROVIDER_REMARK TEXT,
+    USER_PROVIDER_ENABLED BOOLEAN DEFAULT TRUE
+);
+```
 
 ## API Endpoints
 
-### 1. Search Users by Criteria
-**Endpoint:** `GET /api/users/search`  
-**Method:** GET  
-**Access:** ADMIN  
-**Description:** Get users filtered by multiple criteria (all parameters optional)
+### User Role Management
 
-**Request Parameters:**
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `userId` | Long | No | - | User ID filter |
-| `userProviderId` | Long | No | - | Provider ID (1=LOCAL, 2=GOOGLE, 3=FACEBOOK, 4=GITHUB) |
-| `userRoleId` | Long | No | - | Role ID (1=CUSTOMER, 2=ADMIN) |
-| `userEnabled` | Boolean | No | - | User enabled status |
-| `userName` | String | No | - | Username filter (exact match) |
-
-**Example Request:**
+#### 1. Get User Roles with Optional Filtering
 ```http
-GET /api/users/search?userRoleId=4&userEnabled=true
-Host: localhost:8080
-Content-Type: application/json
-Authorization: Bearer <jwt_token>
+GET /api/users/roles
+```
+**Access:** PUBLIC  
+**Description:** Get all user roles or filter by specific criteria. Returns all roles when no parameters are provided.
+
+**Query Parameters (all optional):**
+- `roleName`: Filter by exact role name
+- `textSearch`: Search in role name, display name, or remark (partial match, case-insensitive)
+- `enabled`: Filter by enabled status (true/false/null for all)
+
+**Example Requests:**
+```http
+# Get all roles
+GET /api/users/roles
+
+# Search for admin roles that are enabled
+GET /api/users/roles?textSearch=admin&enabled=true
+
+# Filter by specific role name
+GET /api/users/roles?roleName=USER&enabled=true
 ```
 
-**Example Response:**
+**Response:**
 ```json
 {
-  "code": 200,
-  "message": "Users retrieved successfully",
+  "status": "SUCCESS",
+  "message": "Roles retrieved successfully",
   "data": [
     {
-      "userId": 4,
-      "userProviderId": 1,
-      "userRoleId": 4,
-      "userEnabled": true,
-      "userName": "customer01",
-      "password": null,
-      "firstName": "Nguyen",
-      "lastName": "Van A",
-      "phoneNumber": "0904567890",
-      "emailAddress": "customer1@gmail.com",
-      "description": null,
-      "userAvatarLink": "D4E5F6789012345678901234567890ABCDEF12",
-      "address": null,
-      "lastLoginDt": "2026-01-19 16:20:00",
-      "createdDt": "2026-01-15 09:00:00",
-      "modifiedDt": "2026-01-19 16:20:00",
-      "userProviderName": "LOCAL",
-      "userProviderRemarkEn": "Local authentication",
-      "userProviderRemark": "Xác thực nội bộ",
-      "userRoleName": "CUSTOMER",
-      "userRoleRemarkEn": "Customer",
-      "userRoleRemark": "Khách hàng"
-    }
-  ],
-  "timestamp": "2026-01-26 14:30:00"
-}
-```
-
----
-
-### 2. Get User by ID
-**Endpoint:** `GET /api/users/{userId}`  
-**Method:** GET  
-**Access:** ADMIN, SELF  
-**Description:** Get detailed user information by ID
-
-**Request Parameters:**
-
-| Parameter | Type | Required | Location | Description |
-|-----------|------|----------|----------|-------------|
-| `userId` | Long | Yes | Path | User ID to retrieve |
-
-**Example Request:**
-```http
-GET /api/users/4
-Host: localhost:8080
-Content-Type: application/json
-Authorization: Bearer <jwt_token>
-```
-
-**Example Response:**
-```json
-{
-  "code": 200,
-  "message": "User retrieved successfully",
-  "data": {
-    "userId": 4,
-    "userProviderId": 1,
-    "userRoleId": 4,
-    "userEnabled": true,
-    "userName": "customer01",
-    "password": null,
-    "firstName": "Nguyen",
-    "lastName": "Van A",
-    "phoneNumber": "0904567890",
-    "emailAddress": "customer1@gmail.com",
-    "description": null,
-    "userAvatarLink": "D4E5F6789012345678901234567890ABCDEF12",
-    "address": null,
-    "lastLoginDt": "2026-01-19 16:20:00",
-    "createdDt": "2026-01-15 09:00:00",
-    "modifiedDt": "2026-01-19 16:20:00",
-    "userProviderName": "LOCAL",
-    "userProviderRemarkEn": "Local authentication",
-    "userProviderRemark": "Xác thực nội bộ",
-    "userRoleName": "CUSTOMER",
-    "userRoleRemarkEn": "Customer",
-    "userRoleRemark": "Khách hàng"
-  },
-  "timestamp": "2026-01-26 14:30:00"
-}
-```
-
----
-
-### 3. Get All Users (Paginated)
-**Endpoint:** `GET /api/users`  
-**Method:** GET  
-**Access:** ADMIN  
-**Description:** Get paginated list of all users
-
-**Request Parameters:**
-
-| Parameter | Type | Required | Default | Location | Description |
-|-----------|------|----------|---------|----------|-------------|
-| `page` | Integer | No | 0 | Query | Page number (0-based) |
-| `size` | Integer | No | 10 | Query | Page size (max 100) |
-
-**Example Request:**
-```http
-GET /api/users?page=0&size=5
-Host: localhost:8080
-Content-Type: application/json
-Authorization: Bearer <jwt_token>
-```
-
-**Example Response:**
-```json
-{
-  "code": 200,
-  "message": "Users retrieved successfully",
-  "data": [
-    {
-      "userId": 1,
-      "userName": "admin",
-      "firstName": "Admin",
-      "lastName": "System",
-      "emailAddress": "admin@artdecor.com",
+      "userRoleId": 1,
       "userRoleName": "ADMIN",
-      "userEnabled": true
+      "userRoleDisplayName": "Administrator",
+      "userRoleRemark": "System administrator with full access",
+      "userRoleEnabled": true,
+      "userCount": 5
     },
     {
-      "userId": 2,
-      "userName": "customer01",
-      "firstName": "Nguyen",
-      "lastName": "Van A",
-      "emailAddress": "customer1@gmail.com",
-      "userRoleName": "CUSTOMER",
-      "userEnabled": true
+      "userRoleId": 2,
+      "userRoleName": "USER",
+      "userRoleDisplayName": "Regular User", 
+      "userRoleRemark": "Standard user with limited access",
+      "userRoleEnabled": true,
+      "userCount": 150
     }
   ],
-  "timestamp": "2026-01-26 14:30:00"
+  "timestamp": "2026-02-27 10:45:30"
+}
+      "userRoleName": "CUSTOMER",
+      "userRoleDisplayName": "Customer",
+      "userRoleRemark": "Standard customer access",
+      "userRoleEnabled": true,
+      "userCount": 15
+    }
+  ],
+  "timestamp": "2026-02-25 10:45:30"
 }
 ```
 
----
+#### 2. Get User Role by ID
+```http
+GET /api/users/roles/{roleId}
+```
+**Access:** PUBLIC  
+**Description:** Get specific user role details by ID
 
-### 4. Create User
-**Endpoint:** `POST /api/users`  
-**Method:** POST  
-**Access:** ADMIN  
-**Description:** Create new user account
+**Path Parameters:**
+- `roleId`: User role ID
 
-**Request Body (JSON):**
+**Response:**
+```json
+{
+  "status": "SUCCESS",
+  "message": "Role retrieved successfully",
+  "data": {
+    "userRoleId": 1,
+    "userRoleName": "ADMIN",
+    "userRoleDisplayName": "Administrator",
+    "userRoleRemark": "Full system access",
+    "userRoleEnabled": true,
+    "userCount": 2
+  }
+}
+```
 
-| Field | Type | Required | Default | Max Length | Description |
-|-------|------|----------|---------|------------|-------------|
-| `userProviderId` | Long | No | 1 | - | Provider ID (1=LOCAL) |
-| `userRoleId` | Long | No | 4 | - | Role ID (4=CUSTOMER) |
-| `userEnabled` | Boolean | No | true | - | User enabled status |
-| `userName` | String | Yes | - | 64 | Username (unique) |
-| `password` | String | Yes | - | 150 | Password (min 8 chars) |
-| `firstName` | String | Yes | - | 50 | User first name |
-| `lastName` | String | Yes | - | 50 | User last name |
-| `phoneNumber` | String | No | - | 15 | Phone number |
-| `emailAddress` | String | Yes | - | 100 | Email address (unique) |
-| `description` | String | No | - | - | User description |
-| `userAvatarLink` | String | No | - | 150 | Avatar image link |
-| `address` | String | No | - | - | User address |
+#### 3. Get All User Role Names
+```http
+GET /api/users/roles/names
+```
+**Access:** PUBLIC  
+**Description:** Get list of all enabled user role names for dropdown/combobox usage in UI
+
+**Response:**
+```json
+{
+  "status": "SUCCESS",
+  "message": "Role names retrieved successfully",
+  "data": [
+    "ADMIN",
+    "USER",
+    "CUSTOMER"
+  ],
+  "timestamp": "2026-02-27 10:45:30"
+}
+```
+
+### User Provider Management
+
+#### 1. Get User Providers with Optional Filtering
+```http
+GET /api/users/providers
+```
+**Access:** PUBLIC  
+**Description:** Get all user providers or filter by specific criteria. Returns all providers when no parameters are provided.
+
+**Query Parameters (all optional):**
+- `providerName`: Filter by exact provider name
+- `textSearch`: Search in provider name, display name, or remark (partial match, case-insensitive)
+- `enabled`: Filter by enabled status (true/false/null for all)
+
+**Example Requests:**
+```http
+# Get all providers
+GET /api/users/providers
+
+# Search for Google provider that is enabled
+GET /api/users/providers?textSearch=google&enabled=true
+
+# Filter by specific provider name
+GET /api/users/providers?providerName=LOCAL&enabled=true
+```
+
+**Response:**
+```json
+{
+  "status": "SUCCESS",
+  "message": "User providers retrieved successfully",
+  "data": [
+    {
+      "userProviderId": 1,
+      "userProviderName": "LOCAL",
+      "userProviderDisplayName": "Local Authentication",
+      "userProviderRemark": "Standard username/password authentication",
+      "userProviderEnabled": true,
+      "userCount": 18
+    },
+    {
+      "userProviderId": 2,
+      "userProviderName": "GOOGLE",
+      "userProviderDisplayName": "Google OAuth",
+      "userProviderRemark": "Google OAuth2 authentication",
+      "userProviderEnabled": true,
+      "userCount": 3
+    }
+  ],
+  "timestamp": "2026-02-25 10:45:30"
+}
+```
+
+#### 2. Get User Provider by ID
+```http
+GET /api/users/providers/{providerId}
+```
+**Access:** PUBLIC  
+**Description:** Get detailed information for a specific user provider by ID
+
+**Path Parameters:**
+- `providerId`: User provider ID
+
+**Response:**
+```json
+{
+  "status": "SUCCESS",
+  "message": "Provider retrieved successfully",
+  "data": {
+    "userProviderId": 1,
+    "userProviderName": "LOCAL",
+    "userProviderDisplayName": "Local Authentication", 
+    "userProviderRemark": "Standard username/password authentication",
+    "userProviderEnabled": true,
+    "userCount": 18
+  },
+  "timestamp": "2026-02-27 10:45:30"
+}
+```
+
+#### 3. Get All User Provider Names
+```http
+GET /api/users/providers/names
+```
+**Access:** PUBLIC  
+**Description:** Get list of all enabled user provider names for dropdown/combobox usage in UI
+
+**Response:**
+```json
+{
+  "status": "SUCCESS",
+  "message": "Provider names retrieved successfully",
+  "data": [
+    "LOCAL",
+    "GOOGLE",
+    "FACEBOOK"
+  ],
+  "timestamp": "2026-02-27 10:45:30"
+}
+```
+
+### User Management
+
+#### 1. Get Users by Enhanced Criteria with Pagination
+```http
+GET /api/users?providerName={providerName}&providerDisplayName={providerDisplayName}&roleName={roleName}&roleDisplayName={roleDisplayName}&searchText={searchText}&userName={userName}&userEnabled={userEnabled}&page={page}&size={size}&sort={sort}&direction={direction}
+```
+**Access:** AUTHENTICATED (Admin Role Required)  
+**Description:** Get users by multiple criteria with pagination and enhanced search capabilities. Returns all users if no filters are provided.
+
+**Query Parameters (all optional):**
+- `providerName`: Filter by provider name (partial match, case-insensitive)
+- `providerDisplayName`: Filter by provider display name (partial match, case-insensitive)
+- `roleName`: Filter by role name (partial match, case-insensitive)
+- `roleDisplayName`: Filter by role display name (partial match, case-insensitive) 
+- `searchText`: Enhanced search across userName, firstName, lastName, phoneNumber, email, USER_PROVIDER_DISPLAY_NAME, USER_ROLE_DISPLAY_NAME (partial match, case-insensitive)
+- `userName`: Filter by username (exact match)
+- `userEnabled`: Filter by user enabled status (true/false/null for all)
+- `page`: Page number (default: 0, zero-based)
+- `size`: Page size (default: 10)
+- `sort`: Sort field (default: userId)
+- `direction`: Sort direction: ASC or DESC (default: ASC)
 
 **Example Request:**
 ```http
-POST /api/users
-Host: localhost:8080
-Content-Type: application/json
-Authorization: Bearer <jwt_token>
+GET /api/users?roleName=admin&searchText=john&page=0&size=5&sort=userId&direction=ASC
+```
 
+**Response:**
+```json
 {
-  "userProviderId": 1,
-  "userRoleId": 4,
-  "userEnabled": true,
-  "userName": "newcustomer",
-  "password": "password123",
-  "firstName": "Jane",
-  "lastName": "Doe",
-  "phoneNumber": "0901234567",
-  "emailAddress": "jane.doe@example.com",
-  "description": "New customer account",
-  "address": "123 Main Street, Ho Chi Minh City"
+  "status": "SUCCESS",
+  "message": "Users retrieved successfully",
+  "data": {
+    "content": [
+      {
+        "userId": 1,
+        "userName": "john_admin",
+        "firstName": "John",
+        "lastName": "Smith",
+        "phoneNumber": "+1234567890",
+        "email": "john.admin@example.com",
+        "imageAvatarName": "avatar1.jpg",
+        "socialMedia": {"linkedin": "john-smith"},
+        "userEnabled": true,
+        "lastLoginDt": "2026-02-23T10:30:00",
+        "userRole": {
+          "userRoleId": 1,
+          "userRoleName": "ADMIN", 
+          "userRoleDisplayName": "Administrator"
+        },
+        "userProvider": {
+          "userProviderId": 1,
+          "userProviderName": "LOCAL", 
+          "userProviderDisplayName": "Local Authentication"
+        }
+      }
+    ],
+    "pageable": {
+      "page": 0,
+      "size": 5,
+      "sort": "userId,ASC"
+    },
+    "totalElements": 25,
+    "totalPages": 5,
+    "first": true,
+    "last": false
+  },
+  "timestamp": "2026-02-24 10:45:30"
 }
 ```
 
-**Example Response:**
+#### 2. Get User by ID
+```http
+GET /api/users/{userId}
+```
+**Access:** AUTHENTICATED  
+**Description:** Get specific user details by ID
+
+**Path Parameters:**
+- `userId`: User ID
+
+**Response:**
 ```json
 {
-  "code": 200,
+  "status": "SUCCESS",
+  "message": "User retrieved successfully", 
+  "data": {
+    "userId": 1,
+    "userName": "john_admin",
+    "firstName": "John",
+    "lastName": "Smith",
+    "phoneNumber": "+1234567890", 
+    "email": "john.admin@example.com",
+    "imageAvatarName": "avatar1.jpg",
+    "socialMedia": {"linkedin": "john-smith"},
+    "userEnabled": true,
+    "lastLoginDt": "2026-02-23T10:30:00",
+    "userRole": {
+      "userRoleId": 1,
+      "userRoleName": "ADMIN",
+      "userRoleDisplayName": "Administrator"
+    },
+    "userProvider": {
+      "userProviderId": 1,
+      "userProviderName": "LOCAL",
+      "userProviderDisplayName": "Local Authentication"
+    }
+  }
+}
+```
+
+#### 3. Get All Users (Paginated)
+```http
+GET /api/users?page={page}&size={size}
+```
+**Access:** AUTHENTICATED  
+**Description:** Get all users with pagination
+
+**Query Parameters:**
+- `page` (optional, default=0): Page number (0-based)
+- `size` (optional, default=10): Page size
+
+**Response:**
+```json
+{
+  "status": "SUCCESS",
+  "message": "Users retrieved successfully",
+  "data": {
+    "content": [
+      {
+        "userId": 1,
+        "userName": "john_admin",
+        "firstName": "John",
+        "lastName": "Smith",
+        "userEnabled": true,
+        "userRole": {
+          "userRoleId": 1,
+          "userRoleName": "ADMIN",
+          "userRoleDisplayName": "Administrator"
+        },
+        "userProvider": {
+          "userProviderId": 1,
+          "userProviderName": "LOCAL",
+          "userProviderDisplayName": "Local Authentication"
+        }
+      }
+    ],
+    "pageable": {
+      "sort": {"sorted": false, "unsorted": true},
+      "pageNumber": 0,
+      "pageSize": 10
+    },
+    "totalElements": 25,
+    "totalPages": 3,
+    "size": 10,
+    "number": 0,
+    "first": true,
+    "last": false
+  }
+}
+```
+
+#### 6. Create New User
+```http
+POST /api/users
+Content-Type: application/json
+```
+**Access:** ADMIN or AUTHENTICATED (for registration)  
+**Description:** Create a new user
+
+**Request Body:**
+```json
+{
+  "userName": "jane_customer",
+  "firstName": "Jane",
+  "lastName": "Doe",
+  "phoneNumber": "+0987654321",
+  "email": "jane.doe@example.com", 
+  "password": "SecurePass123!",
+  "imageAvatarName": "avatar2.jpg",
+  "socialMedia": {"facebook": "jane.doe"},
+  "userEnabled": true,
+  "userRole": {
+    "userRoleId": 4
+  },
+  "userProvider": {
+    "userProviderId": 1  
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "status": "SUCCESS",
   "message": "User created successfully",
   "data": {
     "userId": 25,
-    "userProviderId": 1,
-    "userRoleId": 4,
-    "userEnabled": true,
-    "userName": "newcustomer",
-    "password": null,
-    "firstName": "Jane",
+    "userName": "jane_customer",
+    "firstName": "Jane", 
     "lastName": "Doe",
-    "phoneNumber": "0901234567",
-    "emailAddress": "jane.doe@example.com",
-    "description": "New customer account",
-    "userAvatarLink": null,
-    "address": "123 Main Street, Ho Chi Minh City",
+    "phoneNumber": "+0987654321",
+    "email": "jane.doe@example.com",
+    "imageAvatarName": "avatar2.jpg",
+    "socialMedia": {"facebook": "jane.doe"},
+    "userEnabled": true,
     "lastLoginDt": null,
-    "createdDt": "2026-01-26 14:30:00",
-    "modifiedDt": "2026-01-26 14:30:00",
-    "userProviderName": "LOCAL",
-    "userRoleName": "CUSTOMER"
-  },
-  "timestamp": "2026-01-26 14:30:00"
+    "userRole": {
+      "userRoleId": 4,
+      "userRoleName": "CUSTOMER",
+      "userRoleDisplayName": "Customer"
+    },
+    "userProvider": {
+      "userProviderId": 1,
+      "userProviderName": "LOCAL",
+      "userProviderDisplayName": "Local Authentication"
+    }
+  }
 }
 ```
 
----
-
-### 5. Update User
-**Endpoint:** `PUT /api/users/{userId}`  
-**Method:** PUT  
-**Access:** ADMIN, SELF  
-**Description:** Update existing user information
-
-**Request Parameters:**
-
-| Parameter | Type | Required | Location | Description |
-|-----------|------|----------|----------|-------------|
-| `userId` | Long | Yes | Path | User ID to update |
-
-**Request Body:** Same as Create User (all fields optional)
-
-**Example Request:**
+#### 7. Update User
 ```http
-PUT /api/users/4
-Host: localhost:8080
+PUT /api/users/{userId}
 Content-Type: application/json
-Authorization: Bearer <jwt_token>
-
-{
-  "firstName": "Nguyen Updated",
-  "lastName": "Van A Updated",
-  "phoneNumber": "0999888777",
-  "address": "456 New Street, Ho Chi Minh City"
-}
 ```
+**Access:** ADMIN or SELF  
+**Description:** Update existing user
 
-**Example Response:**
-```json
-{
-  "code": 200,
-  "message": "User updated successfully",
-  "data": {
-    "userId": 4,
-    "userName": "customer01",
-    "firstName": "Nguyen Updated",
-    "lastName": "Van A Updated",
-    "phoneNumber": "0999888777",
-    "address": "456 New Street, Ho Chi Minh City",
-    "modifiedDt": "2026-01-26 14:35:00"
-  },
-  "timestamp": "2026-01-26 14:35:00"
-}
+**Path Parameters:**
+- `userId`: User ID to update
+
+**Request Body:** Same as create user (all fields optional for update)
+
+**Response:** Same as create user response
+
+#### 8. Update User Status (Enable/Disable)
+```http
+PATCH /api/users/{userId}/status?enabled={enabled}
 ```
-
----
-
-### 6. Update User Status
-**Endpoint:** `PATCH /api/users/{userId}/status`  
-**Method:** PATCH  
 **Access:** ADMIN  
 **Description:** Enable or disable user account
 
-**Request Parameters:**
+**Path Parameters:**
+- `userId`: User ID
 
-| Parameter | Type | Required | Location | Description |
-|-----------|------|----------|----------|-------------|
-| `userId` | Long | Yes | Path | User ID to update |
-| `enabled` | Boolean | Yes | Query | New enabled status |
+**Query Parameters:**
+- `enabled`: Boolean (true/false)
 
-**Example Request:**
-```http
-PATCH /api/users/4/status?enabled=false
-Host: localhost:8080
-Content-Type: application/json
-Authorization: Bearer <jwt_token>
-```
-
-**Example Response:**
+**Response:**
 ```json
 {
-  "code": 200,
+  "status": "SUCCESS",
   "message": "User status updated successfully",
   "data": {
-    "userId": 4,
-    "userName": "customer01",
+    "userId": 25,
+    "userName": "jane_customer",
     "userEnabled": false,
-    "modifiedDt": "2026-01-26 14:40:00"
-  },
-  "timestamp": "2026-01-26 14:40:00"
-}
-```
-
----
-
-### 7. Delete User
-**Endpoint:** `DELETE /api/users/{userId}`  
-**Method:** DELETE  
-**Access:** ADMIN only  
-**Description:** Delete user account (permanent action)
-
-**Request Parameters:**
-
-| Parameter | Type | Required | Location | Description |
-|-----------|------|----------|----------|-------------|
-| `userId` | Long | Yes | Path | User ID to delete |
-
-**Example Request:**
-```http
-DELETE /api/users/25
-Host: localhost:8080
-Content-Type: application/json
-Authorization: Bearer <jwt_token>
-```
-
-**Example Response:**
-```json
-{
-  "code": 200,
-  "message": "User deleted successfully",
-  "data": null,
-  "timestamp": "2026-01-26 14:45:00"
-}
-```
-
----
-
-### 8. Search Users by Name
-**Endpoint:** `GET /api/users/search-by-name`  
-**Method:** GET  
-**Access:** ADMIN  
-**Description:** Search users by first name or last name
-
-**Request Parameters:**
-
-| Parameter | Type | Required | Location | Description |
-|-----------|------|----------|----------|-------------|
-| `searchTerm` | String | Yes | Query | Search term for names (min 2 chars) |
-
-**Example Request:**
-```http
-GET /api/users/search-by-name?searchTerm=Nguyen
-Host: localhost:8080
-Content-Type: application/json
-Authorization: Bearer <jwt_token>
-```
-
-**Example Response:**
-```json
-{
-  "code": 200,
-  "message": "Users found successfully",
-  "data": [
-    {
-      "userId": 4,
-      "userName": "customer01",
-      "firstName": "Nguyen",
-      "lastName": "Van A",
-      "emailAddress": "customer1@gmail.com",
+    "userRole": {
+      "userRoleId": 4,
       "userRoleName": "CUSTOMER",
-      "userEnabled": true
+      "userRoleDisplayName": "Customer"
     }
-  ],
-  "timestamp": "2026-01-26 14:50:00"
+  }
 }
 ```
 
----
+### Password Management
 
-### 9. Check Username Availability
-**Endpoint:** `GET /api/users/check-username`  
-**Method:** GET  
-**Access:** PUBLIC (no authentication required)  
-**Description:** Check if username is available for registration
-
-**Request Parameters:**
-
-| Parameter | Type | Required | Location | Min Length | Max Length | Description |
-|-----------|------|----------|----------|------------|------------|-------------|
-| `userName` | String | Yes | Query | 3 | 64 | Username to check availability |
-
-**Example Request:**
-```http
-GET /api/users/check-username?userName=testuser123
-Host: localhost:8080
-Content-Type: application/json
-```
-
-**Example Response:**
-```json
-{
-  "code": 200,
-  "message": "Username check completed",
-  "data": false,
-  "timestamp": "2026-01-26 14:55:00"
-}
-```
-*Note: `false` means username is available, `true` means already exists*
-
----
-
-### 10. Check Email Availability
-**Endpoint:** `GET /api/users/check-email`  
-**Method:** GET  
-**Access:** PUBLIC (no authentication required)  
-**Description:** Check if email is available for registration
-
-**Request Parameters:**
-
-| Parameter | Type | Required | Location | Max Length | Description |
-|-----------|------|----------|----------|------------|-------------|
-| `email` | String | Yes | Query | 100 | Email address to check availability |
-
-**Example Request:**
-```http
-GET /api/users/check-email?email=test@example.com
-Host: localhost:8080
-Content-Type: application/json
-```
-
-**Example Response:**
-```json
-{
-  "code": 200,
-  "message": "Email check completed",
-  "data": false,
-  "timestamp": "2026-01-26 14:55:00"
-}
-```
-*Note: `false` means email is available, `true` means already exists*
-
----
-
-## Password Management APIs
-
-### 11. Change Password (Self-Service)
-**Endpoint:** `PUT /api/users/change-password`  
-**Method:** PUT  
-**Access:** CUSTOMER, ADMIN (Self-service only)  
-**Description:** Authenticated user changes their own password
-
-**Request Body (JSON):**
-
-| Field | Type | Required | Validation | Description |
-|-------|------|----------|------------|-------------|
-| `currentPassword` | String | Yes | Not blank | Current password for verification |
-| `newPassword` | String | Yes | 8-150 chars, complexity rules | New password |
-| `confirmPassword` | String | Yes | Must match newPassword | Password confirmation |
-
-**Password Complexity Rules:**
-- Minimum 8 characters, maximum 150 characters
-- Must contain at least one uppercase letter (A-Z)
-- Must contain at least one lowercase letter (a-z)
-- Must contain at least one number (0-9)
-
-**Example Request:**
-```http
+#### 1. Change Password (Self-Service)
+```http  
 PUT /api/users/change-password
-Host: localhost:8080
 Content-Type: application/json
-Authorization: Bearer <jwt_token>
+Authorization: Bearer {token}
+```
+**Access:** AUTHENTICATED (Self only)  
+**Description:** Change password for authenticated user
 
+**Request Body:**
+```json
 {
-  "currentPassword": "oldPassword123",
-  "newPassword": "NewSecurePass456",
-  "confirmPassword": "NewSecurePass456"
+  "currentPassword": "OldPassword123!",
+  "newPassword": "NewPassword456!",
+  "confirmPassword": "NewPassword456!"
 }
 ```
 
-**Example Response:**
+**Response:**
 ```json
 {
-  "code": 200,
+  "status": "SUCCESS",
   "message": "Password changed successfully",
   "data": {
-    "userId": 4,
-    "userName": "customer01",
-    "firstName": "Nguyen",
-    "lastName": "Van A",
-    "modifiedDt": "2026-01-26 15:30:00",
-    "password": null
-  },
-  "timestamp": "2026-01-26 15:30:00"
+    "userId": 25,
+    "userName": "jane_customer",
+    "firstName": "Jane",
+    "lastName": "Doe",
+    "email": "jane.doe@example.com"
+  }
 }
 ```
 
----
-
-### 12. Reset Password (Admin)
-**Endpoint:** `PUT /api/users/{userId}/reset-password`  
-**Method:** PUT  
-**Access:** ADMIN  
-**Description:** Admin resets password for any user (ID-based priority for admin efficiency)
-
-**Request Parameters:**
-
-| Parameter | Type | Required | Location | Description |
-|-----------|------|----------|----------|-------------|
-| `userId` | Long | Yes | Path | User ID to reset password |
-
-**Request Body (JSON):**
-
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `newPassword` | String | Yes | - | New password (complexity rules apply) |
-| `forceChangeOnLogin` | Boolean | No | true | Force user to change password on next login |
-
-**Example Request:**
+#### 2. Admin Reset Password (Username-based)
 ```http
-PUT /api/users/4/reset-password
-Host: localhost:8080
-Content-Type: application/json
-Authorization: Bearer <admin_jwt_token>
-
-{
-  "newPassword": "TempPassword789",
-  "forceChangeOnLogin": true
-}
+PUT /api/users/reset-password/{userName}
+Authorization: Bearer {admin_token}
 ```
+**Access:** ADMIN  
+**Description:** Admin reset password for any user. Generates random password and sends email notification.
 
-**Example Response:**
+**Path Parameters:**
+- `userName`: Username to reset password for
+
+**Response:**
 ```json
 {
-  "code": 200,
-  "message": "Password reset successfully",
+  "status": "SUCCESS",
+  "message": "Password reset successfully", 
   "data": {
-    "userId": 4,
-    "userName": "customer01",
-    "firstName": "Nguyen",
-    "lastName": "Van A",
-    "modifiedDt": "2026-01-26 15:35:00",
-    "password": null
-  },
-  "timestamp": "2026-01-26 15:35:00"
+    "userId": 25,
+    "userName": "jane_customer",
+    "firstName": "Jane",
+    "lastName": "Doe",
+    "email": "jane.doe@example.com",
+    "userEnabled": true
+  }
 }
 ```
 
----
+**Note:** New password is auto-generated and sent to user's email address.
 
-### 13. Change Password by Username (Customer-Friendly)
-**Endpoint:** `PUT /api/users/username/{userName}/change-password`  
-**Method:** PUT  
-**Access:** CUSTOMER (Self-service), ADMIN (with validation)  
-**Description:** Change password using username (customer-friendly identification)
 
-**Request Parameters:**
+## DTOs and Validation
 
-| Parameter | Type | Required | Location | Description |
-|-----------|------|----------|----------|-------------|
-| `userName` | String | Yes | Path | Username for password change |
+### UserDto
+```java
+public class UserDto {
+    private Long userId;
+    
+    @NotBlank(message = "Username is required")
+    @Size(min = 3, max = 50, message = "Username must be 3-50 characters")
+    private String userName;
+    
+    @Size(max = 50, message = "First name must not exceed 50 characters")
+    private String firstName;
+    
+    @Size(max = 50, message = "Last name must not exceed 50 characters") 
+    private String lastName;
+    
+    @Pattern(regexp = "^\\+?[1-9]\\d{1,14}$", message = "Invalid phone number format")
+    private String phoneNumber;
+    
+    @NotBlank(message = "Email is required")
+    @Email(message = "Invalid email format")
+    @Size(max = 100, message = "Email must not exceed 100 characters")
+    private String email;
+    
+    @Size(min = 8, message = "Password must be at least 8 characters")
+    private String password;
+    
+    private String imageAvatarName;
+    private Object socialMedia; // JSON object
+    private Boolean userEnabled;
+    private LocalDateTime lastLoginDt;
+    
+    // Related entities
+    private UserRoleDto userRole;
+    private UserProviderDto userProvider;
+}
+```
 
-**Request Body (JSON):** Same as Change Password (Self-Service)
+### ChangePasswordRequest
+```java
+public class ChangePasswordRequest {
+    @NotBlank(message = "Current password is required")
+    private String currentPassword;
+    
+    @NotBlank(message = "New password is required")
+    @Size(min = 8, message = "Password must be at least 8 characters")
+    private String newPassword;
+    
+    @NotBlank(message = "Confirm password is required")
+    private String confirmPassword;
+    
+    // Validation method
+    public boolean isPasswordsMatch() {
+        return newPassword != null && newPassword.equals(confirmPassword);
+    }
+}
+```
 
-**Security Note:** 
-- **Customer Access:** Can only change own password (JWT userName must match path userName)
-- **Admin Access:** Can change any user's password using username
+### UserRoleDto  
+```java
+public class UserRoleDto {
+    private Long userRoleId;
+    private String userRoleName;
+    private String userRoleDisplayName;
+    private String userRoleRemark;
+    private Boolean userRoleEnabled;
+    private Long userCount; // Count of users with this role
+}
+```
 
-**Example Request:**
-```http
-PUT /api/users/username/customer01/change-password
-Host: localhost:8080
-Content-Type: application/json
-Authorization: Bearer <jwt_token>
+### UserProviderDto
+```java  
+public class UserProviderDto {
+    private Long userProviderId;
+    private String userProviderName;
+    private String userProviderDisplayName;
+    private String userProviderRemark;
+    private Boolean userProviderEnabled;
+    private Long userCount; // Count of users with this provider
+}
+```
 
+## Error Handling
+
+### Standard Error Response Format
+```json
 {
-  "currentPassword": "currentPass123",
-  "newPassword": "CustomerNewPass456",
-  "confirmPassword": "CustomerNewPass456"
+  "status": "BAD_REQUEST|SERVER_ERROR|UNAUTHORIZED|FORBIDDEN|NOT_FOUND",
+  "message": "Error description",
+  "data": null,
+  "timestamp": "2026-02-23T10:30:00.123456",
+  "path": "/users/123"
 }
 ```
 
-**Example Response:** Same as Change Password (Self-Service)
+### Common Error Scenarios
 
----
+#### 1. Validation Errors (400 Bad Request)
+```json
+{
+  "status": "BAD_REQUEST",
+  "message": "Validation failed: Username is required, Email format is invalid",
+  "data": null
+}
+```
 
-## Database Query Strategy Analysis
+#### 2. User Not Found (400 Bad Request)
+```json
+{
+  "status": "BAD_REQUEST", 
+  "message": "User not found with ID: 999",
+  "data": null
+}
+```
 
-### Current Implementation Status
+#### 3. Duplicate Username/Email (400 Bad Request)
+```json
+{
+  "status": "BAD_REQUEST",
+  "message": "Username already exists: john_user",
+  "data": null
+}
+```
 
-**All database operations currently use JPA Repository pattern:**
-- ✅ **100% JPA Implementation** - UserRepository interface with JPA queries
-- ❌ **0% Stored Procedures** - No stored procedures currently used in code
-- ✅ **Current Performance** - Adequate for small to medium user base (<10,000 users)
-- ✅ **Development Speed** - Fast development and easy testing
+#### 4. Authentication Required (401 Unauthorized)
+```json
+{
+  "status": "UNAUTHORIZED",
+  "message": "Authentication required",
+  "data": null
+}
+```
 
-### JPA vs Stored Procedures Decision Matrix
+#### 5. Insufficient Permissions (403 Forbidden)
+```json
+{
+  "status": "FORBIDDEN",
+  "message": "Insufficient permissions for this operation",
+  "data": null
+}
+```
 
-| Operation Type | Current Implementation | Recommendation | Performance Impact | When to Migrate |
-|----------------|----------------------|----------------|-------------------|------------------|
-| **User Authentication** | JPA with JOIN FETCH | Keep JPA | Low impact | >1000 auth/hour |
-| **User CRUD Operations** | JPA Repository | Keep JPA | Very low | Never (unless >10K users) |
-| **User Search/Filter** | JPA with @Query | Keep JPA | Low impact | >5000 searches/hour |
-| **Password Operations** | JPA (BCrypt in service) | Keep JPA | Very low | Keep JPA permanently |
-| **Bulk User Operations** | Not implemented | Use JPA initially | Medium impact | >100 users/batch |
-| **User Reports/Analytics** | Not implemented | Consider SP for future | High impact | When reporting needed |
+#### 6. Password Change Errors (400 Bad Request)
+```json
+{
+  "status": "BAD_REQUEST",
+  "message": "Current password is incorrect",
+  "data": null
+}
+```
 
-### Performance Thresholds for Migration
+## Examples
 
-| Metric | Current JPA Performance | Stored Procedure Threshold | Expected Improvement |
-|--------|------------------------|---------------------------|----------------------|
-| **User Login** | 5-15ms average | When >50ms or >1000/hour | 30-50% faster |
-| **User Registration** | 10-25ms average | When >100ms | 20-40% faster |
-| **User Search** | 15-40ms average | When >100ms or >5000/hour | 50-70% faster |
-| **User Updates** | 5-20ms average | Rarely needed | 20-30% faster |
+### Example 1: User Registration Flow
+```bash
+# 1. Create new customer user
+curl -X POST "http://localhost:8080/users" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "userName": "new_customer",
+    "firstName": "New",
+    "lastName": "Customer", 
+    "email": "new.customer@example.com",
+    "password": "SecurePass123!",
+    "userRole": {"userRoleId": 4},
+    "userProvider": {"userProviderId": 1}
+  }'
 
-### Migration Strategy (Future Planning)
+# 2. Login and get JWT token (separate authentication endpoint)
+# ... authentication process ...
 
-**Phase 1: Maintain JPA (Recommended for 2026)**
-- Continue with JPA for all current operations
-- Monitor query performance using Spring Boot Actuator
-- Optimize JPA queries with proper indexing
-- Add connection pooling optimization
+# 3. Update profile
+curl -X PUT "http://localhost:8080/users/26" \
+  -H "Authorization: Bearer {token}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "firstName": "Updated",
+    "lastName": "Customer",
+    "phoneNumber": "+1234567890"
+  }'
+```
 
-**Phase 2: Hybrid Approach (When needed)**
-- Implement stored procedures for specific high-frequency operations
-- Maintain dual implementation (JPA + SP) for A/B testing
-- Focus on authentication and search operations first
+### Example 2: User Search and Management
+```bash
+# 1. Search users by role and text
+curl -X GET "http://localhost:8080/users?roleName=customer&searchText=john" \
+  -H "Authorization: Bearer {token}"
 
-**Phase 3: Strategic Migration (Enterprise scale)**
-- Use stored procedures for complex reporting
-- Implement bulk operations with stored procedures
-- Keep JPA for simple CRUD operations
+# 2. Get paginated users  
+curl -X GET "http://localhost:8080/users?page=0&size=5" \
+  -H "Authorization: Bearer {token}"
 
-**Current Recommendation:** Continue with JPA approach due to:
-- Excellent development speed and maintainability
-- Easy testing and debugging
-- Platform independence
-- Current performance is adequate for expected load
-- No immediate need for complex operations requiring stored procedures
+# 3. Admin disable user
+curl -X PATCH "http://localhost:8080/users/26/status?enabled=false" \
+  -H "Authorization: Bearer {admin_token}"
+```
 
----
+### Example 3: Password Management Flow
+```bash
+# 1. User changes own password
+curl -X PUT "http://localhost:8080/users/change-password" \
+  -H "Authorization: Bearer {user_token}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "currentPassword": "OldPassword123!",
+    "newPassword": "NewPassword456!",
+    "confirmPassword": "NewPassword456!"
+  }'
 
-## Common Response Structure
+# 2. Admin resets user password (auto-generates and emails new password)
+curl -X PUT "http://localhost:8080/users/reset-password/problem_user" \
+  -H "Authorization: Bearer {admin_token}"
+```
 
-All API responses use `BaseResponseDto` format:
+## Security Considerations
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `code` | Integer | Yes | HTTP status code (200=success, 400=bad request, 404=not found, 500=server error) |
-| `message` | String | Yes | Human-readable response message |
-| `data` | Object/Array/null | No | Response data (varies by endpoint) |
-| `timestamp` | String | Yes | Response timestamp (yyyy-MM-dd HH:mm:ss format) |
+### 1. Authentication and Authorization
+- All user management operations require JWT authentication
+- Admin operations (reset password, disable users) require ADMIN role
+- Users can only modify their own data (except for admin users)
 
-**Success Response Codes:**
-- `200` - Success
-- `201` - Created (for POST operations)
+### 2. Password Security
+- Minimum 8 characters required for passwords
+- Passwords are encrypted using BCrypt before storage
+- Password reset generates cryptographically secure random passwords
+- Current password verification required for password changes
 
-**Error Response Codes:**
-- `400` - Bad Request (validation error)
-- `401` - Unauthorized (authentication required)
-- `403` - Forbidden (insufficient permissions)
-- `404` - Not Found
-- `500` - Internal Server Error
+### 3. Input Validation
+- All inputs are validated using Bean Validation annotations
+- SQL injection prevention through parameterized queries
+- XSS prevention through proper output encoding
 
----
+### 4. Rate Limiting and Monitoring  
+- Implement rate limiting on password-related endpoints
+- Log all administrative actions for audit trails
+- Monitor failed password attempts
 
-## UserDto Fields
+### 5. Email Security
+- Password reset emails sent securely
+- Email delivery failures are logged but don't fail the password reset operation
+- Consider implementing email verification for password resets
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `userId` | Long | User unique identifier |
-| `userProviderId` | Long | User provider ID |
-| `userRoleId` | Long | User role ID |
-| `userEnabled` | Boolean | User enabled status |
-| `userName` | String | Username |
-| `password` | String | Always null for security |
-| `firstName` | String | User first name |
-| `lastName` | String | User last name |
-| `phoneNumber` | String | Phone number |
-| `emailAddress` | String | Email address |
-| `description` | String | User description |
-| `userAvatarLink` | String | Avatar image link |
-| `address` | String | User address |
-| `lastLoginDt` | String | Last login timestamp |
-| `createdDt` | String | User creation timestamp |
-| `modifiedDt` | String | Last modification timestamp |
-| `userProviderName` | String | Provider name (LOCAL, GOOGLE, etc.) |
-| `userProviderRemarkEn` | String | Provider English description |
-| `userProviderRemark` | String | Provider Vietnamese description |
-| `userRoleName` | String | Role name (ADMIN, CUSTOMER) |
-| `userRoleRemarkEn` | String | Role English description |
-| `userRoleRemark` | String | Role Vietnamese description |
+### 6. Data Privacy
+- Sensitive data (passwords) never returned in API responses
+- User search limited to authenticated users
+- Consider implementing field-level access controls
 
----
+## Notes
 
-## Database Schema Reference
+### API Design Decisions
 
-**Primary Tables:**
+1. **Role and Provider Management**: Currently read-only. No create/update/delete operations exposed via API for security and data integrity.
 
-| Table | Description | Key Fields |
-|-------|-------------|------------|
-| `USER` | Core user information | USER_ID, USER_NAME, EMAIL, USER_PROVIDER_ID, USER_ROLE_ID |
-| `USER_PROVIDER` | Authentication provider details | USER_PROVIDER_ID, USER_PROVIDER_NAME |
-| `USER_ROLE` | User role information | USER_ROLE_ID, USER_ROLE_NAME |
+2. **Consolidated Endpoints**: Main endpoints (`/api/users/roles`, `/api/users/providers`, `/users`) now include integrated filtering capabilities. When no filter parameters are provided, they return all results. When filters are provided, they return filtered results. This eliminates the need for separate search endpoints.
 
-**Provider Types:**
-- `1` - LOCAL (Username/Password authentication)
-- `2` - GOOGLE (Google OAuth)
-- `3` - FACEBOOK (Facebook OAuth)
-- `4` - GITHUB (GitHub OAuth)
+3. **OpenAPI Integration**: All endpoints now include comprehensive OpenAPI 3.0 documentation with detailed parameter descriptions, response schemas, and security requirements.
 
-**Role Types:**
-- `1` - CUSTOMER (Regular Customer)
-- `2` - ADMIN (System Administrator)
+3. **Password Reset**: Admin-triggered reset uses username (not user ID) for better usability and uses auto-generated passwords with email notification for security.
 
-**Password Management Extensions:**
-- `PASSWORD_RESET_AT` DATETIME - Timestamp of last password reset
-- `FORCE_PASSWORD_CHANGE` BOOLEAN - Flag to force password change on next login
-- Password history table (optional) for preventing password reuse
+4. **Pagination**: Only main user listing endpoint supports pagination. Search endpoints return full result sets.
 
-**Implementation Notes:**
-- All APIs use JPA queries through UserService (100% JPA implementation)
-- No stored procedures currently implemented or needed for current scale
-- JWT authentication planned for future implementation
-- Password encryption uses BCrypt algorithm with strength 12
-- All password management APIs follow security best practices
-- Database query performance is adequate for current user base
+5. **Error Handling**: Consistent error response format across all endpoints with descriptive error messages.
 
-**Performance Analysis:**
-- Current JPA implementation handles user base up to 10,000 users efficiently
-- Average query response time: 5-40ms depending on operation complexity
-- Stored procedures recommended only when specific performance thresholds are exceeded
-- Migration to hybrid approach (JPA + SP) planned for enterprise scale (>10K users)
+## Email Configuration
+
+### Overview (v11.0)
+Starting from version 11.0, email configuration has been consolidated into a single POLICY key for simplified management. This allows administrators to update all email settings through one configuration entry without requiring application restart.
+
+### Consolidated Configuration
+All email settings are now stored in a single POLICY record with key `EMAIL_CONFIG`. The configuration uses a newline-separated key=value format:
+
+#### Configuration Format
+```
+smtp.host=smtp.gmail.com
+smtp.port=587
+smtp.username=artanddecor.system@gmail.com
+smtp.password=your-email-password-here
+smtp.auth=true
+smtp.starttls.enable=true
+smtp.starttls.required=true
+smtp.ssl.trust=smtp.gmail.com
+from.name=Art and Decor System
+from.address=artanddecor.system@gmail.com
+support.address=support@artanddecor.com
+system.name=Art and Decor E-commerce Platform
+system.website=https://artanddecor.com
+system.support.phone=+84-123-456-789
+```
+
+#### Configuration Keys
+**SMTP Configuration:**
+- `smtp.host`: SMTP server hostname
+- `smtp.port`: SMTP server port  
+- `smtp.username`: SMTP authentication username
+- `smtp.password`: SMTP authentication password
+- `smtp.auth`: Enable SMTP authentication (true/false)
+- `smtp.starttls.enable`: Enable STARTTLS (true/false)
+- `smtp.starttls.required`: Require STARTTLS (true/false)
+- `smtp.ssl.trust`: SSL trust configuration
+
+**Email Template Configuration:**  
+- `from.name`: Sender display name
+- `from.address`: Sender email address
+- `support.address`: Support email address
+
+**System Information:**
+- `system.name`: System name for email templates
+- `system.website`: Website URL for email templates  
+- `system.support.phone`: Support phone number
+
+### Migration Script
+To set up the consolidated email configuration in POLICY table, run:
+```sql
+-- Execute the migration script
+SOURCE DATABASE/INSERT_EMAIL_CONFIG_POLICIES.sql;
+```
+
+### Benefits
+1. **Consolidated Management**: All email settings in one POLICY record
+2. **Dynamic Configuration**: Update email settings via admin interface
+3. **Environment-specific**: Different settings per environment without code changes
+4. **Audit Trail**: Track configuration changes through POLICY table
+5. **Fallback Support**: Automatic fallback to default values if configuration is missing
+6. **Simplified Deployment**: Single configuration entry reduces complexity
+
+### Future Enhancements
+
+1. **Advanced Pagination**: Add pagination support to search endpoints
+2. **Role Management**: Add CRUD operations for roles and providers (admin-only)  
+3. **User Import/Export**: Bulk user management capabilities
+4. **Advanced Filtering**: Date range filtering, sorting options
+5. **User Profiles**: Extended profile information and preferences
+6. **Email Templates**: Customizable email templates for password reset notifications

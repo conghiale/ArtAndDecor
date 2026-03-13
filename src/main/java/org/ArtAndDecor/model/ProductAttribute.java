@@ -36,11 +36,8 @@ public class ProductAttribute {
     @JoinColumn(name = "PRODUCT_ATTR_ID", nullable = false)
     private ProductAttr productAttr;
 
-    @Column(name = "PRODUCT_ATTRIBUTE_REMARK_EN", length = 256)
-    private String productAttributeRemarkEn;
-
-    @Column(name = "PRODUCT_ATTRIBUTE_REMARK", nullable = false, length = 256)
-    private String productAttributeRemark;
+    @Column(name = "PRODUCT_ATTRIBUTE_VALUE", nullable = false, length = 256)
+    private String productAttributeValue;
 
     @Column(name = "PRODUCT_ATTRIBUTE_ENABLED", nullable = false)
     private Boolean productAttributeEnabled = true;

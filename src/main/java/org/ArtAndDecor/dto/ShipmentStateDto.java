@@ -25,10 +25,11 @@ public class ShipmentStateDto {
     @Size(max = 64, message = "Shipment state name must not exceed 64 characters")
     private String shipmentStateName;
     
-    @Size(max = 256, message = "English remark must not exceed 256 characters")
-    private String shipmentStateRemarkEn;
+    @Size(max = 256, message = "Shipment state display name must not exceed 256 characters")
+    private String shipmentStateDisplayName;
     
-    @Size(max = 256, message = "Remark must not exceed 256 characters")
+    @NotBlank(message = "Shipment state remark is required")
+    @Size(max = 256, message = "Shipment state remark must not exceed 256 characters")
     private String shipmentStateRemark;
     
     @NotNull(message = "Shipment state enabled flag is required")

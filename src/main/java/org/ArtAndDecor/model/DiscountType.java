@@ -31,8 +31,8 @@ public class DiscountType {
     @Column(name = "DISCOUNT_TYPE_NAME", nullable = false, unique = true, length = 64)
     private String discountTypeName;
 
-    @Column(name = "DISCOUNT_TYPE_REMARK_EN", length = 256)
-    private String discountTypeRemarkEn;
+    @Column(name = "DISCOUNT_TYPE_DISPLAY_NAME", length = 256)
+    private String discountTypeDisplayName;
 
     @Column(name = "DISCOUNT_TYPE_REMARK", nullable = false, length = 256)
     private String discountTypeRemark;

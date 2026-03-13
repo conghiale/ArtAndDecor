@@ -27,10 +27,11 @@ public class BlogCategoryDto {
     @Size(max = 64, message = "Blog category name must not exceed 64 characters")
     private String blogCategoryName;
     
-    @Size(max = 256, message = "English remark must not exceed 256 characters")
-    private String blogCategoryRemarkEn;
+    @Size(max = 256, message = "Blog category display name must not exceed 256 characters")
+    private String blogCategoryDisplayName;
     
-    @Size(max = 256, message = "Remark must not exceed 256 characters")
+    @NotBlank(message = "Blog category remark is required")
+    @Size(max = 256, message = "Blog category remark must not exceed 256 characters")
     private String blogCategoryRemark;
     
     private Boolean blogCategoryEnabled;
@@ -44,6 +45,8 @@ public class BlogCategoryDto {
     // =============================================
     // NESTED DTO (complete related entity data)
     // =============================================
+    private BlogTypeDto blogType;
+    private ImageDto image;
     private SeoMetaDto seoMeta;
     
     // Constructor for essential fields

@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
  * Handles user registration, authentication, and token management
  */
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/api/auth")
 @CrossOrigin(origins = "*")
 @RequiredArgsConstructor
 public class AuthenticationController {

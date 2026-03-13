@@ -48,11 +48,10 @@ cd "D:\Data\PROJECT_PERSONAL\WEBSITE_ART_DECOR_HUB\DATABASE"
 
 ### Database Structure
 - **Database**: `ART_AND_DECOR` with UTF8MB4 charset
-- **Tables**: 32 tables including:
+- **Tables**: 31 tables including:
   - User management (USER, USER_ROLE, USER_PROVIDER)
   - Product catalog (PRODUCT, PRODUCT_CATEGORY, PRODUCT_TYPE, etc.)
   - Order system (ORDERS, ORDER_STATE, CART, CART_ITEM, etc.)
-  - Response codes (RESPONSE_CODE)
   - Content management (BLOG, CONTACT, POLICY)
 
 ### Sample Data
@@ -60,7 +59,6 @@ cd "D:\Data\PROJECT_PERSONAL\WEBSITE_ART_DECOR_HUB\DATABASE"
 - 12 sample products (paintings, drawing tools, decorations)
 - 15 product reviews with likes
 - Sample orders, carts, and payment records
-- Response codes for API messages
 - Blog posts and policies
 
 ## Database Configuration

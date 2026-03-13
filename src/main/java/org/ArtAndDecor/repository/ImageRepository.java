@@ -42,6 +42,26 @@ public interface ImageRepository extends JpaRepository<Image, Long> {
     // =============================================
 
     /**
+     * Search images by multiple criteria with pagination
+     */
+    @Query("SELECT i FROM Image i " +
+           "WHERE (:imageSize IS NULL OR LOWER(i.imageSize) LIKE LOWER(CONCAT('%', :imageSize, '%'))) " +
+           "AND (:imageFormat IS NULL OR LOWER(i.imageFormat) = LOWER(:imageFormat)) " +
+           "AND (:textSearch IS NULL OR (" +
+           "     LOWER(i.imageName) LIKE LOWER(CONCAT('%', :textSearch, '%')) OR " +
+           "     LOWER(i.imageDisplayName) LIKE LOWER(CONCAT('%', :textSearch, '%')) OR " +
+           "     LOWER(i.imageSlug) LIKE LOWER(CONCAT('%', :textSearch, '%')) OR " +
+           "     LOWER(i.imageRemark) LIKE LOWER(CONCAT('%', :textSearch, '%'))" +
+           ")) " +
+           "ORDER BY i.createdDt DESC")
+    Page<Image> findImagesByCriteriaPaginated(
+        @Param("imageSize") String imageSize,
+        @Param("imageFormat") String imageFormat,
+        @Param("textSearch") String textSearch,
+        Pageable pageable
+    );
+
+    /**
      * Find images by format slug (Customer filtering)  
      */
     @Query("SELECT i FROM Image i " +
@@ -55,6 +75,8 @@ public interface ImageRepository extends JpaRepository<Image, Long> {
     @Query("SELECT i FROM Image i " +
            "WHERE LOWER(i.imageName) LIKE LOWER(CONCAT('%', :searchTerm, '%')) " +
            "OR LOWER(i.imageDisplayName) LIKE LOWER(CONCAT('%', :searchTerm, '%')) " +
+           "OR LOWER(i.imageSlug) LIKE LOWER(CONCAT('%', :searchTerm, '%')) " +
+           "OR LOWER(i.imageRemark) LIKE LOWER(CONCAT('%', :searchTerm, '%')) " +
            "ORDER BY i.createdDt DESC")
     List<Image> findBySearchTerm(@Param("searchTerm") String searchTerm);
 
@@ -93,4 +115,16 @@ public interface ImageRepository extends JpaRepository<Image, Long> {
      */
     @Query("SELECT COUNT(i) FROM Image i")
     long countTotalImages();
+
+    /**
+     * Get all distinct image sizes for combobox
+     */
+    @Query("SELECT DISTINCT i.imageSize FROM Image i WHERE i.imageSize IS NOT NULL ORDER BY i.imageSize")
+    List<String> findDistinctImageSizes();
+
+    /**
+     * Get all distinct image formats for combobox
+     */
+    @Query("SELECT DISTINCT i.imageFormat FROM Image i WHERE i.imageFormat IS NOT NULL ORDER BY i.imageFormat")
+    List<String> findDistinctImageFormats();
 }

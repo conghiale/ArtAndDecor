@@ -36,8 +36,8 @@ public class ProductCategory {
     @Column(name = "PRODUCT_CATEGORY_NAME", nullable = false, unique = true, length = 64)
     private String productCategoryName;
 
-    @Column(name = "PRODUCT_CATEGORY_REMARK_EN", length = 256)
-    private String productCategoryRemarkEn;
+    @Column(name = "PRODUCT_CATEGORY_DISPLAY_NAME", length = 256)
+    private String productCategoryDisplayName;
 
     @Column(name = "PRODUCT_CATEGORY_REMARK", nullable = false, length = 256)
     private String productCategoryRemark;
@@ -45,8 +45,8 @@ public class ProductCategory {
     @Column(name = "PRODUCT_CATEGORY_ENABLED", nullable = false)
     private Boolean productCategoryEnabled = true;
 
-    @Column(name = "PRODUCT_CATEGORY_DISPLAY", nullable = false)
-    private Boolean productCategoryDisplay = true;
+    @Column(name = "PRODUCT_CATEGORY_VISIBLE", nullable = false)
+    private Boolean productCategoryVisible = true;
 
     @Column(name = "SEO_META_ID")
     private Long seoMetaId;
@@ -63,8 +63,9 @@ public class ProductCategory {
     @JoinColumn(name = "PRODUCT_CATEGORY_PARENT_ID")
     private ProductCategory parentCategory;
 
-    @Column(name = "PRODUCT_CATEGORY_IMAGE_NAME", length = 256)
-    private String productCategoryImageName;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "IMAGE_ID")
+    private Image image;
 
     @CreationTimestamp
     @Column(name = "CREATED_DT", nullable = false, updatable = false)
@@ -87,8 +88,8 @@ public class ProductCategory {
         if (this.productCategoryEnabled == null) {
             this.productCategoryEnabled = true;
         }
-        if (this.productCategoryDisplay == null) {
-            this.productCategoryDisplay = true;
+        if (this.productCategoryVisible == null) {
+            this.productCategoryVisible = true;
         }
     }
 

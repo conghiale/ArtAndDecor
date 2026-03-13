@@ -2,7 +2,6 @@ package org.ArtAndDecor.services.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.ArtAndDecor.dto.ChangePasswordRequest;
-import org.ArtAndDecor.dto.ResetPasswordRequest;
 import org.ArtAndDecor.dto.UserDto;
 import org.ArtAndDecor.model.User;
 import org.ArtAndDecor.model.UserProvider;
@@ -11,13 +10,15 @@ import org.ArtAndDecor.repository.UserRepository;
 import org.ArtAndDecor.repository.UserProviderRepository;
 import org.ArtAndDecor.repository.UserRoleRepository;
 import org.ArtAndDecor.services.UserService;
+import org.ArtAndDecor.services.EmailService;
 import org.ArtAndDecor.utils.UserMapperUtil;
+import org.ArtAndDecor.utils.PasswordUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,21 +42,13 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final UserProviderRepository userProviderRepository;
     private final UserRoleRepository userRoleRepository;
+    private final EmailService emailService;
 
     private final PasswordEncoder passwordEncoder;
 
     @Override
     public UserDto createUser(UserDto userDto) {
         logger.info("Creating new user with username: {}", userDto.getUserName());
-
-        // Validation
-        if (userDto.getUserName() != null && userRepository.existsByUserName(userDto.getUserName())) {
-            throw new IllegalArgumentException("Username already exists: " + userDto.getUserName());
-        }
-
-        if (userDto.getEmail() != null && userRepository.existsByEmail(userDto.getEmail())) {
-            throw new IllegalArgumentException("Email already exists: " + userDto.getEmail());
-        }
 
         User user = convertToEntity(userDto);
         
@@ -96,20 +89,6 @@ public class UserServiceImpl implements UserService {
         User existingUser = userRepository.findByIdWithDetails(userId)
             .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
 
-        // Check username uniqueness (if changing)
-        if (userDto.getUserName() != null && 
-            !userDto.getUserName().equals(existingUser.getUsername()) &&
-            userRepository.existsByUserName(userDto.getUserName())) {
-            throw new IllegalArgumentException("Username already exists: " + userDto.getUserName());
-        }
-
-        // Check email uniqueness (if changing)
-        if (userDto.getEmail() != null && 
-            !userDto.getEmail().equals(existingUser.getEmail()) &&
-            userRepository.existsByEmail(userDto.getEmail())) {
-            throw new IllegalArgumentException("Email already exists: " + userDto.getEmail());
-        }
-
         // Update fields
         updateUserFields(existingUser, userDto);
 
@@ -129,38 +108,6 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public Page<UserDto> getAllUsers(int page, int size) {
-        logger.debug("Getting all users - page: {}, size: {}", page, size);
-        
-        List<User> allUsers = userRepository.findAllWithDetails();
-        
-        int start = page * size;
-        int end = Math.min(start + size, allUsers.size());
-        
-        List<UserDto> pageContent;
-        if (start >= allUsers.size()) {
-            pageContent = List.of();
-        } else {
-            pageContent = allUsers.subList(start, end).stream()
-                .map(this::convertToDto)
-                .collect(Collectors.toList());
-        }
-        
-        return new PageImpl<>(pageContent, PageRequest.of(page, size), allUsers.size());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<UserDto> searchUsersByName(String searchTerm) {
-        logger.debug("Searching users by name: {}", searchTerm);
-        
-        return userRepository.searchByNameWithDetails(searchTerm).stream()
-            .map(this::convertToDto)
-            .collect(Collectors.toList());
-    }
-
-    @Override
     @Transactional
     public UserDto updateUserStatus(Long userId, Boolean enabled) {
         logger.info("Updating user status for ID: {} to enabled: {}", userId, enabled);
@@ -175,36 +122,18 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public void deleteUser(Long userId) {
-        logger.info("Deleting user with ID: {}", userId);
-        
-        if (!userRepository.existsById(userId)) {
-            throw new IllegalArgumentException("User not found with ID: " + userId);
-        }
-        
-        userRepository.deleteById(userId);
-    }
-
-    @Override
-    public boolean existsByUserName(String userName) {
-        return userRepository.existsByUserName(userName);
-    }
-
-    @Override
-    public boolean existsByEmail(String email) {
-        return userRepository.existsByEmail(email);
-    }
-
-    @Override
     @Transactional(readOnly = true)
-    public List<UserDto> findUsersByCriteria(Long userId, Long userProviderId, Long userRoleId, 
-                                           Boolean userEnabled, String userName) {
-        logger.debug("Finding users by criteria");
+    public Page<UserDto> findUsersByCriteria(String userProviderName, String userProviderDisplayName, 
+                                           String userRoleName, String userRoleDisplayName, 
+                                           String textSearch, String userName, Boolean userEnabled, 
+                                           Pageable pageable) {
+        logger.debug("Finding users by enhanced criteria with pagination");
         
-        return userRepository.findUsersByCriteria(userId, userProviderId, userRoleId, userEnabled, userName)
-            .stream()
-            .map(this::convertToDto)
-            .collect(Collectors.toList());
+        Page<User> usersPage = userRepository.findUsersAdvancedCriteriaPaginated(
+                userProviderName, userProviderDisplayName, userRoleName, userRoleDisplayName, 
+                textSearch, userName, userEnabled, pageable);
+        
+        return usersPage.map(this::convertToDto);
     }
 
     @Override
@@ -285,31 +214,34 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public UserDto resetPassword(Long userId, ResetPasswordRequest request) {
-        logger.info("Admin resetting password for user ID: {}", userId);
-
-        // 1. Find user by ID
-        User user = userRepository.findById(userId)
-            .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
+    public UserDto resetPassword(String userName) {
+        logger.info("Starting password reset for user: {}", userName);
         
-        // 2. Update password
-        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        // 1. Find user by username (enabled or disabled)
+        User user = userRepository.findByUserNameAndUserEnabled(userName, true)
+            .or(() -> userRepository.findByUserNameAndUserEnabled(userName, false))
+            .orElseThrow(() -> new IllegalArgumentException("User not found with username: " + userName));
+
+        // 2. Generate new random password
+        String newPassword = PasswordUtils.generateRandomPassword();
+        
+        // 3. Update user password
+        user.setPassword(passwordEncoder.encode(newPassword));
         user.setModifiedDt(LocalDateTime.now());
-        // Note: Add password reset timestamp and force change fields to User entity if needed
-        
-        User updatedUser = userRepository.save(user);
-        logger.info("Password reset successfully for user ID: {}", userId);
-        
-        return convertToDto(updatedUser);
-    }
 
-    @Override
-    @Transactional
-    public UserDto changePasswordByUsername(String username, ChangePasswordRequest request) {
-        logger.info("Changing password by username: {}", username);
-        
-        // Same logic as changePassword but with explicit username parameter
-        return changePassword(username, request);
+        User updatedUser = userRepository.save(user);
+        logger.info("Password reset successfully for user: {}", userName);
+
+        // 4. Send password reset email notification
+        try {
+            emailService.sendPasswordResetEmail(user.getEmail(), user.getFirstName(), newPassword);
+            logger.info("Password reset email sent successfully to: {}", user.getEmail());
+        } catch (Exception e) {
+            logger.error("Failed to send password reset email to: {}. Error: {}", user.getEmail(), e.getMessage());
+            // Note: We continue execution even if email fails, as password has been reset
+        }
+
+        return convertToDto(updatedUser);
     }
 
     /**

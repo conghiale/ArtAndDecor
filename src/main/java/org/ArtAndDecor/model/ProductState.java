@@ -34,8 +34,8 @@ public class ProductState {
     @Column(name = "PRODUCT_STATE_ENABLED", nullable = false)
     private Boolean productStateEnabled = true;
 
-    @Column(name = "PRODUCT_STATE_REMARK_EN", length = 256)
-    private String productStateRemarkEn;
+    @Column(name = "PRODUCT_STATE_DISPLAY_NAME", length = 256)
+    private String productStateDisplayName;
 
     @Column(name = "PRODUCT_STATE_REMARK", nullable = false, length = 256)
     private String productStateRemark;

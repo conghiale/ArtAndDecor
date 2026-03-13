@@ -25,10 +25,11 @@ public class PaymentMethodDto {
     @Size(max = 64, message = "Payment method name must not exceed 64 characters")
     private String paymentMethodName;
     
-    @Size(max = 256, message = "English remark must not exceed 256 characters")
-    private String paymentMethodRemarkEn;
+    @Size(max = 256, message = "Payment method display name must not exceed 256 characters")
+    private String paymentMethodDisplayName;
     
-    @Size(max = 256, message = "Remark must not exceed 256 characters")
+    @NotBlank(message = "Payment method remark is required")
+    @Size(max = 256, message = "Payment method remark must not exceed 256 characters")
     private String paymentMethodRemark;
     
     @NotNull(message = "Payment method enabled flag is required")

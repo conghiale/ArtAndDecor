@@ -33,8 +33,8 @@ public class UserRole {
     @Column(name = "USER_ROLE_NAME", nullable = false, unique = true, length = 64)
     private String userRoleName;
 
-    @Column(name = "USER_ROLE_REMARK_EN", length = 256)
-    private String userRoleRemarkEn;
+    @Column(name = "USER_ROLE_DISPLAY_NAME", length = 256)
+    private String userRoleDisplayName;
 
     @Column(name = "USER_ROLE_REMARK", nullable = false, length = 256)
     private String userRoleRemark;

@@ -17,13 +17,6 @@ import java.util.Optional;
 public interface PolicyRepository extends JpaRepository<Policy, Long> {
 
     /**
-     * Find policy by name (unique)
-     * @param policyName Policy name
-     * @return Policy if found
-     */
-    Optional<Policy> findByPolicyName(String policyName);
-
-    /**
      * Find policy by slug
      * @param policySlug the policy slug
      * @return Optional containing Policy if found
@@ -31,40 +24,44 @@ public interface PolicyRepository extends JpaRepository<Policy, Long> {
     Optional<Policy> findByPolicySlug(String policySlug);
 
     /**
+     * Find policy by name
+     * @param policyName Policy name
+     * @return Optional containing policy if found
+     */
+    Optional<Policy> findByPolicyName(String policyName);
+
+    /**
      * Check if policy exists by name
      * @param policyName Policy name
      * @return true if exists
      */
     boolean existsByPolicyName(String policyName);
-    
 
-    
     /**
-     * Find all enabled policies
-     * @return List of enabled policies
-     */
-    List<Policy> findByPolicyEnabledTrue();
-    
-    /**
-     * Find policies by enabled status
-     * @param enabled the enabled status
-     * @return List of policies with specified enabled status
-     */
-    List<Policy> findByPolicyEnabled(Boolean enabled);
-    
-    /**
-     * Find policies by name pattern (case-insensitive)
-     * @param namePattern the name pattern to search
+     * Find policies by multiple criteria
+     * @param policyName Filter by policy name (exact match)
+     * @param policyEnabled Filter by enabled status
+     * @param textSearch Search text in name, slug, value, display name, remark
      * @return List of matching policies
      */
-    @Query("SELECT p FROM Policy p WHERE LOWER(p.policyName) LIKE LOWER(CONCAT('%', :namePattern, '%'))")
-    List<Policy> findByPolicyNameContainingIgnoreCase(@Param("namePattern") String namePattern);
+    @Query("SELECT p FROM Policy p WHERE " +
+           "(:policyName IS NULL OR p.policyName = :policyName) AND " +
+           "(:policyEnabled IS NULL OR p.policyEnabled = :policyEnabled) AND " +
+           "(:textSearch IS NULL OR :textSearch = '' OR " +
+           " LOWER(p.policyName) LIKE LOWER(CONCAT('%', :textSearch, '%')) OR " +
+           " LOWER(p.policySlug) LIKE LOWER(CONCAT('%', :textSearch, '%')) OR " +
+           " LOWER(p.policyValue) LIKE LOWER(CONCAT('%', :textSearch, '%')) OR " +
+           " LOWER(p.policyDisplayName) LIKE LOWER(CONCAT('%', :textSearch, '%')) OR " +
+           " LOWER(p.policyRemark) LIKE LOWER(CONCAT('%', :textSearch, '%')))")
+    List<Policy> findPoliciesByCriteria(
+        @Param("policyName") String policyName,
+        @Param("policyEnabled") Boolean policyEnabled,
+        @Param("textSearch") String textSearch);
     
     /**
-     * Find policies by value pattern (for configuration search)
-     * @param valuePattern the value pattern to search
-     * @return List of matching policies
+     * Get all distinct policy names for dropdown/combobox
+     * @return List of policy names
      */
-    @Query("SELECT p FROM Policy p WHERE p.policyValue LIKE CONCAT('%', :valuePattern, '%')")
-    List<Policy> findByPolicyValueContaining(@Param("valuePattern") String valuePattern);
+    @Query("SELECT DISTINCT p.policyName FROM Policy p ORDER BY p.policyName")
+    List<String> findAllPolicyNames();
 }

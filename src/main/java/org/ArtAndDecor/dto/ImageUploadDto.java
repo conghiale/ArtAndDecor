@@ -40,19 +40,19 @@ public class ImageUploadDto {
     private String[] imageDisplayNames;
     
     /**
-     * Array of image sizes (formats) - e.g., "200x200", "500x500", "JPEG", "PNG"
-     * Optional field, if not provided, extension will be extracted from file
+     * Array of image sizes (dimensions) - e.g., "2048x1024", "1920x1080", "800x600"
+     * Optional field, if not provided, will be auto-detected from image file
      */
     private String[] imageSizes;
     
     /**
-     * Array of remarks in English for each image
-     * Optional field
+     * Array of image formats - e.g., "JPG", "PNG", "WEBP", "GIF"
+     * Optional field, if not provided, will be extracted from file extension
      */
-    private String[] imageRemarksEn;
+    private String[] imageFormats;
     
     /**
-     * Array of remarks for each image
+     * Array of remarks for each image (Vietnamese descriptions)
      * Optional field
      */
     private String[] imageRemarks;

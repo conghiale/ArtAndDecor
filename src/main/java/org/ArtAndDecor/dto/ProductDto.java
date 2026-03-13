@@ -32,10 +32,10 @@ public class ProductDto {
     @Size(max = 64, message = "Product slug must not exceed 64 characters")
     private String productSlug;
     
-    @NotNull(message = "Product description is required")
-    private String productDescription;
-    
-    @NotNull(message = "Product price is required")
+    @NotBlank(message = "Product code is required")
+    @Size(max = 64, message = "Product code must not exceed 64 characters")
+    private String productCode;
+
     @DecimalMin(value = "0.0", message = "Product price must not be negative")
     @Digits(integer = 13, fraction = 2, message = "Invalid price format")
     private BigDecimal productPrice;
@@ -47,13 +47,14 @@ public class ProductDto {
     @Min(value = 0, message = "Sold quantity must not be negative")
     private Integer soldQuantity;
     
-    @Size(max = 256, message = "English remark must not exceed 256 characters")
-    private String productRemarkEn;
-    
-    @Size(max = 256, message = "Remark must not exceed 256 characters")
-    private String productRemark;
+    @NotBlank(message = "Product description is required")
+    private String productDescription;
     
     private Boolean productEnabled;
+    
+    private Boolean productFeatured;
+    
+    private Boolean productHighlighted;
     
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdDt;
@@ -65,7 +66,6 @@ public class ProductDto {
     // NESTED DTOs (complete related entity data)
     // =============================================
     private ProductCategoryDto productCategory;
-    private ProductTypeDto productType;
     private ProductStateDto productState;
     private SeoMetaDto seoMeta;
     
@@ -124,7 +124,7 @@ public class ProductDto {
     public String getPrimaryImageUrl() {
         if (productImages != null) {
             return productImages.stream()
-                .filter(ProductImageDto::getIsPrimary)
+                .filter(ProductImageDto::getProductImagePrimary)
                 .findFirst()
                 .map(img -> img.getImage() != null ? img.getImage().getImageSlug() : null)
                 .orElse(null);

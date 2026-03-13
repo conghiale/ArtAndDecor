@@ -1,74 +1,121 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="WARN">
+    
     <Properties>
-<!--        <Property name="basePath">${sys:jboss.server.log.dir}/</Property>-->
-        <Property name="basePath">${sys:java.io.tmpdir}/ArtAndDecor/</Property>
-<!--        <Property name="basePath">./DVC_TAX_CODE_INFO_RETRIEVAL_TOOL_LOG/</Property>-->
+        <Property name="LOG_PATTERN">%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%t] %logger{36} [%M:%L] - %msg%n</Property>
+        <Property name="LOG_DIR">${sys:java.io.tmpdir}/ArtAndDecorLogs</Property>
     </Properties>
-
+    
     <Appenders>
-        <RollingFile name="logFile" fileName="${basePath}/ArtAndDecor.log" filePattern="${basePath}/tool%d{yyyyMMdd}-%i.log.gz">
-
-            <PatternLayout pattern="[%d{yyyy-MM-dd HH:mm:ss.SSS}][%highlight{%-5level}][%t][%c{7.4}][%M:%L] %msg%n"/>
-            <Policies>
-                <SizeBasedTriggeringPolicy size="100MB"/>
-                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
-            </Policies>
-            <DefaultRolloverStrategy >
-                <Delete basePath="${basePath}" maxDepth="30" >
-                    <IfLastModified age="365d"/>
-                </Delete>
-            </DefaultRolloverStrategy>
-        </RollingFile>
-
-        <Console name="consoleLogger">
-            <PatternLayout pattern="${prefix} [%d{yyyy-MM-dd HH:mm:ss.SSS}][%highlight{%-5level}][%t][%c{7.4}][%M:%L] %msg%n"/>
+        <!-- Console Appender -->
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
         </Console>
+        
+        <!-- File Appender -->
+        <RollingFile name="FileAppender" 
+                     fileName="${LOG_DIR}/ArtAndDecor.log"
+                     filePattern="${LOG_DIR}/ArtAndDecor.%d{yyyy-MM-dd}.%i.log.gz">
+            
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+            
+            <Policies>
+                <!-- Roll over daily -->
+                <TimeBasedTriggeringPolicy />
+                <!-- Roll over when file reaches 50MB -->
+                <SizeBasedTriggeringPolicy size="50MB"/>
+            </Policies>
+            
+            <!-- Keep maximum 30 files -->
+            <DefaultRolloverStrategy max="30"/>
+        </RollingFile>
+        
+        <!-- Error File Appender -->
+        <RollingFile name="ErrorFileAppender" 
+                     fileName="${LOG_DIR}/ArtAndDecor-Error.log"
+                     filePattern="${LOG_DIR}/ArtAndDecor-Error.%d{yyyy-MM-dd}.%i.log.gz">
+            
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+            
+            <!-- Only log WARN and ERROR level messages -->
+            <ThresholdFilter level="WARN" onMatch="ACCEPT" onMismatch="DENY"/>
+            
+            <Policies>
+                <TimeBasedTriggeringPolicy />
+                <SizeBasedTriggeringPolicy size="50MB"/>
+            </Policies>
+            
+            <DefaultRolloverStrategy max="30"/>
+        </RollingFile>
     </Appenders>
-
+    
     <Loggers>
-        <Logger name="org.apache.axis"  additivity="false">
-            <AppenderRef ref="logFile" level="ERROR"/>
+        <!-- Application specific loggers -->
+        <Logger name="org.ArtAndDecor" level="INFO" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="FileAppender"/>
+            <AppenderRef ref="ErrorFileAppender"/>
         </Logger>
         
-        <Logger name="org.apache.http"  additivity="false">
-            <AppenderRef ref="logFile" level="ERROR" />
+        <!-- Spring Framework loggers -->
+        <Logger name="org.springframework" level="INFO" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="FileAppender"/>
+            <AppenderRef ref="ErrorFileAppender"/>
         </Logger>
         
-        <Logger name="org.apache.jackrabbit.spi2davex"  additivity="false">
-            <AppenderRef ref="logFile" level="ERROR"/>
+        <Logger name="org.springframework.data" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="FileAppender"/>
         </Logger>
         
-        <Logger name="org.apache.jackrabbit.jcr2spi"  additivity="false">
-            <AppenderRef ref="logFile" level="ERROR"/>
+        <!-- Database related loggers -->
+        <Logger name="org.hibernate" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="FileAppender"/>
         </Logger>
         
-        <Logger name="org.apache.jackrabbit.jcr2spi.state"  additivity="false">
-            <AppenderRef ref="logFile" level="ERROR"/>
+        <Logger name="com.mysql" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="FileAppender"/>
         </Logger>
         
-        <Logger name="org.apache.jackrabbit.spi2dav"  additivity="false">
-            <AppenderRef ref="logFile" level="ERROR"/>
+        <!-- Mail related loggers -->
+        <Logger name="org.springframework.mail" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="FileAppender"/>
         </Logger>
-
-        <Logger name="org.springframework" additivity="false">
-            <AppenderRef ref="logFile" level="INFO"/>
-            <AppenderRef ref="consoleLogger" level="INFO"/>
+        
+        <!-- Jackson JSON loggers -->
+        <Logger name="com.fasterxml.jackson" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="FileAppender"/>
         </Logger>
-
-        <Logger name="org.springframework.data" additivity="false">
-            <AppenderRef ref="logFile" level="ERROR"/>
-            <AppenderRef ref="consoleLogger" level="ERROR"/>
+        
+        <!-- Security related loggers -->
+        <Logger name="org.springframework.security" level="INFO" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="FileAppender"/>
+            <AppenderRef ref="ErrorFileAppender"/>
         </Logger>
-
-        <Logger name="org.hibernate" additivity="false">
-            <AppenderRef ref="logFile" level="WARN"/>
-            <AppenderRef ref="consoleLogger" level="WARN"/>
+        
+        <!-- JWT loggers -->
+        <Logger name="io.jsonwebtoken" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="FileAppender"/>
         </Logger>
-
-        <Root level="DEBUG">
-            <AppenderRef ref="consoleLogger"/>
-            <AppenderRef ref="logFile"/>
+        
+        <!-- Apache HTTP loggers -->
+        <Logger name="org.apache.http" level="WARN" additivity="false">
+            <AppenderRef ref="FileAppender"/>
+        </Logger>
+        
+        <!-- Root logger -->
+        <Root level="INFO">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="FileAppender"/>
+            <AppenderRef ref="ErrorFileAppender"/>
         </Root>
     </Loggers>
+    
 </Configuration>

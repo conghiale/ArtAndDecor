@@ -32,7 +32,6 @@ public class ImageMapperUtil {
         dto.setImageDisplayName(image.getImageDisplayName());
         dto.setImageSlug(image.getImageSlug());
         dto.setImageSize(image.getImageSize());
-        dto.setImageRemarkEn(image.getImageRemarkEn());
         dto.setImageRemark(image.getImageRemark());
         dto.setCreatedDt(image.getCreatedDt());
         dto.setModifiedDt(image.getModifiedDt());
@@ -50,8 +49,8 @@ public class ImageMapperUtil {
         
         ImageDto dto = toBasicDto(image);
         
-        // Set nested DTO objects
-        dto.setSeoMeta(toSeoMetaDto(image.getSeoMeta()));
+        // Note: IMAGE table does not have direct relationship with SEO_META
+        // SeoMeta is handled separately by entities that reference both IMAGE and SEO_META
         
         return dto;
     }
@@ -90,10 +89,10 @@ public class ImageMapperUtil {
     // =============================================
 
     /**
-     * Check if Image entity has SEO data
+     * Check if Image entity is valid (has basic required fields)
      */
-    public static boolean hasSeoData(Image image) {
-        return image != null && image.getSeoMeta() != null;
+    public static boolean isValidImage(Image image) {
+        return image != null && image.getImageName() != null && image.getImageSlug() != null;
     }
     
     // =============================================
@@ -101,18 +100,9 @@ public class ImageMapperUtil {
     // =============================================
     
     /**
-     * Get imageFormatId from ImageDto nested object
+     * Get image format from ImageDto (stored as string in IMAGE_FORMAT field)
      */
-    public static Long getImageFormatId(ImageDto imageDto) {
-        return imageDto != null && imageDto.getImageFormat() != null ? 
-               imageDto.getImageFormat().getImageFormatId() : null;
-    }
-    
-    /**
-     * Get seoMetaId from ImageDto nested object
-     */
-    public static Long getSeoMetaId(ImageDto imageDto) {
-        return imageDto != null && imageDto.getSeoMeta() != null ? 
-               imageDto.getSeoMeta().getSeoMetaId() : null;
+    public static String getImageFormat(ImageDto imageDto) {
+        return imageDto != null ? imageDto.getImageFormat() : null;
     }
 }

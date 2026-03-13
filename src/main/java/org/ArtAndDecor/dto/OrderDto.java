@@ -31,26 +31,76 @@ public class OrderDto {
     @Size(max = 64, message = "Order slug must not exceed 64 characters")
     private String orderSlug;
     
+    // User reference for easy API usage
+    private Long userId;
+    
+    // Order state reference for easy API usage
+    private Long orderStateId;
+    private String orderStateName;
+    
+    // Discount reference for easy API usage
+    private Long discountId;
+    private String discountCode;
+    
+    // Discount information snapshot (lưu thông tin discount tại thời điểm đặt hàng)
+    private String discountType;
+    private BigDecimal discountValue;
+    
+    // Customer information snapshot (from USER table or CART.SESSION_ID)
+    // Maps to USER.USER_NAME if USER_ID is not null, otherwise CART.SESSION_ID
+    @Size(max = 150, message = "Customer name must not exceed 150 characters")
+    private String customerName;
+    
+    // Maps to USER.PHONE_NUMBER or manual input
+    @Size(max = 15, message = "Customer phone number must not exceed 15 characters")
+    private String customerPhoneNumber;
+    
+    // Maps to USER.EMAIL or manual input
+    @Email(message = "Invalid customer email format")
+    @Size(max = 100, message = "Customer email must not exceed 100 characters")
+    private String customerEmail;
+    
+    // Customer address (manual input or from USER address)
+    private String customerAddress;
+    
+    // Receiver information snapshot (from SHIPMENT table)
+    // Maps to SHIPMENT.RECEIVER_NAME
+    @Size(max = 150, message = "Receiver name must not exceed 150 characters")
+    private String receiverName;
+    
+    // Maps to SHIPMENT.RECEIVER_PHONE
+    @Size(max = 20, message = "Receiver phone must not exceed 20 characters")
+    private String receiverPhone;
+    
+    // Maps to SHIPMENT.RECEIVER_EMAIL
+    @Email(message = "Invalid receiver email format")
+    @Size(max = 150, message = "Receiver email must not exceed 150 characters")
+    private String receiverEmail;
+    
+    // Combined address from SHIPMENT (ADDRESS_LINE, CITY, DISTRICT, WARD, COUNTRY)
+    private String receiverAddress;
+    
+    // Financial breakdown (ORDER table fields)
+    // Maps to ORDER.SUBTOTAL_AMOUNT - original order amount before any adjustments
+    @NotNull(message = "Subtotal amount is required")
+    @DecimalMin(value = "0.0", message = "Subtotal amount must not be negative")
+    private BigDecimal subtotalAmount;
+    
+    // Maps to ORDER.DISCOUNT_AMOUNT - snapshot from DISCOUNT calculation
+    @DecimalMin(value = "0.0", message = "Discount amount must not be negative")
+    private BigDecimal discountAmount;
+    
+    // Maps to ORDER.SHIPPING_FEE_AMOUNT - snapshot from SHIPMENT.SHIPPING_FEE_AMOUNT
+    @DecimalMin(value = "0.0", message = "Shipping fee amount must not be negative")
+    private BigDecimal shippingFeeAmount;
+    
+    // Maps to ORDER.TOTAL_AMOUNT - final amount = SUBTOTAL_AMOUNT + SHIPPING_FEE_AMOUNT - DISCOUNT_AMOUNT
     @NotNull(message = "Total amount is required")
     @DecimalMin(value = "0.0", message = "Total amount must not be negative")
     private BigDecimal totalAmount;
     
-    @Size(max = 1000, message = "Note must not exceed 1000 characters")
-    private String note;
-    
-    @Size(max = 256, message = "English remark must not exceed 256 characters")
-    private String orderRemarkEn;
-    
-    @Size(max = 256, message = "Remark must not exceed 256 characters")
-    private String orderRemark;
-    
-    private Boolean orderEnabled;
-    
-    @DecimalMin(value = "0.0", message = "Final amount must not be negative")
-    private BigDecimal finalAmount;
-    
-    @Size(max = 500, message = "Shipping address must not exceed 500 characters")
-    private String shippingAddress;
+    @Size(max = 1000, message = "Order note must not exceed 1000 characters")
+    private String orderNote;
     
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdDt;
@@ -65,10 +115,9 @@ public class OrderDto {
     private CartDto cart;
     private OrderStateDto orderState;
     private DiscountDto discount;
-    private SeoMetaDto seoMeta;
     
     // Related data
-    private List<OrderStateHistoryDto> orderStateHistories;
+    private List<OrderItemDto> orderItems;
     private List<PaymentDto> payments;
     private List<ShipmentDto> shipments;
     
@@ -131,13 +180,56 @@ public class OrderDto {
     }
     
     /**
-     * Calculate final amount
+     * Calculate final amount based on database schema
+     * TOTAL_AMOUNT = SUBTOTAL_AMOUNT + SHIPPING_FEE_AMOUNT - DISCOUNT_AMOUNT
      */
     public BigDecimal calculateFinalAmount() {
-        BigDecimal total = totalAmount != null ? totalAmount : BigDecimal.ZERO;
-        BigDecimal discountAmount = (discount != null && discount.getDiscountValue() != null) ? 
-                                   discount.getDiscountValue() : BigDecimal.ZERO;
+        BigDecimal subtotal = subtotalAmount != null ? subtotalAmount : BigDecimal.ZERO;
+        BigDecimal shipping = shippingFeeAmount != null ? shippingFeeAmount : BigDecimal.ZERO;
+        BigDecimal discount = discountAmount != null ? discountAmount : BigDecimal.ZERO;
         
-        return total.subtract(discountAmount);
+        return subtotal.add(shipping).subtract(discount);
+    }
+    
+    /**
+     * Verify if calculated total matches stored total amount
+     */
+    public boolean isTotalAmountValid() {
+        if (totalAmount == null) return false;
+        return totalAmount.compareTo(calculateFinalAmount()) == 0;
+    }
+    
+    /**
+     * Generate customer name from user or session
+     * Should use USER.USER_NAME if USER_ID exists, otherwise CART.SESSION_ID
+     */
+    public String getEffectiveCustomerName() {
+        if (customerName != null && !customerName.trim().isEmpty()) {
+            return customerName;
+        }
+        if (user != null && user.getUserName() != null) {
+            return user.getUserName();
+        }
+        if (cart != null && cart.getSessionId() != null) {
+            return "Guest-" + cart.getSessionId();
+        }
+        return "Unknown Customer";
+    }
+    
+    /**
+     * Generate full receiver address from shipment data
+     * Combines ADDRESS_LINE, WARD, DISTRICT, CITY, COUNTRY from SHIPMENT
+     */
+    public String generateReceiverAddress(ShipmentDto shipment) {
+        if (shipment == null) return receiverAddress;
+        
+        StringBuilder address = new StringBuilder();
+        if (shipment.getAddressLine() != null) address.append(shipment.getAddressLine());
+        if (shipment.getWard() != null) address.append(", ").append(shipment.getWard());
+        if (shipment.getDistrict() != null) address.append(", ").append(shipment.getDistrict());
+        if (shipment.getCity() != null) address.append(", ").append(shipment.getCity());
+        if (shipment.getCountry() != null) address.append(", ").append(shipment.getCountry());
+        
+        return address.toString();
     }
 }

@@ -6,11 +6,13 @@ import org.ArtAndDecor.dto.UserRoleDto;
 import org.ArtAndDecor.model.User;
 import org.ArtAndDecor.model.UserProvider;
 import org.ArtAndDecor.model.UserRole;
+import org.springframework.stereotype.Component;
 
 /**
  * Utility class for mapping User entities to UserDto objects
  * Supports clean architecture pattern with nested DTOs
  */
+@Component
 public class UserMapperUtil {
     
     // =============================================
@@ -77,7 +79,6 @@ public class UserMapperUtil {
         dto.setUserProviderId(provider.getUserProviderId());
         dto.setUserProviderName(provider.getUserProviderName());
         dto.setUserProviderRemark(provider.getUserProviderRemark());
-        dto.setUserProviderRemarkEn(provider.getUserProviderRemarkEn());
         dto.setUserProviderEnabled(provider.getUserProviderEnabled());
         
         return dto;
@@ -97,7 +98,6 @@ public class UserMapperUtil {
         dto.setUserRoleId(role.getUserRoleId());
         dto.setUserRoleName(role.getUserRoleName());
         dto.setUserRoleRemark(role.getUserRoleRemark());
-        dto.setUserRoleRemarkEn(role.getUserRoleRemarkEn());
         dto.setUserRoleEnabled(role.getUserRoleEnabled());
         
         return dto;

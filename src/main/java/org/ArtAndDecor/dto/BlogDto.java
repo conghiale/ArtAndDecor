@@ -32,10 +32,8 @@ public class BlogDto {
     
     private Boolean blogEnabled;
     
-    @Size(max = 256, message = "English remark must not exceed 256 characters")
-    private String blogRemarkEn;
-    
-    @Size(max = 256, message = "Remark must not exceed 256 characters")
+    @NotBlank(message = "Blog remark is required")
+    @Size(max = 256, message = "Blog remark must not exceed 256 characters")
     private String blogRemark;
     
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
@@ -45,7 +43,6 @@ public class BlogDto {
     private LocalDateTime modifiedDt;
 
     private BlogCategoryDto blogCategory;
-    private BlogTypeDto blogType;
     private SeoMetaDto seoMeta;
 
 }

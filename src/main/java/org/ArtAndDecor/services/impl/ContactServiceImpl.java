@@ -45,47 +45,6 @@ public class ContactServiceImpl implements ContactService {
     }
     
     @Override
-    @Transactional(readOnly = true)
-    public Optional<ContactDto> findContactByName(String contactName) {
-        logger.debug("Finding contact by name: {}", contactName);
-        return contactRepository.findByContactName(contactName)
-                .map(this::mapToDto);
-    }
-    
-    @Override
-    @Transactional(readOnly = true)
-    public Optional<ContactDto> findContactByEmail(String contactEmail) {
-        logger.debug("Finding contact by email: {}", contactEmail);
-        return contactRepository.findByContactEmail(contactEmail)
-                .map(this::mapToDto);
-    }
-    
-    @Override
-    @Transactional(readOnly = true)
-    public List<ContactDto> findAllEnabledContacts() {
-        logger.debug("Finding all enabled contacts");
-        return contactRepository.findByContactEnabledTrue()
-                .stream()
-                .map(this::mapToDto)
-                .collect(Collectors.toList());
-    }
-    
-
-    
-    @Override
-    @Transactional(readOnly = true)
-    public List<ContactDto> searchContactsByName(String namePattern) {
-        logger.debug("Searching contacts by name pattern: {}", namePattern);
-        if (namePattern == null || namePattern.isBlank()) {
-            return List.of();
-        }
-        return contactRepository.findByContactNameContainingIgnoreCase(namePattern)
-                .stream()
-                .map(this::mapToDto)
-                .collect(Collectors.toList());
-    }
-    
-    @Override
     public ContactDto createContact(ContactDto contactDto) {
         logger.info("Creating new contact: {}", contactDto.getContactName());
         
@@ -104,7 +63,6 @@ public class ContactServiceImpl implements ContactService {
         contact.setContactEmail(contactDto.getContactEmail());
         contact.setContactPhone(contactDto.getContactPhone());
         contact.setContactFanpage(contactDto.getContactFanpage());
-        contact.setContactRemarkEn(contactDto.getContactRemarkEn());
         contact.setContactRemark(contactDto.getContactRemark());
         contact.setContactEnabled(contactDto.getContactEnabled() != null ? contactDto.getContactEnabled() : true);
         contact.setSeoMetaId(contactDto.getSeoMetaId());
@@ -139,7 +97,6 @@ public class ContactServiceImpl implements ContactService {
         contact.setContactEmail(contactDto.getContactEmail());
         contact.setContactPhone(contactDto.getContactPhone());
         contact.setContactFanpage(contactDto.getContactFanpage());
-        contact.setContactRemarkEn(contactDto.getContactRemarkEn());
         contact.setContactRemark(contactDto.getContactRemark());
         if (contactDto.getContactEnabled() != null) {
             contact.setContactEnabled(contactDto.getContactEnabled());
@@ -192,6 +149,24 @@ public class ContactServiceImpl implements ContactService {
         return contactRepository.count();
     }
     
+    @Override
+    @Transactional(readOnly = true)
+    public List<ContactDto> findContactsByCriteria(String contactName, Boolean contactEnabled, String textSearch) {
+        logger.debug("Finding contacts by criteria - name: {}, enabled: {}, textSearch: {}", 
+                    contactName, contactEnabled, textSearch);
+        return contactRepository.findContactsByCriteria(contactName, contactEnabled, textSearch)
+                .stream()
+                .map(this::mapToDto)
+                .collect(Collectors.toList());
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public List<String> getAllContactNames() {
+        logger.debug("Getting all contact names");
+        return contactRepository.findAllContactNames();
+    }
+    
     // =============================================
     // HELPER METHODS
     // =============================================
@@ -216,7 +191,6 @@ public class ContactServiceImpl implements ContactService {
                 .contactPhone(contact.getContactPhone())
                 .contactFanpage(contact.getContactFanpage())
                 .contactEnabled(contact.getContactEnabled())
-                .contactRemarkEn(contact.getContactRemarkEn())
                 .contactRemark(contact.getContactRemark())
                 .seoMetaId(contact.getSeoMetaId())
                 .createdDt(contact.getCreatedDt())

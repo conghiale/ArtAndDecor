@@ -31,8 +31,8 @@ public class PaymentState {
     @Column(name = "PAYMENT_STATE_NAME", nullable = false, unique = true, length = 64)
     private String paymentStateName;
 
-    @Column(name = "PAYMENT_STATE_REMARK_EN", length = 256)
-    private String paymentStateRemarkEn;
+    @Column(name = "PAYMENT_STATE_DISPLAY_NAME", length = 256)
+    private String paymentStateDisplayName;
 
     @Column(name = "PAYMENT_STATE_REMARK", nullable = false, length = 256)
     private String paymentStateRemark;

@@ -63,10 +63,10 @@ public class Discount {
     @Column(name = "END_AT", nullable = false)
     private LocalDateTime endAt;
 
-    @Column(name = "DISCOUNT_REMARK_EN", length = 256)
-    private String discountRemarkEn;
+    @Column(name = "DISCOUNT_DISPLAY_NAME", length = 256)
+    private String discountDisplayName;
 
-    @Column(name = "DISCOUNT_REMARK", length = 256, nullable = false)
+    @Column(name = "DISCOUNT_REMARK", nullable = false, length = 256)
     private String discountRemark;
 
     @Column(name = "CREATED_DT", nullable = false, updatable = false)
@@ -77,7 +77,7 @@ public class Discount {
 
     // One-to-Many relationship with Orders
     @OneToMany(mappedBy = "discount", fetch = FetchType.LAZY)
-    private List<Orders> orders;
+    private List<Order> orders;
 
     @PrePersist
     protected void onCreate() {

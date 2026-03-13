@@ -21,7 +21,6 @@ import java.io.IOException;
 
 /**
  * JWT Authentication Filter
- * Processes JWT tokens in requests and sets up Spring Security authentication context
  */
 @Component
 @RequiredArgsConstructor

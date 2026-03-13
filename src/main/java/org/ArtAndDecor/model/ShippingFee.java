@@ -42,8 +42,8 @@ public class ShippingFee {
     @Column(name = "SHIPPING_FEE_VALUE", nullable = false, precision = 15, scale = 2)
     private BigDecimal shippingFeeValue;
 
-    @Column(name = "SHIPPING_FEE_REMARK_EN", length = 256)
-    private String shippingFeeRemarkEn;
+    @Column(name = "SHIPPING_FEE_DISPLAY_NAME", length = 256)
+    private String shippingFeeDisplayName;
 
     @Column(name = "SHIPPING_FEE_REMARK", nullable = false, length = 256)
     private String shippingFeeRemark;
@@ -56,10 +56,6 @@ public class ShippingFee {
 
     @Column(name = "MODIFIED_DT", nullable = false)
     private LocalDateTime modifiedDt;
-
-    // One-to-Many relationship with Shipment
-    @OneToMany(mappedBy = "shippingFee", fetch = FetchType.LAZY)
-    private List<Shipment> shipments;
 
     @PrePersist
     protected void onCreate() {

@@ -1,10 +1,10 @@
 package org.ArtAndDecor.services;
 
 import org.ArtAndDecor.dto.ChangePasswordRequest;
-import org.ArtAndDecor.dto.ResetPasswordRequest;
 import org.ArtAndDecor.dto.UserDto;
 import org.ArtAndDecor.model.User;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
@@ -37,21 +37,6 @@ public interface UserService {
     Optional<UserDto> findUserById(Long userId);
 
     /**
-     * Get all users with pagination
-     * @param page Page number
-     * @param size Page size
-     * @return Page of user DTOs
-     */
-    Page<UserDto> getAllUsers(int page, int size);
-
-    /**
-     * Search users by name
-     * @param searchTerm Search term
-     * @return List of user DTOs
-     */
-    List<UserDto> searchUsersByName(String searchTerm);
-
-    /**
      * Enable or disable user
      * @param userId User ID
      * @param enabled Enabled status
@@ -59,25 +44,9 @@ public interface UserService {
      */
     UserDto updateUserStatus(Long userId, Boolean enabled);
 
-    /**
-     * Delete user
-     * @param userId User ID
-     */
-    void deleteUser(Long userId);
 
-    /**
-     * Check if username exists
-     * @param userName Username to check
-     * @return true if exists
-     */
-    boolean existsByUserName(String userName);
 
-    /**
-     * Check if email exists
-     * @param emailAddress Email to check
-     * @return true if exists
-     */
-    boolean existsByEmail(String emailAddress);
+
 
     /**
      * Convert User entity to DTO
@@ -94,16 +63,26 @@ public interface UserService {
     User convertToEntity(UserDto userDto);
 
     /**
-     * Find users by multiple criteria (all parameters optional)
-     * @param userId User ID filter
-     * @param userProviderId Provider ID filter
-     * @param userRoleId Role ID filter
-     * @param userEnabled Enabled status filter
+     * Find users by multiple criteria with pagination (all parameters optional)
+     * Enhanced textSearch includes USER_PROVIDER_DISPLAY_NAME and USER_ROLE_DISPLAY_NAME
+     * @param userProviderName Provider name filter
+     * @param userProviderDisplayName Provider display name filter
+     * @param userRoleName Role name filter
+     * @param userRoleDisplayName Role display name filter
+     * @param textSearch Text search in userName, firstName, lastName, phoneNumber, email, USER_PROVIDER_DISPLAY_NAME, USER_ROLE_DISPLAY_NAME (contains, case-insensitive)
      * @param userName Username filter
-     * @return List of UserDto matching criteria
+     * @param userEnabled User enabled status filter
+     * @param pageable Pagination and sorting information
+     * @return Page of UserDto matching criteria
      */
-    List<UserDto> findUsersByCriteria(Long userId, Long userProviderId, Long userRoleId, 
-                                     Boolean userEnabled, String userName);
+    Page<UserDto> findUsersByCriteria(String userProviderName, String userProviderDisplayName, 
+                                     String userRoleName, String userRoleDisplayName, 
+                                     String textSearch, String userName, Boolean userEnabled, 
+                                     Pageable pageable);
+
+
+
+
 
     /**
      * Change password for authenticated user (self-service)
@@ -114,18 +93,12 @@ public interface UserService {
     UserDto changePassword(String username, ChangePasswordRequest request);
 
     /**
-     * Admin reset password for any user (ID-based)
-     * @param userId User ID to reset password
-     * @param request Password reset request
+     * Admin reset password for any user (username-based) with email notification
+     * Generates random password and sends email notification to user
+     * @param userName Username to reset password for
      * @return Updated user DTO
      */
-    UserDto resetPassword(Long userId, ResetPasswordRequest request);
+    UserDto resetPassword(String userName);
 
-    /**
-     * Customer change password by username (customer-friendly)
-     * @param username Username to change password for
-     * @param request Password change request
-     * @return Updated user DTO
-     */
-    UserDto changePasswordByUsername(String username, ChangePasswordRequest request);
+
 }

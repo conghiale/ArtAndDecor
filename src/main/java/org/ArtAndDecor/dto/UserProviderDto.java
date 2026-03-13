@@ -22,14 +22,25 @@ public class UserProviderDto {
     @Size(max = 50, message = "User provider name must not exceed 50 characters")
     private String userProviderName;
     
+    @Size(max = 256, message = "User provider display name must not exceed 256 characters")
+    private String userProviderDisplayName;
+    
+    @NotBlank(message = "User provider remark is required")
+    @Size(max = 256, message = "User provider remark must not exceed 256 characters")
     private String userProviderRemark;
-    private String userProviderRemarkEn;
     
     @NotNull(message = "User provider enabled flag is required")
     private Boolean userProviderEnabled;
     
     // Additional information for reporting
     private Long userCount;
+    
+    /**
+     * Get display text for the provider
+     */
+    public String getDisplayText() {
+        return userProviderDisplayName != null ? userProviderDisplayName : userProviderName;
+    }
     
     /**
      * Check if this is a local provider

@@ -30,14 +30,18 @@ public class BlogType {
     @Column(name = "BLOG_TYPE_NAME", length = 64, nullable = false, unique = true)
     private String blogTypeName;
 
-    @Column(name = "BLOG_TYPE_REMARK_EN", length = 256)
-    private String blogTypeRemarkEn;
+    @Column(name = "BLOG_TYPE_DISPLAY_NAME", length = 256)
+    private String blogTypeDisplayName;
 
     @Column(name = "BLOG_TYPE_REMARK", length = 256, nullable = false)
     private String blogTypeRemark;
 
     @Column(name = "BLOG_TYPE_ENABLED", nullable = false)
     private Boolean blogTypeEnabled = true;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "IMAGE_ID")
+    private Image image;
 
     @Column(name = "SEO_META_ID")
     private Long seoMetaId;
@@ -53,9 +57,9 @@ public class BlogType {
     @Column(name = "MODIFIED_DT", nullable = false)
     private LocalDateTime modifiedDt;
 
-    // Relationship: One BlogType to Many Blog
-    @OneToMany(mappedBy = "blogType", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    private List<Blog> blogs;
+    // Relationship: One BlogType to Many BlogCategory
+    @OneToMany(mappedBy = "blogType", fetch = FetchType.LAZY)
+    private List<BlogCategory> blogCategories;
 
     @PrePersist
     protected void onCreate() {

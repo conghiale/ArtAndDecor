@@ -27,10 +27,6 @@ public class Blog {
     @JoinColumn(name = "BLOG_CATEGORY_ID", nullable = false)
     private BlogCategory blogCategory;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "BLOG_TYPE_ID", nullable = false)
-    private BlogType blogType;
-
     @Column(name = "BLOG_TITLE", length = 256, nullable = false)
     private String blogTitle;
 
@@ -42,9 +38,6 @@ public class Blog {
 
     @Column(name = "BLOG_ENABLED", nullable = false)
     private Boolean blogEnabled = true;
-
-    @Column(name = "BLOG_REMARK_EN", length = 256)
-    private String blogRemarkEn;
 
     @Column(name = "BLOG_REMARK", length = 256, nullable = false)
     private String blogRemark;

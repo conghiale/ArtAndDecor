@@ -23,22 +23,30 @@ public class ReviewDto {
     
     private Long parentReviewId;
     
-    @Size(max = 255, message = "Review title must not exceed 255 characters")
-    private String reviewTitle;
+    private Long rootReviewId;
     
-    private String reviewContent;
+    @Min(value = 0, message = "Review level must not be negative")
+    @Builder.Default
+    private Integer reviewLevel = 0;
     
+    @NotNull(message = "Rating is required")
     @Min(value = 1, message = "Rating must be at least 1")
     @Max(value = 5, message = "Rating must not exceed 5")
-    private Integer rating;
+    private int rating;
     
+    @NotBlank(message = "Review content is required")
+    @Size(max = 65535, message = "Review content must not exceed 65535 characters")
+    private String reviewContent;
+    
+    @Min(value = 0, message = "Count like must not be negative")
+    @Builder.Default
+    private Integer countLike = 0;
+    
+    @Builder.Default
     private Boolean isVisible = true;
     
-    private Integer likeCount = 0;
-    
-    private Integer replyCount = 0;
-    
-    private Boolean reviewEnabled;
+    @Builder.Default
+    private Boolean isDeleted = false;
     
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdDt;
@@ -81,12 +89,5 @@ public class ReviewDto {
      */
     public boolean isReply() {
         return parentReviewId != null;
-    }
-    
-    /**
-     * Check if this review has a valid rating
-     */
-    public boolean hasValidRating() {
-        return rating != null && rating >= 1 && rating <= 5;
     }
 }

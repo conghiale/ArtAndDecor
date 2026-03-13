@@ -41,8 +41,8 @@ public class ImageDto {
     @Size(max = 64, message = "Image size must not exceed 64 characters")
     private String imageSize;
     
-    @Size(max = 256, message = "English remark must not exceed 256 characters")
-    private String imageRemarkEn;
+    @Size(max = 10, message = "Image format must not exceed 10 characters")
+    private String imageFormat;
     
     @Size(max = 256, message = "Remark must not exceed 256 characters")
     private String imageRemark;

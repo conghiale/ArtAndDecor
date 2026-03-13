@@ -32,8 +32,8 @@ public class PageGroup {
     @Column(name = "PAGE_GROUP_ENABLED", nullable = false)
     private Boolean pageGroupEnabled = true;
 
-    @Column(name = "PAGE_GROUP_REMARK_EN", length = 256)
-    private String pageGroupRemarkEn;
+    @Column(name = "PAGE_GROUP_DISPLAY_NAME", length = 256)
+    private String pageGroupDisplayName;
 
     @Column(name = "PAGE_GROUP_REMARK", length = 256, nullable = false)
     private String pageGroupRemark;

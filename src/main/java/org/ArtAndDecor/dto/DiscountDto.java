@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 
 /**
  * Discount DTO for API requests and responses
+ * Contains comprehensive information from DISCOUNT table with related entities
  */
 @Data
 @Builder
@@ -22,43 +23,49 @@ public class DiscountDto {
     private Long discountId;
     
     @NotBlank(message = "Discount code is required")
-    @Size(max = 50, message = "Discount code must not exceed 50 characters")
+    @Size(max = 100, message = "Discount code must not exceed 100 characters")
     private String discountCode;
     
     @NotBlank(message = "Discount name is required")
-    @Size(max = 100, message = "Discount name must not exceed 100 characters")
+    @Size(max = 64, message = "Discount name must not exceed 64 characters")
     private String discountName;
-    
-    private String remark;
-    
-    @NotNull(message = "Discount type is required")
-    @Pattern(regexp = "^(FIXED|PERCENTAGE)$", message = "Discount type must be FIXED or PERCENTAGE")
-    private String discountType;
     
     @NotNull(message = "Discount value is required")
     @DecimalMin(value = "0.0", inclusive = false, message = "Discount value must be greater than 0")
     private BigDecimal discountValue;
     
-    @DecimalMin(value = "0.0", message = "Minimum order amount must not be negative")
-    private BigDecimal minimumOrderAmount;
+    @NotNull(message = "Max discount amount is required")
+    @DecimalMin(value = "0.0", message = "Max discount amount must not be negative")
+    private BigDecimal maxDiscountAmount;
     
-    @DecimalMin(value = "0.0", message = "Maximum discount amount must not be negative")
-    private BigDecimal maximumDiscountAmount;
+    @NotNull(message = "Min order amount is required")
+    @DecimalMin(value = "0.0", message = "Min order amount must not be negative")
+    private BigDecimal minOrderAmount;
     
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime validFrom;
+    @NotNull(message = "Start date is required")
+    private LocalDateTime startAt;
     
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime validTo;
+    @NotNull(message = "End date is required")
+    private LocalDateTime endAt;
     
-    @Min(value = 0, message = "Usage limit must not be negative")
-    private Integer usageLimit;
+    @NotNull(message = "Usage limit is required")
+    @Min(value = 1, message = "Usage limit must be at least 1")
+    private Integer totalUsageLimit;
     
     @Min(value = 0, message = "Used count must not be negative")
     private Integer usedCount;
     
-    @NotNull(message = "Discount enabled flag is required")
-    private Boolean discountEnabled;
+    @NotNull(message = "Active status is required")
+    private Boolean isActive;
+    
+    @Size(max = 256, message = "Display name must not exceed 256 characters")
+    private String discountDisplayName;
+    
+    @NotBlank(message = "Discount remark is required")
+    @Size(max = 256, message = "Discount remark must not exceed 256 characters")
+    private String discountRemark;
     
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdDt;
@@ -66,29 +73,45 @@ public class DiscountDto {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime modifiedDt;
     
+    // Nested DTO for related entity
+    private DiscountTypeDto discountType;
+    
+    // Computed fields
+    private Boolean isExpired;
+    private Boolean isExhausted;
+    private Integer remainingUsage;
+    
     /**
      * Check if discount is valid now
      */
     public boolean isValidNow() {
         LocalDateTime now = LocalDateTime.now();
-        return discountEnabled != null && discountEnabled &&
-               (validFrom == null || !now.isBefore(validFrom)) &&
-               (validTo == null || !now.isAfter(validTo)) &&
-               (usageLimit == null || usedCount < usageLimit);
+        return isActive != null && isActive &&
+               (startAt == null || !now.isBefore(startAt)) &&
+               (endAt == null || !now.isAfter(endAt)) &&
+               (totalUsageLimit == null || usedCount < totalUsageLimit);
     }
     
     /**
      * Check if discount is expired
      */
     public boolean isExpired() {
-        return validTo != null && LocalDateTime.now().isAfter(validTo);
+        return endAt != null && LocalDateTime.now().isAfter(endAt);
     }
     
     /**
      * Check if discount usage is exhausted
      */
     public boolean isUsageExhausted() {
-        return usageLimit != null && usedCount >= usageLimit;
+        return totalUsageLimit != null && usedCount >= totalUsageLimit;
+    }
+    
+    /**
+     * Get remaining usage count
+     */
+    public int getRemainingUsageCount() {
+        if (totalUsageLimit == null) return Integer.MAX_VALUE;
+        return Math.max(0, totalUsageLimit - (usedCount != null ? usedCount : 0));
     }
     
     /**
@@ -99,21 +122,21 @@ public class DiscountDto {
             return BigDecimal.ZERO;
         }
         
-        if (minimumOrderAmount != null && orderAmount.compareTo(minimumOrderAmount) < 0) {
+        if (minOrderAmount != null && orderAmount.compareTo(minOrderAmount) < 0) {
             return BigDecimal.ZERO;
         }
         
         BigDecimal discountAmount;
-        if ("FIXED".equals(discountType)) {
+        if (discountType != null && discountType.isFixedAmountType()) {
             discountAmount = discountValue;
-        } else if ("PERCENTAGE".equals(discountType)) {
+        } else if (discountType != null && discountType.isPercentageType()) {
             discountAmount = orderAmount.multiply(discountValue).divide(BigDecimal.valueOf(100));
         } else {
             return BigDecimal.ZERO;
         }
         
-        if (maximumDiscountAmount != null && discountAmount.compareTo(maximumDiscountAmount) > 0) {
-            discountAmount = maximumDiscountAmount;
+        if (maxDiscountAmount != null && discountAmount.compareTo(maxDiscountAmount) > 0) {
+            discountAmount = maxDiscountAmount;
         }
         
         return discountAmount.min(orderAmount);

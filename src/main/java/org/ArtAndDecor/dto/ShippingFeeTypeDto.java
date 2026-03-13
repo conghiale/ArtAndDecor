@@ -25,10 +25,11 @@ public class ShippingFeeTypeDto {
     @Size(max = 64, message = "Shipping fee type name must not exceed 64 characters")
     private String shippingFeeTypeName;
     
-    @Size(max = 256, message = "English remark must not exceed 256 characters")
-    private String shippingFeeTypeRemarkEn;
+    @Size(max = 256, message = "Shipping fee type display name must not exceed 256 characters")
+    private String shippingFeeTypeDisplayName;
     
-    @Size(max = 256, message = "Remark must not exceed 256 characters")
+    @NotBlank(message = "Shipping fee type remark is required")
+    @Size(max = 256, message = "Shipping fee type remark must not exceed 256 characters")
     private String shippingFeeTypeRemark;
     
     @NotNull(message = "Shipping fee type enabled flag is required")

@@ -31,8 +31,8 @@ public class OrderState {
     @Column(name = "ORDER_STATE_NAME", nullable = false, unique = true, length = 64)
     private String orderStateName;
 
-    @Column(name = "ORDER_STATE_REMARK_EN", length = 256)
-    private String orderStateRemarkEn;
+    @Column(name = "ORDER_STATE_DISPLAY_NAME", length = 256)
+    private String orderStateDisplayName;
 
     @Column(name = "ORDER_STATE_REMARK", nullable = false, length = 256)
     private String orderStateRemark;
@@ -48,7 +48,7 @@ public class OrderState {
 
     // One-to-Many relationship with Order
     @OneToMany(mappedBy = "orderState", fetch = FetchType.LAZY)
-    private List<Orders> orders;
+    private List<Order> orders;
 
     @PrePersist
     protected void onCreate() {

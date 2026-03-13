@@ -35,11 +35,8 @@ public class ProductImage {
     @JoinColumn(name = "IMAGE_ID", nullable = false)
     private Image image;
 
-    @Column(name = "PRODUCT_IMAGE_REMARK_EN", length = 256)
-    private String productImageRemarkEn;
-
-    @Column(name = "PRODUCT_IMAGE_REMARK", nullable = false, length = 256)
-    private String productImageRemark;
+    @Column(name = "PRODUCT_IMAGE_PRIMARY", nullable = false)
+    private Boolean productImagePrimary = false;
 
     @Column(name = "CREATED_DT", nullable = false, updatable = false)
     private LocalDateTime createdDt;

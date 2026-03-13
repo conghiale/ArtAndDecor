@@ -25,33 +25,21 @@ public interface ContactService {
     Optional<ContactDto> findContactById(Long contactId);
     
     /**
-     * Get contact by name
-     * @param contactName the contact name
-     * @return Optional containing ContactDto if found
-     */
-    Optional<ContactDto> findContactByName(String contactName);
-    
-    /**
-     * Get contact by email
-     * @param contactEmail the contact email
-     * @return Optional containing ContactDto if found
-     */
-    Optional<ContactDto> findContactByEmail(String contactEmail);
-    
-    /**
-     * Get all enabled contacts (public-facing)
-     * @return List of enabled ContactDto objects
-     */
-    List<ContactDto> findAllEnabledContacts();
-    
-
-    
-    /**
-     * Search contacts by name (case-insensitive)
-     * @param namePattern the name pattern to search
+     * Find contacts by criteria (with filters)
+     * @param contactName Filter by contact name (exact match)
+     * @param contactEnabled Filter by enabled status  
+     * @param textSearch Search text in multiple fields
      * @return List of matching ContactDto objects
      */
-    List<ContactDto> searchContactsByName(String namePattern);
+    List<ContactDto> findContactsByCriteria(String contactName, Boolean contactEnabled, String textSearch);
+    
+    /**
+     * Get all contact names for dropdown/combobox
+     * @return List of all contact names
+     */
+    List<String> getAllContactNames();
+    
+
     
     /**
      * Create new contact

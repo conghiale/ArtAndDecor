@@ -28,10 +28,10 @@ public class Image {
     @Column(name = "IMAGE_ID")
     private Long imageId;
 
-    @Column(name = "IMAGE_NAME", nullable = false, unique = true, length = 150)
+    @Column(name = "IMAGE_NAME", nullable = false, length = 150)
     private String imageName;
 
-    @Column(name = "IMAGE_DISPLAY_NAME", nullable = false, unique = true, length = 64)
+    @Column(name = "IMAGE_DISPLAY_NAME", nullable = false, length = 64)
     private String imageDisplayName;
 
     @Column(name = "IMAGE_SLUG", nullable = false, unique = true, length = 64)
@@ -40,10 +40,10 @@ public class Image {
     @Column(name = "IMAGE_SIZE", nullable = false, length = 64)
     private String imageSize;
 
-    @Column(name = "IMAGE_REMARK_EN", length = 256)
-    private String imageRemarkEn;
+    @Column(name = "IMAGE_FORMAT", nullable = false, length = 10)
+    private String imageFormat;
 
-    @Column(name = "IMAGE_REMARK", length = 256, nullable = false)
+    @Column(name = "IMAGE_REMARK", length = 256)
     private String imageRemark;
 
     @Column(name = "CREATED_DT", nullable = false, updatable = false)

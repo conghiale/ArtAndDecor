@@ -48,9 +48,7 @@ public class ContactDto {
     
     private Boolean contactEnabled;
     
-    @Size(max = 256, message = "English remark must not exceed 256 characters")
-    private String contactRemarkEn;
-    
+    @NotBlank(message = "Remark is required")
     @Size(max = 256, message = "Remark must not exceed 256 characters")
     private String contactRemark;
     

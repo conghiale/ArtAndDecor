@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * Orders Entity (renamed from ORDER to avoid SQL reserved keyword)
+ * Order Entity 
  * Represents customer orders
  */
 @Entity
@@ -20,9 +20,9 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Orders {
+public class Order {
     
-    private static final Logger logger = LogManager.getLogger(Orders.class);
+    private static final Logger logger = LogManager.getLogger(Order.class);
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -30,11 +30,11 @@ public class Orders {
     private Long orderId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "USER_ID", nullable = false)
+    @JoinColumn(name = "USER_ID")
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "CART_ID", nullable = false)
+    @JoinColumn(name = "CART_ID")
     private Cart cart;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -45,30 +45,63 @@ public class Orders {
     @JoinColumn(name = "DISCOUNT_ID")
     private Discount discount;
 
+    // Discount information snapshot (lưu trữ thông tin discount tại thời điểm đặt hàng)
+    @Column(name = "DISCOUNT_CODE", length = 50)
+    private String discountCode;
+    
+    @Column(name = "DISCOUNT_TYPE", length = 100)
+    private String discountType;
+    
+    @Column(name = "DISCOUNT_VALUE", precision = 15, scale = 2)
+    private BigDecimal discountValue;
+
     @Column(name = "ORDER_CODE", nullable = false, unique = true, length = 50)
     private String orderCode;
 
     @Column(name = "ORDER_SLUG", length = 64, nullable = false, unique = true)
     private String orderSlug;
 
+    // Customer information snapshot (người đặt hàng)
+    @Column(name = "CUSTOMER_NAME", length = 150)
+    private String customerName;
+    
+    @Column(name = "CUSTOMER_PHONE_NUMBER", length = 15)
+    private String customerPhoneNumber;
+    
+    @Column(name = "CUSTOMER_EMAIL", length = 100)
+    private String customerEmail;
+    
+    @Column(name = "CUSTOMER_ADDRESS", columnDefinition = "TEXT")
+    private String customerAddress;
+    
+    // Receiver information snapshot (người nhận)
+    @Column(name = "RECEIVER_NAME", length = 150)
+    private String receiverName;
+    
+    @Column(name = "RECEIVER_PHONE", length = 20)
+    private String receiverPhone;
+    
+    @Column(name = "RECEIVER_EMAIL", length = 150)
+    private String receiverEmail;
+    
+    @Column(name = "RECEIVER_ADDRESS", columnDefinition = "TEXT")
+    private String receiverAddress;
+
+    // Financial breakdown
+    @Column(name = "SUBTOTAL_AMOUNT", nullable = false, precision = 15, scale = 2)
+    private BigDecimal subtotalAmount;
+    
+    @Column(name = "DISCOUNT_AMOUNT", nullable = false, precision = 15, scale = 2)
+    private BigDecimal discountAmount = BigDecimal.ZERO;
+    
+    @Column(name = "SHIPPING_FEE_AMOUNT", nullable = false, precision = 15, scale = 2)
+    private BigDecimal shippingFeeAmount = BigDecimal.ZERO;
+
     @Column(name = "TOTAL_AMOUNT", nullable = false, precision = 15, scale = 2)
     private BigDecimal totalAmount;
 
     @Column(name = "ORDER_NOTE", columnDefinition = "TEXT")
-    private String note;
-
-    @Column(name = "ORDER_REMARK_EN", length = 256)
-    private String orderRemarkEn;
-
-    @Column(name = "ORDER_REMARK", length = 256, nullable = false)
-    private String orderRemark;
-
-    @Column(name = "SEO_META_ID")
-    private Long seoMetaId;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "SEO_META_ID", referencedColumnName = "SEO_META_ID", insertable = false, updatable = false)
-    private SeoMeta seoMeta;
+    private String orderNote;
 
     @Column(name = "CREATED_DT", nullable = false, updatable = false)
     private LocalDateTime createdDt;

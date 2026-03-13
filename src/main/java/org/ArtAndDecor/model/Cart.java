@@ -42,24 +42,11 @@ public class Cart {
     @Column(name = "CART_SLUG", length = 64, nullable = false, unique = true)
     private String cartSlug;
 
-    @Column(name = "TOTAL_AMOUNT", nullable = false)
-    private Integer totalAmount = 0;
-
-    @Column(name = "CART_REMARK_EN", length = 256)
-    private String cartRemarkEn;
-
-    @Column(name = "CART_REMARK", length = 256, nullable = false)
-    private String cartRemark;
+    @Column(name = "TOTAL_QUANTITY", nullable = false)
+    private Integer totalQuantity = 0;
 
     @Column(name = "CART_ENABLED", nullable = false)
     private Boolean cartEnabled = true;
-
-    @Column(name = "SEO_META_ID")
-    private Long seoMetaId;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "SEO_META_ID", referencedColumnName = "SEO_META_ID", insertable = false, updatable = false)
-    private SeoMeta seoMeta;
 
     @Column(name = "CREATED_DT", nullable = false, updatable = false)
     private LocalDateTime createdDt;

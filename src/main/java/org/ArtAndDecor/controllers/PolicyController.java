@@ -1,5 +1,13 @@
 package org.ArtAndDecor.controllers;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.ArtAndDecor.dto.BaseResponseDto;
 import org.ArtAndDecor.dto.PolicyDto;
@@ -22,8 +30,9 @@ import java.util.Optional;
  * Priority ID > name > slug for admin operations
  */
 @RestController
-@RequestMapping("/policies")
+@RequestMapping("/api/policies")
 @RequiredArgsConstructor
+@Tag(name = "Policy Management", description = "APIs for managing system policies and configuration settings")
 public class PolicyController {
     
     private static final Logger logger = LoggerFactory.getLogger(PolicyController.class);
@@ -34,33 +43,25 @@ public class PolicyController {
     // =============================================
     
     /**
-     * Get policy by name (admin access)
-     * Used by admin to retrieve configuration values
-     */
-    @GetMapping("/name/{policyName}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<BaseResponseDto<PolicyDto>> getPolicyByName(@PathVariable String policyName) {
-        logger.debug("Requesting policy by name: {}", policyName);
-        try {
-            Optional<PolicyDto> policy = policyService.findPolicyByName(policyName);
-            return policy.map(policyDto -> ResponseEntity.ok(BaseResponseDto.success(
-                            "Policy retrieved successfully",
-                            policyDto)))
-                    .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                            BaseResponseDto.notFound("Policy not found with name: " + policyName)));
-        } catch (Exception e) {
-            logger.error("Error retrieving policy by name {}: {}", policyName, e.getMessage(), e);
-            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(
-                    "Failed to retrieve policy: " + e.getMessage()));
-        }
-    }
-    
-    /**
      * Get policy by slug (admin access)
      * Used for URL-friendly policy lookup
      */
+    @Operation(
+        summary = "Get policy by slug", 
+        description = "Retrieve policy information using URL-friendly slug. Public access for policy viewing."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Policy found successfully",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "404", description = "Policy not found with the provided slug",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid request or system error",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class)))
+    })
     @GetMapping("/slug/{policySlug}")
-    public ResponseEntity<BaseResponseDto<PolicyDto>> getPolicyBySlug(@PathVariable String policySlug) {
+    public ResponseEntity<BaseResponseDto<PolicyDto>> getPolicyBySlug(
+        @Parameter(description = "URL-friendly policy identifier", example = "contact-email")
+        @PathVariable String policySlug) {
         logger.debug("Requesting policy by slug: {}", policySlug);
         try {
             Optional<PolicyDto> policy = policyService.findPolicyBySlug(policySlug);
@@ -77,22 +78,44 @@ public class PolicyController {
     }
     
     /**
-     * Get all enabled policies (admin access)
-     * Returns configuration that is available
+     * Get policies with criteria-based filtering and search 
+     * Admin access for searching/browsing policies
      */
-    @GetMapping("/public")
+    @Operation(
+        summary = "Search policies with criteria", 
+        description = "Filter and search policies by name, enabled status, and text search across multiple fields. If no parameters provided, returns all policies. Restricted to admin users only.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Policies retrieved successfully",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid request parameters or system error",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "401", description = "Unauthorized - Authentication required"),
+        @ApiResponse(responseCode = "403", description = "Forbidden - Admin role required")
+    })
+    @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<BaseResponseDto<List<PolicyDto>>> getPublicPolicies() {
-        logger.debug("Requesting all enabled policies");
+    public ResponseEntity<BaseResponseDto<List<PolicyDto>>> getPoliciesByCriteria(
+        @Parameter(description = "Filter by exact policy name", example = "CONTACT_EMAIL")
+        @RequestParam(name = "policyName", required = false) String policyName,
+        @Parameter(description = "Filter by enabled status (true/false)")
+        @RequestParam(name = "policyEnabled", required = false) Boolean policyEnabled,
+        @Parameter(description = "Search text in name, slug, value, display name, remark fields", example = "email")
+        @RequestParam(name = "textSearch", required = false) String textSearch) {
+        
+        logger.info("Searching policies with criteria - name: {}, enabled: {}, textSearch: {}", 
+                   policyName, policyEnabled, textSearch);
+        
         try {
-            List<PolicyDto> policies = policyService.findAllEnabledPolicies();
+            List<PolicyDto> results = policyService.findPoliciesByCriteria(policyName, policyEnabled, textSearch);
             return ResponseEntity.ok(BaseResponseDto.success(
-                    String.format("Retrieved %d enabled policies", policies.size()),
-                    policies));
+                    String.format("Found %d matching policy(ies)", results.size()),
+                    results));
         } catch (Exception e) {
-            logger.error("Error retrieving public policies: {}", e.getMessage(), e);
+            logger.error("Error searching policies: {}", e.getMessage(), e);
             return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(
-                    "Failed to retrieve policies: " + e.getMessage()));
+                    "Failed to search policies: " + e.getMessage()));
         }
     }
     
@@ -100,9 +123,26 @@ public class PolicyController {
      * Get policy by ID (admin/management lookup)
      * Requires ADMIN role
      */
+    @Operation(
+        summary = "Get policy by ID", 
+        description = "Retrieve policy information using database ID. Restricted to admin users only.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Policy found successfully",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "404", description = "Policy not found with the provided ID",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "401", description = "Unauthorized - Authentication required"),
+        @ApiResponse(responseCode = "403", description = "Forbidden - Admin role required"),
+        @ApiResponse(responseCode = "400", description = "Invalid request or system error",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class)))
+    })
     @GetMapping("/{policyId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<BaseResponseDto<PolicyDto>> getPolicyById(@PathVariable Long policyId) {
+    public ResponseEntity<BaseResponseDto<PolicyDto>> getPolicyById(
+        @Parameter(description = "Policy database ID", example = "1")
+        @PathVariable Long policyId) {
         logger.info("Admin requesting policy by ID: {}", policyId);
         try {
             Optional<PolicyDto> policy = policyService.findPolicyById(policyId);
@@ -119,39 +159,28 @@ public class PolicyController {
     }
     
     /**
-     * Search policies by name pattern (admin)
-     * Requires ADMIN role
-     */
-    @GetMapping("/admin/search")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<BaseResponseDto<List<PolicyDto>>> searchPoliciesByName(
-            @RequestParam(name = "q", required = false) String searchTerm) {
-        
-        logger.info("Admin searching policies with term: {}", searchTerm);
-        try {
-            if (searchTerm == null || searchTerm.isBlank()) {
-                return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(
-                        "Search term is required"));
-            }
-            
-            List<PolicyDto> results = policyService.searchPoliciesByName(searchTerm);
-            return ResponseEntity.ok(BaseResponseDto.success(
-                    String.format("Found %d matching policy/policies", results.size()),
-                    results));
-        } catch (Exception e) {
-            logger.error("Error searching policies: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(
-                    "Failed to search policies: " + e.getMessage()));
-        }
-    }
-    
-    /**
      * Create new policy
      * Requires ADMIN role only
      */
+    @Operation(
+        summary = "Create new policy", 
+        description = "Create a new system policy with provided configuration. Auto-generates slug if not provided. Restricted to admin users only.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "201", description = "Policy created successfully",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "400", description = "Validation error or policy name already exists",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "401", description = "Unauthorized - Authentication required"),
+        @ApiResponse(responseCode = "403", description = "Forbidden - Admin role required"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<BaseResponseDto<PolicyDto>> createPolicy(@Valid @RequestBody PolicyDto policyDto) {
+    public ResponseEntity<BaseResponseDto<PolicyDto>> createPolicy(
+        @Parameter(description = "Policy information to create", required = true)
+        @Valid @RequestBody PolicyDto policyDto) {
         logger.info("Creating new policy: {}", policyDto.getPolicyName());
         try {
             PolicyDto created = policyService.createPolicy(policyDto);
@@ -173,11 +202,28 @@ public class PolicyController {
      * Update policy
      * Requires ADMIN role only
      */
+    @Operation(
+        summary = "Update existing policy", 
+        description = "Update policy information by ID. Auto-generates slug if not provided. Restricted to admin users only.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Policy updated successfully",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "404", description = "Policy not found with the provided ID",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "400", description = "Validation error or policy name already exists",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "401", description = "Unauthorized - Authentication required"),
+        @ApiResponse(responseCode = "403", description = "Forbidden - Admin role required")
+    })
     @PutMapping("/{policyId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BaseResponseDto<PolicyDto>> updatePolicy(
-            @PathVariable Long policyId,
-            @Valid @RequestBody PolicyDto policyDto) {
+        @Parameter(description = "Policy ID to update", example = "1")
+        @PathVariable Long policyId,
+        @Parameter(description = "Updated policy information", required = true)
+        @Valid @RequestBody PolicyDto policyDto) {
         
         logger.info("Updating policy with ID: {}", policyId);
         try {
@@ -200,11 +246,28 @@ public class PolicyController {
      * Update policy status (enable/disable)
      * Requires ADMIN role
      */
+    @Operation(
+        summary = "Update policy status", 
+        description = "Enable or disable a policy by changing its status. Restricted to admin users only.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Policy status updated successfully",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "404", description = "Policy not found with the provided ID",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid request parameters",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "401", description = "Unauthorized - Authentication required"),
+        @ApiResponse(responseCode = "403", description = "Forbidden - Admin role required")
+    })
     @PatchMapping("/{policyId}/status")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BaseResponseDto<PolicyDto>> updatePolicyStatus(
-            @PathVariable Long policyId,
-            @RequestParam Boolean enabled) {
+        @Parameter(description = "Policy ID to update", example = "1")
+        @PathVariable Long policyId,
+        @Parameter(description = "New enabled status (true/false)", required = true)
+        @RequestParam Boolean enabled) {
         
         logger.info("Updating policy status - ID: {}, Enabled: {}", policyId, enabled);
         try {
@@ -227,11 +290,28 @@ public class PolicyController {
      * Update policy value only (quick configuration update)
      * Requires ADMIN role
      */
+    @Operation(
+        summary = "Update policy value", 
+        description = "Update only the value of a policy for quick configuration changes. Restricted to admin users only.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Policy value updated successfully",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "404", description = "Policy not found with the provided ID",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid request parameters or empty value",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "401", description = "Unauthorized - Authentication required"),
+        @ApiResponse(responseCode = "403", description = "Forbidden - Admin role required")
+    })
     @PatchMapping("/{policyId}/value")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BaseResponseDto<PolicyDto>> updatePolicyValue(
-            @PathVariable Long policyId,
-            @RequestParam String value) {
+        @Parameter(description = "Policy ID to update", example = "1")
+        @PathVariable Long policyId,
+        @Parameter(description = "New policy value", required = true, example = "contact@artstore.com")
+        @RequestParam String value) {
         
         logger.info("Updating policy value - ID: {}", policyId);
         try {
@@ -256,33 +336,22 @@ public class PolicyController {
     }
     
     /**
-     * Delete policy
-     * Requires ADMIN role only
-     */
-    @DeleteMapping("/{policyId}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<BaseResponseDto<Void>> deletePolicy(@PathVariable Long policyId) {
-        logger.info("Deleting policy with ID: {}", policyId);
-        try {
-            policyService.deletePolicy(policyId);
-            return ResponseEntity.ok(BaseResponseDto.success(
-                    "Policy deleted successfully",
-                    null));
-        } catch (IllegalArgumentException e) {
-            logger.error("Error deleting policy {}: {}", policyId, e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                    BaseResponseDto.notFound(e.getMessage()));
-        } catch (Exception e) {
-            logger.error("Error deleting policy {}: {}", policyId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
-                    BaseResponseDto.serverError("Failed to delete policy: " + e.getMessage()));
-        }
-    }
-    
-    /**
      * Get total policy count (admin dashboard)
      * Requires ADMIN role
      */
+    @Operation(
+        summary = "Get total policy count", 
+        description = "Retrieve the total number of policies in the system for dashboard statistics. Restricted to admin users only.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Total count retrieved successfully",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "400", description = "System error occurred",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "401", description = "Unauthorized - Authentication required"),
+        @ApiResponse(responseCode = "403", description = "Forbidden - Admin role required")
+    })
     @GetMapping("/admin/total-count")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BaseResponseDto<Long>> getTotalPolicyCount() {
@@ -296,6 +365,39 @@ public class PolicyController {
             logger.error("Error getting total policy count: {}", e.getMessage(), e);
             return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(
                     "Failed to get total count: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * Get all policy names for dropdown/combobox (admin)
+     * Requires ADMIN role
+     */
+    @Operation(
+        summary = "Get all policy names", 
+        description = "Retrieve list of all policy names for use in dropdown/combobox UI elements. Restricted to admin users only.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Policy names retrieved successfully",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "400", description = "System error occurred",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "401", description = "Unauthorized - Authentication required"),
+        @ApiResponse(responseCode = "403", description = "Forbidden - Admin role required")
+    })
+    @GetMapping("/admin/names")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<BaseResponseDto<List<String>>> getAllPolicyNames() {
+        logger.info("Getting all policy names");
+        try {
+            List<String> names = policyService.getAllPolicyNames();
+            return ResponseEntity.ok(BaseResponseDto.success(
+                    String.format("Retrieved %d policy names", names.size()),
+                    names));
+        } catch (Exception e) {
+            logger.error("Error retrieving policy names: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(
+                    "Failed to retrieve policy names: " + e.getMessage()));
         }
     }
 }

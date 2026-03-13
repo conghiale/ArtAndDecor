@@ -1,25 +1,17 @@
 package org.ArtAndDecor.utils;
 
-import org.ArtAndDecor.services.ResponseCodeService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
  * Response utility class for API responses
+ * Provides standardized response codes and messages
  */
 @Component
 public class ResponseUtils {
     
     private static final Logger logger = LogManager.getLogger(ResponseUtils.class);
-    
-    private static ResponseCodeService responseCodeService;
-
-    @Autowired
-    public ResponseUtils(ResponseCodeService responseCodeService) {
-        ResponseUtils.responseCodeService = responseCodeService;
-    }
 
     // Standard HTTP Response codes
     public static final int SUCCESS = 200;
@@ -42,39 +34,21 @@ public class ResponseUtils {
     public static final int DELETED = 1006;
 
     /**
-     * Get response message by code from database (default Vietnamese)
+     * Get response message by code (Vietnamese default)
      * @param code Response code (HTTP code or custom code)
      * @return Response message
      */
     public static String getResponseMessage(int code) {
-        if (responseCodeService == null) {
-            return getDefaultMessage(code);
-        }
-        
-        try {
-            return responseCodeService.getResponseMessage(String.valueOf(code));
-        } catch (Exception e) {
-            logger.error("Failed to get response message from database for code: {}, using default", code, e);
-            return getDefaultMessage(code);
-        }
+        return getDefaultMessage(code);
     }
 
     /**
-     * Get English response message by code from database
+     * Get English response message by code
      * @param code Response code (HTTP code or custom code)
      * @return English response message
      */
     public static String getEnglishResponseMessage(int code) {
-        if (responseCodeService == null) {
-            return getDefaultEnglishMessage(code);
-        }
-        
-        try {
-            return responseCodeService.getEnglishResponseMessage(String.valueOf(code));
-        } catch (Exception e) {
-            logger.error("Failed to get English response message from database for code: {}, using default", code, e);
-            return getDefaultEnglishMessage(code);
-        }
+        return getDefaultEnglishMessage(code);
     }
 
     /**

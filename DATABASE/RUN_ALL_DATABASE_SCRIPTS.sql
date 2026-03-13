@@ -74,32 +74,33 @@ SELECT '=====================================================' AS '';
 USE `ART_AND_DECOR`;
 SHOW TABLES;
 
+-- Count total tables
+SELECT CONCAT('total_tables: ', COUNT(*)) AS ''
+FROM information_schema.tables
+WHERE table_schema = 'ART_AND_DECOR';
+
 -- Count records in key tables
 SELECT 'Table record counts:' AS '';
+
 SELECT 
-    'USER' AS table_name, 
-    COUNT(*) AS record_count 
+    'USER' AS table_name,
+    COUNT(*) AS record_count
 FROM `USER`
 UNION ALL
 SELECT 
-    'PRODUCT' AS table_name, 
-    COUNT(*) AS record_count 
+    'PRODUCT',
+    COUNT(*)
 FROM `PRODUCT`
 UNION ALL
 SELECT 
-    'RESPONSE_CODE' AS table_name, 
-    COUNT(*) AS record_count 
-FROM `RESPONSE_CODE`
-UNION ALL
-SELECT 
-    'CART' AS table_name, 
-    COUNT(*) AS record_count 
+    'CART',
+    COUNT(*)
 FROM `CART`
 UNION ALL
 SELECT 
-    'ORDERS' AS table_name, 
-    COUNT(*) AS record_count 
-FROM `ORDERS`;
+    'ORDER',
+    COUNT(*)
+FROM `ORDER`;
 
 -- =============================================
 -- COMPLETION MESSAGE

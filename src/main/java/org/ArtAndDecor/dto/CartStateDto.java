@@ -17,10 +17,15 @@ public class CartStateDto {
     private Long cartStateId;
     
     @NotBlank(message = "Cart state name is required")
-    @Size(max = 50, message = "Cart state name must not exceed 50 characters")
+    @Size(max = 64, message = "Cart state name must not exceed 64 characters")
     private String cartStateName;
     
-    private String remark;
+    @Size(max = 256, message = "Display name must not exceed 256 characters")
+    private String cartStateDisplayName;
+    
+    @NotBlank(message = "Cart state remark is required")
+    @Size(max = 256, message = "Remark must not exceed 256 characters")
+    private String cartStateRemark;
     
     @NotNull(message = "Cart state enabled flag is required")
     private Boolean cartStateEnabled;

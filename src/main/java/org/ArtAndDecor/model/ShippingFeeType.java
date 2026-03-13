@@ -31,11 +31,14 @@ public class ShippingFeeType {
     @Column(name = "SHIPPING_FEE_TYPE_NAME", nullable = false, unique = true, length = 64)
     private String shippingFeeTypeName;
 
-    @Column(name = "SHIPPING_FEE_TYPE_REMARK_EN", length = 256)
-    private String shippingFeeTypeRemarkEn;
+    @Column(name = "SHIPPING_FEE_TYPE_DISPLAY_NAME", length = 256)
+    private String shippingFeeTypeDisplayName;
 
     @Column(name = "SHIPPING_FEE_TYPE_REMARK", nullable = false, length = 256)
     private String shippingFeeTypeRemark;
+
+    @Column(name = "SHIPPING_FEE_TYPE_ENABLED", nullable = false)
+    private Boolean shippingFeeTypeEnabled = true;
 
     @Column(name = "CREATED_DT", nullable = false, updatable = false)
     private LocalDateTime createdDt;

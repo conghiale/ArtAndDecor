@@ -22,6 +22,29 @@ public class OrderItemDto {
     
     private Long orderItemId;
     
+    // Foreign key references for easy API usage
+    private Long orderId;
+    private Long productId;
+    
+    // Product snapshot information
+    @NotBlank(message = "Product name is required")
+    @Size(max = 255, message = "Product name must not exceed 255 characters")
+    private String productName;
+    
+    @NotBlank(message = "Product code is required")
+    @Size(max = 64, message = "Product code must not exceed 64 characters")
+    private String productCode;
+    
+    @NotBlank(message = "Product category name is required")
+    @Size(max = 100, message = "Product category name must not exceed 100 characters")
+    private String productCategoryName;
+    
+    @NotBlank(message = "Product type name is required")
+    @Size(max = 100, message = "Product type name must not exceed 100 characters")
+    private String productTypeName;
+    
+    private String productAttrJson;
+    
     @NotNull(message = "Unit price is required")
     @DecimalMin(value = "0.0", message = "Unit price must not be negative")
     @Digits(integer = 13, fraction = 2, message = "Invalid unit price format")
@@ -29,12 +52,12 @@ public class OrderItemDto {
     
     @NotNull(message = "Quantity is required")
     @Min(value = 1, message = "Quantity must be at least 1")
-    private Integer orderItemQuantity;
+    private Integer quantity;
     
     @NotNull(message = "Total price is required")
     @DecimalMin(value = "0.0", message = "Total price must not be negative")
     @Digits(integer = 13, fraction = 2, message = "Invalid total price format")
-    private BigDecimal orderItemTotalPrice;
+    private BigDecimal totalPrice;
     
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdDt;
@@ -55,8 +78,8 @@ public class OrderItemDto {
      * @return Calculated total
      */
     public BigDecimal calculateTotal() {
-        if (unitPrice != null && orderItemQuantity != null) {
-            return unitPrice.multiply(BigDecimal.valueOf(orderItemQuantity));
+        if (unitPrice != null && quantity != null) {
+            return unitPrice.multiply(BigDecimal.valueOf(quantity));
         }
         return BigDecimal.ZERO;
     }
@@ -66,10 +89,10 @@ public class OrderItemDto {
      * @return Product name or default text
      */
     public String getDisplayNameValue() {
-        if (product != null && product.getProductName() != null && !product.getProductName().isEmpty()) {
-            return product.getProductName() + " (x" + orderItemQuantity + ")";
+        if (productName != null && !productName.isEmpty()) {
+            return productName + " (x" + quantity + ")";
         }
-        return "Unknown Product (x" + (orderItemQuantity != null ? orderItemQuantity : 0) + ")";
+        return "Unknown Product (x" + (quantity != null ? quantity : 0) + ")";
     }
     
     /**

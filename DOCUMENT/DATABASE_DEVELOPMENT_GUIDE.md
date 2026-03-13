@@ -2,16 +2,38 @@
 
 ## Tổng quan
 
-Database **ART_AND_DECOR** là hệ thống quản lý e-commerce cho cửa hàng bán tranh nghệ thuật và đồ trang trí. Database được thiết kế với **31 bảng chính** (giảm từ 33 do loại bỏ IMAGE_FORMAT và IMAGE_CATEGORY), hỗ trợ đầy đủ các tính năng như quản lý người dùng, sản phẩm, giỏ hàng, đơn hàng, thanh toán, vận chuyển, quản lý trang và SEO.
+Database **ART_AND_DECOR** là hệ thống quản lý e-commerce cho cửa hàng bán tranh nghệ thuật và đồ trang trí. Database được thiết kế với **39 bảng chính**, hỗ trợ đầy đủ các tính năng như quản lý người dùng, sản phẩm, giỏ hàng, đơn hàng, thanh toán, vận chuyển, quản lý trang, blog và SEO.
 
-**Phiên bản hiện tại:** v1.1 (Cập nhật Phase 2 - Xóa IMAGE_FORMAT)
+**Phiên bản hiện tại:** v1.5 (Cập nhật snapshot thông tin khách hàng trong bảng ORDER)
 
 **Thứ tự tạo bảng đã được tối ưu hóa:** Các bảng SEO được tạo trước các bảng khác để tránh lỗi foreign key constraint.
 
 **Thay đổi từ phiên bản trước:**
 - **IMAGE_FORMAT table**: ❌ Đã xóa - Định dạng hình ảnh được lưu trực tiếp trong trường `IMAGE_SIZE` của bảng IMAGE
 - **IMAGE_CATEGORY table**: ❌ Đã xóa từ trước
-- **IMAGE table**: ✅ Cập nhật - Loại bỏ cột `IMAGE_CATEGORY_ID` và `IMAGE_FORMAT_ID`, giữ lại các cột chính
+- **IMAGE table**: ✅ Cập nhật - Loại bỏ cột `IMAGE_CATEGORY_ID`, `IMAGE_FORMAT_ID` và `IMAGE_REMARK_EN`, giữ lại các cột chính
+
+**Thay đổi v1.5 (Cập nhật snapshot thông tin khách hàng trong bảng ORDER):**
+- **ORDER**: Thêm cột `CUSTOMER_PHONE_NUMBER` VARCHAR(15) NULL (Snapshot số điện thoại khách hàng từ bảng USER)
+- **ORDER**: Thêm cột `CUSTOMER_EMAIL` VARCHAR(100) NULL (Snapshot email khách hàng từ bảng USER)
+- **ORDER**: Thêm cột `CUSTOMER_ADDRESS` TEXT NULL (Snapshot địa chỉ khách hàng từ bảng USER)
+- **INSERT_SAMPLE_DATA.sql**: Cập nhật dữ liệu mẫu cho bảng ORDER với các cột mới
+- **DATABASE_DEVELOPMENT_GUIDE.md**: Rà soát toàn bộ 39 bảng để đảm bảo tính nhất quán với CREATE_DB_ART_AND_DECOR.sql
+- **ORDER_STATE_HISTORY**: Sửa cấu trúc và thêm cột `CHANGED_BY_USER_ID` BIGINT NULL
+- **PAYMENT**: Thêm cột `PAYMENT_REMARK` VARCHAR(256) YES
+
+**Thay đổi v1.4 (Loại bỏ bảng RESPONSE_CODE):**
+- **RESPONSE_CODE**: ❌ Đã xóa - Bảng này không được sử dụng trong business logic, chỉ cho logging
+- **ResponseCodeService, ResponseCodeRepository, ResponseCodeDto**: ❌ Đã xóa - Các class Java liên quan
+- **ResponseUtils**: ✅ Cập nhật - Loại bỏ dependency với database, chỉ sử dụng static messages
+
+**Thay đổi v1.3 (Cập nhật cấu trúc PRODUCT và ORDER):**
+- **PRODUCT**: Xóa cột `PRODUCT_REMARK` TEXT NULL
+- **ORDER**: Thêm cột `CUSTOMER_NAME` VARCHAR(150) NULL (Snapshot tên khách hàng từ bảng USER)
+- **ORDER**: Thêm cột `CUSTOMER_ADDRESS` TEXT NULL (Snapshot địa chỉ khách hàng)
+- **ORDER**: Đổi tên các cột từ `CUSTOMER_*` thành `RECEIVER_*` (CUSTOMER_NAME→RECEIVER_NAME, CUSTOMER_PHONE→RECEIVER_PHONE, CUSTOMER_EMAIL→RECEIVER_EMAIL, CUSTOMER_ADDRESS→RECEIVER_ADDRESS)
+- **ORDER**: Đổi tên cột `SHIPPING_FEE` thành `SHIPPING_FEE_AMOUNT`
+- **ORDER**: Cập nhật cấu trúc snapshot thông tin khách hàng và người nhận riêng biệt
 
 **Lợi ích của thay đổi:**
 - Giảm độ phức tạp của schema
@@ -35,7 +57,7 @@ Database **ART_AND_DECOR** là hệ thống quản lý e-commerce cho cửa hàn
 |-------------|------|---------|-------------|
 | USER_PROVIDER_ID | BIGINT | YES | ID duy nhất của nhà cung cấp |
 | USER_PROVIDER_NAME | VARCHAR(50) | YES | Tên nhà cung cấp đăng nhập |
-| USER_PROVIDER_REMARK_EN | VARCHAR(256) | NO | Ghi chú tiếng Anh |
+| USER_PROVIDER_DISPLAY_NAME | VARCHAR(256) | NO | Tên hiển thị tiếng Anh |
 | USER_PROVIDER_REMARK | VARCHAR(256) | YES | Ghi chú tiếng Việt |
 | USER_PROVIDER_ENABLED | BOOLEAN | YES | Trạng thái kích hoạt |
 | CREATED_DT | DATETIME | YES | Ngày tạo |
@@ -52,7 +74,7 @@ Database **ART_AND_DECOR** là hệ thống quản lý e-commerce cho cửa hàn
 |-------------|------|---------|-------------|
 | USER_ROLE_ID | BIGINT | YES | ID duy nhất của vai trò |
 | USER_ROLE_NAME | VARCHAR(64) | YES | Tên vai trò |
-| USER_ROLE_REMARK_EN | VARCHAR(256) | NO | Ghi chú tiếng Anh |
+| USER_ROLE_DISPLAY_NAME | VARCHAR(256) | NO | Tên hiển thị tiếng Anh |
 | USER_ROLE_REMARK | VARCHAR(256) | YES | Ghi chú tiếng Việt |
 | USER_ROLE_ENABLED | BOOLEAN | YES | Trạng thái kích hoạt |
 | CREATED_DT | DATETIME | YES | Ngày tạo |
@@ -67,12 +89,12 @@ Database **ART_AND_DECOR** là hệ thống quản lý e-commerce cho cửa hàn
 | USER_PROVIDER_ID | BIGINT | YES | ID nhà cung cấp đăng nhập |
 | USER_ROLE_ID | BIGINT | YES | ID vai trò người dùng |
 | USER_ENABLED | BOOLEAN | YES | Trạng thái kích hoạt |
-| USER_NAME | VARCHAR(64) | NO | Tên đăng nhập |
+| USER_NAME | VARCHAR(64) | YES | Tên đăng nhập (UNIQUE) |
 | PASSWORD | VARCHAR(150) | NO | Mật khẩu đã mã hóa |
 | FIRST_NAME | VARCHAR(50) | NO | Tên |
 | LAST_NAME | VARCHAR(50) | NO | Họ |
 | PHONE_NUMBER | VARCHAR(15) | NO | Số điện thoại |
-| EMAIL | VARCHAR(100) | NO | Email |
+| EMAIL | VARCHAR(100) | YES | Email (UNIQUE) |
 | IMAGE_AVATAR_NAME | VARCHAR(150) | NO | Tên file ảnh đại diện |
 | SOCIAL_MEDIA | TEXT | NO | Thông tin mạng xã hội |
 | LAST_LOGIN_DT | DATETIME | NO | Thời gian đăng nhập gần nhất |
@@ -88,10 +110,11 @@ Database **ART_AND_DECOR** là hệ thống quản lý e-commerce cho cửa hàn
 ### 5. IMAGE
 **Chức năng:** Lưu trữ thông tin chi tiết của từng hình ảnh
 
-**Thay đổi Phase 2:**
-- ❌ Loại bỏ: `IMAGE_CATEGORY_ID` - Danh mục hình ảnh
-- ❌ Loại bỏ: `IMAGE_FORMAT_ID` - Tham chiếu đến bảng IMAGE_FORMAT  
-- ✅ Giữ lại: `IMAGE_SIZE` - Bây giờ dùng để lưu thông tin định dạng (ví dụ: "JPEG", "PNG", "1920x1080", v.v.)
+**Thay đổi mới nhất:**
+- ✅ Thêm mới: `IMAGE_FORMAT` - Định dạng file hình ảnh (JPEG, PNG, WebP, v.v.)
+- ❌ Loại bỏ: `IMAGE_CATEGORY_ID` - Danh mục hình ảnh (đã loại bỏ từ trước)
+- ❌ Loại bỏ: `IMAGE_FORMAT_ID` - Tham chiếu đến bảng IMAGE_FORMAT (đã loại bỏ từ trước)  
+- ✅ Cập nhật: `IMAGE_SIZE` - Kích thước hình ảnh (ví dụ: "1920x1080", "300x300", v.v.)
 
 | Column Name | Type | Require | Description |
 |-------------|------|---------|-------------|
@@ -99,10 +122,9 @@ Database **ART_AND_DECOR** là hệ thống quản lý e-commerce cho cửa hàn
 | IMAGE_NAME | VARCHAR(150) | YES | Tên file hình ảnh (UUID hoặc hash SHA-256) |
 | IMAGE_DISPLAY_NAME | VARCHAR(64) | YES | Tên hiển thị của hình ảnh |
 | IMAGE_SLUG | VARCHAR(64) | YES | URL slug cho SEO |
-| IMAGE_SIZE | VARCHAR(64) | YES | Kích thước/định dạng file (ví dụ: "JPEG", "PNG", "1920x1080") |
-| IMAGE_REMARK_EN | VARCHAR(256) | NO | Ghi chú tiếng Anh |
-| IMAGE_REMARK | VARCHAR(256) | YES | Ghi chú tiếng Việt |
-| SEO_META_ID | BIGINT | NO | ID metadata SEO |
+| IMAGE_SIZE | VARCHAR(64) | YES | Kích thước hình ảnh (ví dụ: "1920x1080", "300x300") |
+| IMAGE_FORMAT | VARCHAR(10) | YES | Định dạng file (JPEG, PNG, WebP, SVG, v.v.) |
+| IMAGE_REMARK | VARCHAR(256) | NO | Ghi chú tiếng Việt |
 | CREATED_DT | DATETIME | YES | Ngày tạo |
 | MODIFIED_DT | DATETIME | YES | Ngày cập nhật |
 
@@ -110,14 +132,13 @@ Database **ART_AND_DECOR** là hệ thống quản lý e-commerce cho cửa hàn
 - `idx_image_slug` - Tối ưu hóa truy vấn theo slug
 - `idx_image_display_name` - Tối ưu hóa truy vấn theo display name
 - `idx_image_name` - Tối ưu hóa truy vấn theo tên file
-- `idx_image_seo_meta` - Tối ưu hóa JOIN với bảng SEO_META
 
 **Ví dụ dữ liệu:**
 ```sql
 INSERT INTO IMAGE VALUES
-(1, 'sunset_seascape_001_hash.jpg', 'Hoàng hôn biển', 'sunset-seascape-001', 'JPEG', 'Bầu trời đẹp...', 'Beautiful sky...', 25, NOW(), NOW()),
-(2, 'mountain_landscape_002_hash.jpg', 'Núi non', 'mountain-landscape-002', 'PNG', 'Núi cao...', 'High mountain...', 26, NOW(), NOW()),
-(3, 'abstract_modern_001_hash.jpg', 'Nghệ thuật trừu tượng', 'modern-abstract-001', '1920x1200', 'Hiệu ứng...', 'Effects...', 27, NOW(), NOW());
+(1, 'sunset_seascape_001_hash.jpg', 'Hoàng hôn biển', 'sunset-seascape-001', '1920x1080', 'JPEG', 'Bầu trời đẹp...', NOW(), NOW()),
+(2, 'mountain_landscape_002_hash.jpg', 'Núi non', 'mountain-landscape-002', '1920x1200', 'PNG', 'Núi cao...', NOW(), NOW()),
+(3, 'abstract_modern_001_hash.jpg', 'Nghệ thuật trừu tượng', 'modern-abstract-001', '1500x1500', 'JPEG', 'Hiệu ứng...', NOW(), NOW());
 ```
 
 ---
@@ -128,19 +149,20 @@ INSERT INTO IMAGE VALUES
 **Chức năng:** Phân loại sản phẩm theo loại. Có thể đính kèm ảnh đại diện cho từng loại.
 
 **Lưu ý:**
-- Có thêm cột PRODUCT_TYPE_IMAGE_NAME (tùy chọn) để lưu tên file ảnh đại diện cho loại sản phẩm.
+- Có thêm cột IMAGE_ID (tùy chọn) để liên kết với hình ảnh đại diện cho loại sản phẩm.
+- ❌ Đã loại bỏ: PRODUCT_TYPE_DISPLAY - Không cần thiết
+- ✅ Thay đổi: PRODUCT_TYPE_IMAGE_NAME → IMAGE_ID (khóa ngoại)
 
 | Column Name             | Type         | Require | Description                         |
 |------------------------|--------------|---------|-------------------------------------|
 | PRODUCT_TYPE_ID        | BIGINT       | YES     | ID duy nhất của loại                |
 | PRODUCT_TYPE_SLUG      | VARCHAR(64)  | YES     | URL slug cho SEO                    |
 | PRODUCT_TYPE_NAME      | VARCHAR(64)  | YES     | Tên loại sản phẩm                   |
-| PRODUCT_TYPE_REMARK_EN | VARCHAR(256) | NO      | Ghi chú tiếng Anh                   |
+| PRODUCT_TYPE_DISPLAY_NAME | VARCHAR(256) | NO      | Tên hiển thị tiếng Anh                   |
 | PRODUCT_TYPE_REMARK    | VARCHAR(256) | YES     | Ghi chú tiếng Việt                  |
 | PRODUCT_TYPE_ENABLED   | BOOLEAN      | YES     | Trạng thái kích hoạt                |
-| PRODUCT_TYPE_DISPLAY   | BOOLEAN      | YES     | Hiển thị trên giao diện             |
+| IMAGE_ID               | BIGINT       | NO      | ID hình ảnh đại diện (khóa ngoại)   |
 | SEO_META_ID            | BIGINT       | NO      | ID metadata SEO                     |
-| PRODUCT_TYPE_IMAGE_NAME| VARCHAR(255) | NO      | Tên file ảnh đại diện loại sản phẩm |
 | CREATED_DT             | DATETIME     | YES     | Ngày tạo                            |
 | MODIFIED_DT            | DATETIME     | YES     | Ngày cập nhật                       |
 
@@ -155,21 +177,23 @@ INSERT INTO IMAGE VALUES
 **Lưu ý:**
 - Mỗi category liên kết với một PRODUCT_TYPE_ID (bắt buộc).
 - Hỗ trợ phân cấp category qua PRODUCT_CATEGORY_PARENT_ID (có thể null).
-- Có thể đính kèm ảnh đại diện qua PRODUCT_CATEGORY_IMAGE_NAME (tùy chọn).
+- Có thể đính kèm ảnh đại diện qua IMAGE_ID (tùy chọn).
+- ✅ Thay đổi: PRODUCT_CATEGORY_DISPLAY → PRODUCT_CATEGORY_VISIBLE
+- ✅ Thay đổi: PRODUCT_CATEGORY_IMAGE_NAME → IMAGE_ID (khóa ngoại)
 
 | Column Name | Type | Require | Description |
 |--------------------------|--------|---------|---------------------------------------------|
 | PRODUCT_CATEGORY_ID      | BIGINT | YES     | ID duy nhất của danh mục                    |
 | PRODUCT_CATEGORY_SLUG    | VARCHAR(64) | YES | URL slug cho SEO                           |
 | PRODUCT_CATEGORY_NAME    | VARCHAR(64) | YES | Tên danh mục sản phẩm                      |
-| PRODUCT_CATEGORY_REMARK_EN | VARCHAR(256) | NO | Ghi chú tiếng Anh                        |
+| PRODUCT_CATEGORY_DISPLAY_NAME | VARCHAR(256) | NO | Tên hiển thị tiếng Anh                        |
 | PRODUCT_CATEGORY_REMARK  | VARCHAR(256) | YES | Ghi chú tiếng Việt                         |
 | PRODUCT_CATEGORY_ENABLED | BOOLEAN | YES     | Trạng thái kích hoạt                        |
-| PRODUCT_CATEGORY_DISPLAY | BOOLEAN | YES     | Hiển thị trên giao diện                     |
-| SEO_META_ID              | BIGINT | NO      | ID metadata SEO                             |
+| PRODUCT_CATEGORY_VISIBLE | BOOLEAN | YES     | Hiển thị trên giao diện                     |
 | PRODUCT_TYPE_ID          | BIGINT | YES     | ID loại sản phẩm liên kết                   |
 | PRODUCT_CATEGORY_PARENT_ID | BIGINT | NO    | ID danh mục cha (nếu là category con)       |
-| PRODUCT_CATEGORY_IMAGE_NAME | VARCHAR(255) | NO | Tên file ảnh đại diện category           |
+| IMAGE_ID                 | BIGINT | NO      | ID hình ảnh đại diện (khóa ngoại)           |
+| SEO_META_ID              | BIGINT | NO      | ID metadata SEO                             |
 | CREATED_DT               | DATETIME | YES   | Ngày tạo                                    |
 | MODIFIED_DT              | DATETIME | YES   | Ngày cập nhật                               |
 
@@ -187,7 +211,7 @@ INSERT INTO IMAGE VALUES
 | PRODUCT_STATE_ID | BIGINT | YES | ID duy nhất của trạng thái |
 | PRODUCT_STATE_NAME | VARCHAR(64) | YES | Tên trạng thái sản phẩm |
 | PRODUCT_STATE_ENABLED | BOOLEAN | YES | Trạng thái kích hoạt |
-| PRODUCT_STATE_REMARK_EN | VARCHAR(256) | NO | Ghi chú tiếng Anh |
+| PRODUCT_STATE_DISPLAY_NAME | VARCHAR(256) | NO | Tên hiển thị tiếng Anh |
 | PRODUCT_STATE_REMARK | VARCHAR(256) | YES | Ghi chú tiếng Việt |
 | CREATED_DT | DATETIME | YES | Ngày tạo |
 | MODIFIED_DT | DATETIME | YES | Ngày cập nhật |
@@ -207,7 +231,7 @@ INSERT INTO IMAGE VALUES
 | PRODUCT_ATTR_ID | BIGINT | YES | ID duy nhất của thuộc tính |
 | PRODUCT_ATTR_NAME | VARCHAR(64) | YES | Tên thuộc tính |
 | PRODUCT_ATTR_ENABLED | BOOLEAN | YES | Trạng thái kích hoạt |
-| PRODUCT_ATTR_REMARK_EN | VARCHAR(256) | NO | Ghi chú tiếng Anh |
+| PRODUCT_ATTR_DISPLAY_NAME | VARCHAR(256) | NO | Tên hiển thị tiếng Anh |
 | PRODUCT_ATTR_REMARK | VARCHAR(256) | YES | Ghi chú tiếng Việt |
 | CREATED_DT | DATETIME | YES | Ngày tạo |
 | MODIFIED_DT | DATETIME | YES | Ngày cập nhật |
@@ -220,16 +244,16 @@ INSERT INTO IMAGE VALUES
 | PRODUCT_ID | BIGINT | YES | ID duy nhất của sản phẩm |
 | PRODUCT_NAME | VARCHAR(100) | YES | Tên sản phẩm |
 | PRODUCT_SLUG | VARCHAR(64) | YES | URL slug cho SEO |
+| PRODUCT_CODE | VARCHAR(64) | YES | Mã sản phẩm (UNIQUE) |
 | PRODUCT_CATEGORY_ID | BIGINT | YES | ID danh mục sản phẩm |
 | PRODUCT_STATE_ID | BIGINT | YES | ID trạng thái sản phẩm |
-| PRODUCT_TYPE_ID | BIGINT | YES | ID loại sản phẩm |
 | SOLD_QUANTITY | INT | YES | Số lượng đã bán |
 | STOCK_QUANTITY | INT | YES | Số lượng tồn kho |
 | PRODUCT_DESCRIPTION | TEXT | YES | Mô tả sản phẩm |
 | PRODUCT_PRICE | DECIMAL(15,2) | YES | Giá sản phẩm |
-| PRODUCT_REMARK_EN | VARCHAR(256) | NO | Ghi chú tiếng Anh |
-| PRODUCT_REMARK | VARCHAR(256) | YES | Ghi chú tiếng Việt |
 | PRODUCT_ENABLED | BOOLEAN | YES | Trạng thái kích hoạt |
+| PRODUCT_FEATURED | BOOLEAN | YES | Sản phẩm nổi bật (DEFAULT FALSE) |
+| PRODUCT_HIGHLIGHTED | BOOLEAN | YES | Sản phẩm tiêu biểu (DEFAULT FALSE) |
 | SEO_META_ID | BIGINT | NO | ID metadata SEO |
 | CREATED_DT | DATETIME | YES | Ngày tạo |
 | MODIFIED_DT | DATETIME | YES | Ngày cập nhật |
@@ -237,13 +261,14 @@ INSERT INTO IMAGE VALUES
 ### 11. PRODUCT_IMAGE
 **Chức năng:** Liên kết sản phẩm với hình ảnh
 
+**Lưu ý:** Mỗi sản phẩm có thể có nhiều hình ảnh, nhưng chỉ một hình ảnh được đánh dấu là hình ảnh chính (PRIMARY=TRUE). Hình ảnh chính sẽ được hiển thị đầu tiên trên trang chi tiết sản phẩm.
+
 | Column Name | Type | Require | Description |
 |-------------|------|---------|-------------|
 | PRODUCT_IMAGE_ID | BIGINT | YES | ID duy nhất của liên kết |
 | PRODUCT_ID | BIGINT | YES | ID sản phẩm |
 | IMAGE_ID | BIGINT | YES | ID hình ảnh |
-| PRODUCT_IMAGE_REMARK_EN | VARCHAR(256) | NO | Ghi chú tiếng Anh |
-| PRODUCT_IMAGE_REMARK | VARCHAR(256) | YES | Ghi chú tiếng Việt |
+| PRODUCT_IMAGE_PRIMARY | BOOLEAN | YES | Đánh dấu hình ảnh chính của sản phẩm (TRUE/FALSE) |
 | CREATED_DT | DATETIME | YES | Ngày tạo |
 | MODIFIED_DT | DATETIME | YES | Ngày cập nhật |
 
@@ -255,8 +280,7 @@ INSERT INTO IMAGE VALUES
 | PRODUCT_ATTRIBUTE_ID | BIGINT | YES | ID duy nhất của liên kết |
 | PRODUCT_ID | BIGINT | YES | ID sản phẩm |
 | PRODUCT_ATTR_ID | BIGINT | YES | ID thuộc tính |
-| PRODUCT_ATTRIBUTE_REMARK_EN | VARCHAR(256) | NO | Ghi chú tiếng Anh |
-| PRODUCT_ATTRIBUTE_REMARK | VARCHAR(256) | YES | Ghi chú tiếng Việt |
+| PRODUCT_ATTRIBUTE_VALUE | VARCHAR(256) | YES | Giá trị thuộc tính |
 | PRODUCT_ATTRIBUTE_ENABLED | BOOLEAN | YES | Trạng thái kích hoạt |
 | CREATED_DT | DATETIME | YES | Ngày tạo |
 | MODIFIED_DT | DATETIME | YES | Ngày cập nhật |
@@ -281,7 +305,6 @@ INSERT INTO IMAGE VALUES
 | COUNT_LIKE | INT | YES | Số lượt like |
 | IS_VISIBLE | BOOLEAN | YES | Hiển thị công khai |
 | IS_DELETED | BOOLEAN | YES | Trạng thái xóa |
-| CREATED_BY_ROLE_ID | BIGINT | YES | ID vai trò người tạo |
 | CREATED_DT | DATETIME | YES | Ngày tạo |
 | MODIFIED_DT | DATETIME | YES | Ngày cập nhật |
 
@@ -313,7 +336,7 @@ INSERT INTO IMAGE VALUES
 |-------------|------|---------|-------------|
 | CART_STATE_ID | BIGINT | YES | ID duy nhất của trạng thái |
 | CART_STATE_NAME | VARCHAR(64) | YES | Tên trạng thái giỏ hàng |
-| CART_STATE_REMARK_EN | VARCHAR(256) | NO | Ghi chú tiếng Anh |
+| CART_STATE_DISPLAY_NAME | VARCHAR(256) | NO | Tên hiển thị tiếng Anh |
 | CART_STATE_REMARK | VARCHAR(256) | YES | Ghi chú tiếng Việt |
 | CART_STATE_ENABLED | BOOLEAN | YES | Trạng thái kích hoạt |
 | CREATED_DT | DATETIME | YES | Ngày tạo |
@@ -325,15 +348,12 @@ INSERT INTO IMAGE VALUES
 | Column Name | Type | Require | Description |
 |-------------|------|---------|-------------|
 | CART_ID | BIGINT | YES | ID duy nhất của giỏ hàng |
-| USER_ID | BIGINT | YES | ID người dùng sở hữu |
-| SESSION_ID | VARCHAR(100) | NO | ID phiên làm việc |
+| USER_ID | BIGINT | NO | ID người dùng sở hữu (NULL cho guest checkout) |
+| SESSION_ID | VARCHAR(100) | NO | ID phiên làm việc cho guest |
 | CART_SLUG | VARCHAR(64) | YES | URL slug cho SEO |
 | CART_STATE_ID | BIGINT | YES | ID trạng thái giỏ hàng |
-| TOTAL_AMOUNT | INT | YES | Tổng số lượng sản phẩm |
-| CART_REMARK_EN | VARCHAR(256) | NO | Ghi chú tiếng Anh |
-| CART_REMARK | VARCHAR(256) | YES | Ghi chú tiếng Việt |
+| TOTAL_QUANTITY | INT | YES | Tổng số lượng sản phẩm |
 | CART_ENABLED | BOOLEAN | YES | Trạng thái kích hoạt |
-| SEO_META_ID | BIGINT | NO | ID metadata SEO |
 | CREATED_DT | DATETIME | YES | Ngày tạo |
 | MODIFIED_DT | DATETIME | YES | Ngày cập nhật |
 
@@ -348,7 +368,7 @@ INSERT INTO IMAGE VALUES
 |-------------|------|---------|-------------|
 | CART_ITEM_STATE_ID | BIGINT | YES | ID duy nhất của trạng thái |
 | CART_ITEM_STATE_NAME | VARCHAR(64) | YES | Tên trạng thái item |
-| CART_ITEM_STATE_REMARK_EN | VARCHAR(256) | NO | Ghi chú tiếng Anh |
+| CART_ITEM_STATE_DISPLAY_NAME | VARCHAR(256) | NO | Tên hiển thị tiếng Anh |
 | CART_ITEM_STATE_REMARK | VARCHAR(256) | YES | Ghi chú tiếng Việt |
 | CART_ITEM_STATE_ENABLED | BOOLEAN | YES | Trạng thái kích hoạt |
 | CREATED_DT | DATETIME | YES | Ngày tạo |
@@ -388,7 +408,7 @@ INSERT INTO IMAGE VALUES
 |-------------|------|---------|-------------|
 | ORDER_STATE_ID | BIGINT | YES | ID duy nhất của trạng thái |
 | ORDER_STATE_NAME | VARCHAR(64) | YES | Tên trạng thái đơn hàng |
-| ORDER_STATE_REMARK_EN | VARCHAR(256) | NO | Ghi chú tiếng Anh |
+| ORDER_STATE_DISPLAY_NAME | VARCHAR(256) | NO | Tên hiển thị tiếng Anh |
 | ORDER_STATE_REMARK | VARCHAR(256) | YES | Ghi chú tiếng Việt |
 | ORDER_STATE_ENABLED | BOOLEAN | YES | Trạng thái kích hoạt |
 | CREATED_DT | DATETIME | YES | Ngày tạo |
@@ -405,7 +425,7 @@ INSERT INTO IMAGE VALUES
 |-------------|------|---------|-------------|
 | DISCOUNT_TYPE_ID | BIGINT | YES | ID duy nhất của loại giảm giá |
 | DISCOUNT_TYPE_NAME | VARCHAR(64) | YES | Tên loại giảm giá |
-| DISCOUNT_TYPE_REMARK_EN | VARCHAR(256) | NO | Ghi chú tiếng Anh |
+| DISCOUNT_TYPE_DISPLAY_NAME | VARCHAR(256) | NO | Tên hiển thị tiếng Anh |
 | DISCOUNT_TYPE_REMARK | VARCHAR(256) | YES | Ghi chú tiếng Việt |
 | DISCOUNT_TYPE_ENABLED | BOOLEAN | YES | Trạng thái kích hoạt |
 | CREATED_DT | DATETIME | YES | Ngày tạo |
@@ -428,28 +448,38 @@ INSERT INTO IMAGE VALUES
 | TOTAL_USAGE_LIMIT | INT | YES | Giới hạn số lần sử dụng |
 | USED_COUNT | INT | YES | Số lần đã sử dụng |
 | IS_ACTIVE | BOOLEAN | YES | Trạng thái kích hoạt |
-| DISCOUNT_REMARK_EN | VARCHAR(256) | NO | Ghi chú tiếng Anh |
+| DISCOUNT_DISPLAY_NAME | VARCHAR(256) | NO | Tên hiển thị tiếng Anh |
 | DISCOUNT_REMARK | VARCHAR(256) | YES | Ghi chú tiếng Việt |
 | CREATED_DT | DATETIME | YES | Ngày tạo |
 | MODIFIED_DT | DATETIME | YES | Ngày cập nhật |
 
 ### 22. ORDER
-**Chức năng:** Lưu trữ thông tin đơn hàng
+**Chức năng:** Lưu trữ thông tin đơn hàng với snapshot thông tin khách hàng và người nhận
+
+**Lưu ý v1.5:** Bảng ORDER được cập nhật để lưu trữ đầy đủ thông tin snapshot của khách hàng đặt hàng bao gồm: CUSTOMER_NAME, CUSTOMER_PHONE_NUMBER, CUSTOMER_EMAIL, CUSTOMER_ADDRESS. Ngoài ra vẫn duy trì riêng biệt thông tin người nhận (RECEIVER_*), hỗ trợ trường hợp mua hàng tặng hoặc giao đến địa chỉ khác.
 
 | Column Name | Type | Require | Description |
 |-------------|------|---------|-------------|
 | ORDER_ID | BIGINT | YES | ID duy nhất của đơn hàng |
-| USER_ID | BIGINT | YES | ID người đặt hàng |
-| ORDER_CODE | VARCHAR(50) | YES | Mã đơn hàng |
-| ORDER_SLUG | VARCHAR(64) | YES | URL slug cho SEO |
-| CART_ID | BIGINT | YES | ID giỏ hàng gốc |
+| USER_ID | BIGINT | NO | ID người đặt hàng (có thể NULL nếu guest checkout) |
+| ORDER_CODE | VARCHAR(50) | YES | Mã đơn hàng (UNIQUE) |
+| ORDER_SLUG | VARCHAR(64) | YES | URL slug cho SEO (UNIQUE) |
+| CART_ID | BIGINT | NO | ID giỏ hàng gốc (chỉ để trace) |
 | ORDER_STATE_ID | BIGINT | YES | ID trạng thái đơn hàng |
 | DISCOUNT_ID | BIGINT | NO | ID mã giảm giá (nếu có) |
-| TOTAL_AMOUNT | DECIMAL(15,2) | YES | Tổng tiền đơn hàng |
+| CUSTOMER_NAME | VARCHAR(150) | NO | Tên khách hàng đặt hàng (snapshot từ bảng USER) |
+| CUSTOMER_PHONE_NUMBER | VARCHAR(15) | NO | Số điện thoại khách hàng (snapshot từ bảng USER) |
+| CUSTOMER_EMAIL | VARCHAR(100) | NO | Email khách hàng (snapshot từ bảng USER) |
+| CUSTOMER_ADDRESS | TEXT | NO | Địa chỉ khách hàng (snapshot từ bảng USER) |
+| RECEIVER_NAME | VARCHAR(150) | NO | Tên người nhận hàng |
+| RECEIVER_PHONE | VARCHAR(20) | NO | Số điện thoại người nhận |
+| RECEIVER_EMAIL | VARCHAR(150) | NO | Email người nhận |
+| RECEIVER_ADDRESS | TEXT | NO | Địa chỉ người nhận |
+| SUBTOTAL_AMOUNT | DECIMAL(15,2) | YES | Tổng tiền hàng (trước giảm giá và phí ship) |
+| DISCOUNT_AMOUNT | DECIMAL(15,2) | YES | Số tiền giảm giá (DEFAULT 0) |
+| SHIPPING_FEE_AMOUNT | DECIMAL(15,2) | YES | Phí vận chuyển (DEFAULT 0) |
+| TOTAL_AMOUNT | DECIMAL(15,2) | YES | Tổng tiền đơn hàng (sau tất cả) |
 | ORDER_NOTE | TEXT | NO | Ghi chú của khách hàng |
-| ORDER_REMARK_EN | VARCHAR(256) | NO | Ghi chú tiếng Anh |
-| ORDER_REMARK | VARCHAR(256) | YES | Ghi chú tiếng Việt |
-| SEO_META_ID | BIGINT | NO | ID metadata SEO |
 | CREATED_DT | DATETIME | YES | Ngày tạo |
 | MODIFIED_DT | DATETIME | YES | Ngày cập nhật |
 
@@ -460,27 +490,30 @@ INSERT INTO IMAGE VALUES
 |-------------|------|---------|-------------|
 | ORDER_STATE_HISTORY_ID | BIGINT | YES | ID duy nhất của lịch sử |
 | ORDER_ID | BIGINT | YES | ID đơn hàng |
-| ORDER_STATE_HISTORY_SLUG | VARCHAR(64) | YES | URL slug cho SEO |
 | OLD_STATE_ID | BIGINT | YES | ID trạng thái cũ |
 | NEW_STATE_ID | BIGINT | YES | ID trạng thái mới |
-| ORDER_STATE_HISTORY_NOTE | TEXT | NO | Ghi chú thay đổi |
-| ORDER_STATE_HISTORY_REMARK_EN | VARCHAR(256) | NO | Ghi chú tiếng Anh |
-| ORDER_STATE_HISTORY_REMARK | VARCHAR(256) | YES | Ghi chú tiếng Việt |
-| SEO_META_ID | BIGINT | NO | ID metadata SEO |
+| CHANGED_BY_USER_ID | BIGINT | NO | ID người thực hiện thay đổi |
 | CREATED_DT | DATETIME | YES | Ngày tạo |
 | MODIFIED_DT | DATETIME | YES | Ngày cập nhật |
 
 ### 24. ORDER_ITEM
-**Chức năng:** Lưu trữ chi tiết các sản phẩm trong mỗi đơn hàng
+**Chức năng:** Lưu trữ chi tiết các sản phẩm trong mỗi đơn hàng với snapshot thông tin sản phẩm
+
+**Lưu ý:** Bảng này lưu trữ snapshot thông tin sản phẩm tại thời điểm đặt hàng để đảm bảo tính nhất quán dữ liệu ngay cả khi thông tin sản phẩm gốc thay đổi.
 
 | Column Name | Type | Require | Description |
 |-------------|------|---------|-------------|
 | ORDER_ITEM_ID | BIGINT | YES | ID duy nhất của item đơn hàng |
 | ORDER_ID | BIGINT | YES | ID đơn hàng |
-| PRODUCT_ID | BIGINT | YES | ID sản phẩm |
+| PRODUCT_ID | BIGINT | YES | ID sản phẩm (tham chiếu) |
+| PRODUCT_NAME | VARCHAR(255) | YES | Tên sản phẩm (snapshot) |
+| PRODUCT_CODE | VARCHAR(64) | YES | Mã sản phẩm (snapshot) |
+| PRODUCT_CATEGORY_NAME | VARCHAR(100) | YES | Tên danh mục sản phẩm (snapshot) |
+| PRODUCT_TYPE_NAME | VARCHAR(100) | YES | Tên loại sản phẩm (snapshot) |
+| PRODUCT_ATTR_JSON | JSON | NO | Thuộc tính sản phẩm dạng JSON (snapshot) |
 | UNIT_PRICE | DECIMAL(15,2) | YES | Giá đơn vị tại thời điểm đặt hàng |
-| ORDER_ITEM_QUANTITY | INT | YES | Số lượng sản phẩm |
-| ORDER_ITEM_TOTAL_PRICE | DECIMAL(15,2) | YES | Tổng tiền của item |
+| QUANTITY | INT | YES | Số lượng sản phẩm |
+| TOTAL_PRICE | DECIMAL(15,2) | YES | Tổng tiền của item |
 | CREATED_DT | DATETIME | YES | Ngày tạo |
 | MODIFIED_DT | DATETIME | YES | Ngày cập nhật |
 
@@ -502,7 +535,7 @@ INSERT INTO IMAGE VALUES
 |-------------|------|---------|-------------|
 | PAYMENT_METHOD_ID | BIGINT | YES | ID duy nhất của phương thức |
 | PAYMENT_METHOD_NAME | VARCHAR(64) | YES | Tên phương thức thanh toán |
-| PAYMENT_METHOD_REMARK_EN | VARCHAR(256) | NO | Ghi chú tiếng Anh |
+| PAYMENT_METHOD_DISPLAY_NAME | VARCHAR(256) | NO | Tên hiển thị tiếng Anh |
 | PAYMENT_METHOD_REMARK | VARCHAR(256) | YES | Ghi chú tiếng Việt |
 | PAYMENT_METHOD_ENABLED | BOOLEAN | YES | Trạng thái kích hoạt |
 | CREATED_DT | DATETIME | YES | Ngày tạo |
@@ -521,7 +554,7 @@ INSERT INTO IMAGE VALUES
 |-------------|------|---------|-------------|
 | PAYMENT_STATE_ID | BIGINT | YES | ID duy nhất của trạng thái |
 | PAYMENT_STATE_NAME | VARCHAR(64) | YES | Tên trạng thái thanh toán |
-| PAYMENT_STATE_REMARK_EN | VARCHAR(256) | NO | Ghi chú tiếng Anh |
+| PAYMENT_STATE_DISPLAY_NAME | VARCHAR(256) | NO | Tên hiển thị tiếng Anh |
 | PAYMENT_STATE_REMARK | VARCHAR(256) | YES | Ghi chú tiếng Việt |
 | PAYMENT_STATE_ENABLED | BOOLEAN | YES | Trạng thái kích hoạt |
 | CREATED_DT | DATETIME | YES | Ngày tạo |
@@ -539,9 +572,7 @@ INSERT INTO IMAGE VALUES
 | PAYMENT_STATE_ID | BIGINT | YES | ID trạng thái thanh toán |
 | AMOUNT | DECIMAL(15,2) | YES | Số tiền thanh toán |
 | TRANSACTION_ID | VARCHAR(100) | YES | Mã giao dịch |
-| PAYMENT_REMARK_EN | VARCHAR(256) | NO | Ghi chú tiếng Anh |
-| PAYMENT_REMARK | VARCHAR(256) | YES | Ghi chú tiếng Việt |
-| SEO_META_ID | BIGINT | NO | ID metadata SEO |
+| PAYMENT_REMARK | VARCHAR(256) | YES | Ghi chú chi tiết giao dịch |
 | CREATED_DT | DATETIME | YES | Ngày tạo |
 | MODIFIED_DT | DATETIME | YES | Ngày cập nhật |
 
@@ -561,7 +592,7 @@ INSERT INTO IMAGE VALUES
 |-------------|------|---------|-------------|
 | SHIPPING_FEE_TYPE_ID | BIGINT | YES | ID duy nhất của loại phí |
 | SHIPPING_FEE_TYPE_NAME | VARCHAR(64) | YES | Tên loại phí vận chuyển |
-| SHIPPING_FEE_TYPE_REMARK_EN | VARCHAR(256) | NO | Ghi chú tiếng Anh |
+| SHIPPING_FEE_TYPE_DISPLAY_NAME | VARCHAR(256) | NO | Tên hiển thị tiếng Anh |
 | SHIPPING_FEE_TYPE_REMARK | VARCHAR(256) | YES | Ghi chú tiếng Việt |
 | SHIPPING_FEE_TYPE_ENABLED | BOOLEAN | YES | Trạng thái kích hoạt |
 | CREATED_DT | DATETIME | YES | Ngày tạo |
@@ -577,7 +608,7 @@ INSERT INTO IMAGE VALUES
 | MIN_ORDER_PRICE | DECIMAL(15,2) | YES | Giá đơn hàng tối thiểu |
 | MAX_ORDER_PRICE | DECIMAL(15,2) | YES | Giá đơn hàng tối đa |
 | SHIPPING_FEE_VALUE | DECIMAL(15,2) | YES | Giá trị phí vận chuyển |
-| SHIPPING_FEE_REMARK_EN | VARCHAR(256) | NO | Ghi chú tiếng Anh |
+| SHIPPING_FEE_DISPLAY_NAME | VARCHAR(256) | NO | Tên hiển thị tiếng Anh |
 | SHIPPING_FEE_REMARK | VARCHAR(256) | YES | Ghi chú tiếng Việt |
 | SHIPPING_FEE_ENABLED | BOOLEAN | YES | Trạng thái kích hoạt |
 | CREATED_DT | DATETIME | YES | Ngày tạo |
@@ -597,27 +628,33 @@ INSERT INTO IMAGE VALUES
 |-------------|------|---------|-------------|
 | SHIPMENT_STATE_ID | BIGINT | YES | ID duy nhất của trạng thái |
 | SHIPMENT_STATE_NAME | VARCHAR(64) | YES | Tên trạng thái vận chuyển |
-| SHIPMENT_STATE_REMARK_EN | VARCHAR(256) | NO | Ghi chú tiếng Anh |
+| SHIPMENT_STATE_DISPLAY_NAME | VARCHAR(256) | NO | Tên hiển thị tiếng Anh |
 | SHIPMENT_STATE_REMARK | VARCHAR(256) | YES | Ghi chú tiếng Việt |
 | SHIPMENT_STATE_ENABLED | BOOLEAN | YES | Trạng thái kích hoạt |
 | CREATED_DT | DATETIME | YES | Ngày tạo |
 | MODIFIED_DT | DATETIME | YES | Ngày cập nhật |
 
 ### 31. SHIPMENT
-**Chức năng:** Quản lý thông tin vận chuyển đơn hàng
+**Chức năng:** Quản lý thông tin vận chuyển đơn hàng với snapshot đầy đủ thông tin người nhận
 
 | Column Name | Type | Require | Description |
 |-------------|------|---------|-------------|
 | SHIPMENT_ID | BIGINT | YES | ID duy nhất của lô hàng |
 | ORDER_ID | BIGINT | YES | ID đơn hàng |
-| SHIPMENT_SLUG | VARCHAR(64) | YES | URL slug cho SEO |
-| SHIPPING_FEE_ID | BIGINT | YES | ID phí vận chuyển |
+| SHIPMENT_CODE | VARCHAR(64) | YES | Mã vận đơn (UNIQUE) |
 | SHIPMENT_STATE_ID | BIGINT | YES | ID trạng thái vận chuyển |
-| PHONE | VARCHAR(20) | YES | Số điện thoại nhận hàng |
-| ADDRESS | VARCHAR(256) | YES | Địa chỉ nhận hàng |
-| SHIPMENT_REMARK_EN | VARCHAR(256) | NO | Ghi chú tiếng Anh |
-| SHIPMENT_REMARK | VARCHAR(256) | YES | Ghi chú tiếng Việt |
-| SEO_META_ID | BIGINT | NO | ID metadata SEO |
+| RECEIVER_NAME | VARCHAR(150) | YES | Tên người nhận (snapshot) |
+| RECEIVER_PHONE | VARCHAR(20) | YES | Số điện thoại nhận hàng |
+| RECEIVER_EMAIL | VARCHAR(150) | NO | Email người nhận |
+| ADDRESS_LINE | VARCHAR(255) | YES | Địa chỉ chi tiết |
+| CITY | VARCHAR(100) | YES | Thành phố |
+| DISTRICT | VARCHAR(100) | NO | Quận/Huyện |
+| WARD | VARCHAR(100) | NO | Phường/Xã |
+| COUNTRY | VARCHAR(100) | YES | Quốc gia |
+| SHIPPING_FEE_AMOUNT | DECIMAL(15,2) | YES | Phí vận chuyển (snapshot) |
+| SHIPPED_AT | DATETIME | NO | Thời gian giao hàng |
+| DELIVERED_AT | DATETIME | NO | Thời gian nhận hàng |
+| SHIPMENT_REMARK | VARCHAR(256) | NO | Ghi chú vận chuyển |
 | CREATED_DT | DATETIME | YES | Ngày tạo |
 | MODIFIED_DT | DATETIME | YES | Ngày cập nhật |
 
@@ -638,9 +675,11 @@ INSERT INTO IMAGE VALUES
 | BLOG_CATEGORY_ID | BIGINT | YES | ID duy nhất của danh mục |
 | BLOG_CATEGORY_SLUG | VARCHAR(64) | YES | URL slug cho SEO |
 | BLOG_CATEGORY_NAME | VARCHAR(64) | YES | Tên danh mục blog |
-| BLOG_CATEGORY_REMARK_EN | VARCHAR(256) | NO | Ghi chú tiếng Anh |
+| BLOG_CATEGORY_DISPLAY_NAME | VARCHAR(256) | NO | Tên hiển thị tiếng Anh |
 | BLOG_CATEGORY_REMARK | VARCHAR(256) | YES | Ghi chú tiếng Việt |
 | BLOG_CATEGORY_ENABLED | BOOLEAN | YES | Trạng thái kích hoạt |
+| BLOG_TYPE_ID | BIGINT | NO | ID loại blog |
+| IMAGE_ID | BIGINT | NO | ID hình ảnh đại diện |
 | SEO_META_ID | BIGINT | NO | ID metadata SEO |
 | CREATED_DT | DATETIME | YES | Ngày tạo |
 | MODIFIED_DT | DATETIME | YES | Ngày cập nhật |
@@ -658,9 +697,10 @@ INSERT INTO IMAGE VALUES
 | BLOG_TYPE_ID | BIGINT | YES | ID duy nhất của loại |
 | BLOG_TYPE_SLUG | VARCHAR(64) | YES | URL slug cho SEO |
 | BLOG_TYPE_NAME | VARCHAR(64) | YES | Tên loại blog |
-| BLOG_TYPE_REMARK_EN | VARCHAR(256) | NO | Ghi chú tiếng Anh |
+| BLOG_TYPE_DISPLAY_NAME | VARCHAR(256) | NO | Tên hiển thị tiếng Anh |
 | BLOG_TYPE_REMARK | VARCHAR(256) | YES | Ghi chú tiếng Việt |
 | BLOG_TYPE_ENABLED | BOOLEAN | YES | Trạng thái kích hoạt |
+| IMAGE_ID | BIGINT | NO | ID hình ảnh đại diện |
 | SEO_META_ID | BIGINT | NO | ID metadata SEO |
 | CREATED_DT | DATETIME | YES | Ngày tạo |
 | MODIFIED_DT | DATETIME | YES | Ngày cập nhật |
@@ -672,12 +712,10 @@ INSERT INTO IMAGE VALUES
 |-------------|------|---------|-------------|
 | BLOG_ID | BIGINT | YES | ID duy nhất của bài viết |
 | BLOG_CATEGORY_ID | BIGINT | YES | ID danh mục blog |
-| BLOG_TYPE_ID | BIGINT | YES | ID loại blog |
 | BLOG_TITLE | VARCHAR(256) | YES | Tiêu đề bài viết |
 | BLOG_SLUG | VARCHAR(64) | YES | URL slug cho SEO |
 | BLOG_CONTENT | LONGTEXT | YES | Nội dung bài viết |
 | BLOG_ENABLED | BOOLEAN | YES | Trạng thái kích hoạt |
-| BLOG_REMARK_EN | VARCHAR(256) | NO | Ghi chú tiếng Anh |
 | BLOG_REMARK | VARCHAR(256) | YES | Ghi chú tiếng Việt |
 | SEO_META_ID | BIGINT | NO | ID metadata SEO |
 | CREATED_DT | DATETIME | YES | Ngày tạo |
@@ -713,21 +751,18 @@ INSERT INTO IMAGE VALUES
 ### 36. CONTACT
 **Chức năng:** Quản lý thông tin liên hệ của cửa hàng
 
-| Column Name | Type | Require | Description |
-|-------------|------|---------|-------------|
+| Column Name | Type | Require | Description             |
+|-------------|------|---------|-------------------------|
 | CONTACT_ID | BIGINT | YES | ID duy nhất của liên hệ |
-| CONTACT_NAME | VARCHAR(64) | YES | Tên liên hệ |
-| CONTACT_SLUG | VARCHAR(64) | YES | URL slug cho SEO |
-| CONTACT_ADDRESS | VARCHAR(256) | YES | Địa chỉ |
-| CONTACT_EMAIL | VARCHAR(64) | YES | Email liên hệ |
-| CONTACT_PHONE | VARCHAR(15) | YES | Số điện thoại |
-| CONTACT_FANPAGE | VARCHAR(256) | NO | Link fanpage |
-| CONTACT_ENABLED | BOOLEAN | YES | Trạng thái kích hoạt |
-| CONTACT_REMARK_EN | VARCHAR(256) | NO | Ghi chú tiếng Anh |
-| CONTACT_REMARK | VARCHAR(256) | YES | Ghi chú tiếng Việt |
-| SEO_META_ID | BIGINT | NO | ID metadata SEO |
-| CREATED_DT | DATETIME | YES | Ngày tạo |
-| MODIFIED_DT | DATETIME | YES | Ngày cập nhật |
+| CONTACT_NAME | VARCHAR(64) | YES | Tên duy nhất liên hệ    |
+| CONTACT_SLUG | VARCHAR(64) | YES | URL slug cho SEO        |
+| CONTACT_ADDRESS | VARCHAR(256) | YES | Địa chỉ                 |
+| CONTACT_EMAIL | VARCHAR(64) | YES | Email liên hệ           |
+| CONTACT_PHONE | VARCHAR(15) | YES | Số điện thoại           |
+| CONTACT_FANPAGE | VARCHAR(256) | NO | Link fanpage            |
+| CONTACT_ENABLED | BOOLEAN | YES | Trạng thái kích hoạt    |
+| CREATED_DT | DATETIME | YES | Ngày tạo                |
+| MODIFIED_DT | DATETIME | YES | Ngày cập nhật           |
 
 ### 37. POLICY
 **Chức năng:** Lưu trữ các chính sách và cấu hình nội dung động của website
@@ -756,7 +791,7 @@ INSERT INTO IMAGE VALUES
 | POLICY_NAME | VARCHAR(64) | YES | Tên chính sách |
 | POLICY_SLUG | VARCHAR(64) | NO | URL slug cho SEO |
 | POLICY_VALUE | TEXT | YES | Nội dung chính sách |
-| POLICY_REMARK_EN | VARCHAR(256) | NO | Ghi chú tiếng Anh |
+| POLICY_DISPLAY_NAME | VARCHAR(256) | NO | Tên hiển thị tiếng Anh |
 | POLICY_REMARK | VARCHAR(256) | YES | Ghi chú tiếng Việt |
 | POLICY_ENABLED | BOOLEAN | YES | Trạng thái kích hoạt |
 | CREATED_DT | DATETIME | YES | Ngày tạo |
@@ -781,7 +816,7 @@ INSERT INTO IMAGE VALUES
 | PAGE_POSITION_SLUG | VARCHAR(64) | YES | URL slug cho SEO |
 | PAGE_POSITION_NAME | VARCHAR(100) | YES | Tên vị trí hiển thị |
 | PAGE_POSITION_ENABLED | BOOLEAN | YES | Trạng thái kích hoạt |
-| PAGE_POSITION_REMARK_EN | VARCHAR(256) | NO | Ghi chú tiếng Anh |
+| PAGE_POSITION_DISPLAY_NAME | VARCHAR(256) | NO | Tên hiển thị tiếng Anh |
 | PAGE_POSITION_REMARK | VARCHAR(256) | YES | Ghi chú tiếng Việt |
 | CREATED_DT | DATETIME | YES | Ngày tạo |
 | MODIFIED_DT | DATETIME | YES | Ngày cập nhật |
@@ -802,7 +837,7 @@ INSERT INTO IMAGE VALUES
 | PAGE_GROUP_SLUG | VARCHAR(64) | YES | URL slug cho SEO |
 | PAGE_GROUP_NAME | VARCHAR(100) | YES | Tên nhóm trang |
 | PAGE_GROUP_ENABLED | BOOLEAN | YES | Trạng thái kích hoạt |
-| PAGE_GROUP_REMARK_EN | VARCHAR(256) | NO | Ghi chú tiếng Anh |
+| PAGE_GROUP_DISPLAY_NAME | VARCHAR(256) | NO | Tên hiển thị tiếng Anh |
 | PAGE_GROUP_REMARK | VARCHAR(256) | YES | Ghi chú tiếng Việt |
 | CREATED_DT | DATETIME | YES | Ngày tạo |
 | MODIFIED_DT | DATETIME | YES | Ngày cập nhật |
@@ -820,35 +855,12 @@ INSERT INTO IMAGE VALUES
 | PAGE_NAME | VARCHAR(100) | YES | Tên hiển thị của trang |
 | PAGE_CONTENT | LONGTEXT | NO | Nội dung HTML của trang |
 | PAGE_ENABLED | BOOLEAN | YES | Trạng thái kích hoạt |
-| PAGE_REMARK_EN | VARCHAR(256) | NO | Ghi chú tiếng Anh |
+| PAGE_DISPLAY_NAME | VARCHAR(256) | NO | Tên hiển thị tiếng Anh |
 | PAGE_REMARK | VARCHAR(256) | YES | Ghi chú tiếng Việt |
 | CREATED_DT | DATETIME | YES | Ngày tạo |
 | MODIFIED_DT | DATETIME | YES | Ngày cập nhật |
 
 ---
-
-## SYSTEM MANAGEMENT TABLES
-
-### 38. RESPONSE_CODE
-**Chức năng:** Quản lý mã phản hồi API
-
-**Dữ liệu mẫu:**
-- Name: 200 - Description: Success (Thành công)
-- Name: 201 - Description: Created successfully (Tạo thành công)
-- Name: 400 - Description: Bad request (Yêu cầu không hợp lệ)
-- Name: 401 - Description: Unauthorized (Không có quyền truy cập)
-- Name: 404 - Description: Not found (Không tìm thấy)
-- Name: 500 - Description: Internal server error (Lỗi máy chủ nội bộ)
-
-| Column Name | Type | Require | Description |
-|-------------|------|---------|-------------|
-| RESPONSE_CODE_ID | BIGINT | YES | ID duy nhất của mã phản hồi |
-| RESPONSE_CODE_NAME | VARCHAR(64) | YES | Tên mã phản hồi |
-| RESPONSE_CODE_REMARK_EN | VARCHAR(256) | NO | Ghi chú tiếng Anh |
-| RESPONSE_CODE_REMARK | VARCHAR(256) | YES | Ghi chú tiếng Việt |
-| RESPONSE_CODE_ENABLED | BOOLEAN | YES | Trạng thái kích hoạt |
-| CREATED_DT | DATETIME | YES | Ngày tạo |
-| MODIFIED_DT | DATETIME | YES | Ngày cập nhật |
 
 ---
 

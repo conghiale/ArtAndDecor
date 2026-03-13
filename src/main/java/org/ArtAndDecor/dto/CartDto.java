@@ -27,15 +27,9 @@ public class CartDto {
     @Size(max = 64, message = "Cart slug must not exceed 64 characters")
     private String cartSlug;
     
-    @NotNull(message = "Total amount is required")
-    @Min(value = 0, message = "Total amount must not be negative")
-    private Integer totalAmount;
-    
-    @Size(max = 256, message = "English remark must not exceed 256 characters")
-    private String cartRemarkEn;
-    
-    @Size(max = 256, message = "Remark must not exceed 256 characters")
-    private String cartRemark;
+    @NotNull(message = "Total quantity is required")
+    @Min(value = 0, message = "Total quantity must not be negative")
+    private Integer totalQuantity;
     
     private Boolean cartEnabled;
     
@@ -45,18 +39,23 @@ public class CartDto {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime modifiedDt;
 
-    // NESTED DTOs (complete related entity data)
-    private CartStateDto cartState;
-    private UserDto user;
-    private SeoMetaDto seoMeta;
-    
-    // Cart items
-    private List<CartItemDto> cartItems;
+    // ID fields for simple reference (also exposed as nested objects below)
+    private Long userId;
+    private Long cartStateId;
+    private String cartStateName;
     
     // Computed fields
+    private Integer totalAmount;
     private Integer totalItemCount;
     private Integer uniqueProductCount;
     private Boolean isEmpty;
+
+    // NESTED DTOs (complete related entity data)
+    private CartStateDto cartState;
+    private UserDto user;
+    
+    // Cart items
+    private List<CartItemDto> cartItems;
     
     /**
      * Generate full name from user's first and last name

@@ -46,8 +46,8 @@ public class Page {
     @Column(name = "PAGE_ENABLED", nullable = false)
     private Boolean pageEnabled = true;
 
-    @Column(name = "PAGE_REMARK_EN", length = 256)
-    private String pageRemarkEn;
+    @Column(name = "PAGE_DISPLAY_NAME", length = 256)
+    private String pageDisplayName;
 
     @Column(name = "PAGE_REMARK", length = 256, nullable = false)
     private String pageRemark;

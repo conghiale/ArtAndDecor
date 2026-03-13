@@ -1,5 +1,13 @@
 package org.ArtAndDecor.controllers;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.ArtAndDecor.dto.BaseResponseDto;
 import org.ArtAndDecor.dto.ContactDto;
@@ -22,8 +30,9 @@ import java.util.Optional;
  * - ADMIN/MANAGER/STAFF APIs: Priority ID > name > slug
  */
 @RestController
-@RequestMapping("/contacts")
+@RequestMapping("/api/contacts")
 @RequiredArgsConstructor
+@Tag(name = "Contact Management", description = "APIs for managing contact information including creation, updates, search and deletion")
 public class ContactController {
     
     private static final Logger logger = LoggerFactory.getLogger(ContactController.class);
@@ -37,8 +46,22 @@ public class ContactController {
      * Get contact by slug (customer-friendly lookup)
      * Public access for finding contact information
      */
+    @Operation(
+        summary = "Get contact by slug", 
+        description = "Retrieve contact information using URL-friendly slug. Public access for customer viewing."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Contact found successfully",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "404", description = "Contact not found with the provided slug",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid request or system error",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class)))
+    })
     @GetMapping("/slug/{contactSlug}")
-    public ResponseEntity<BaseResponseDto<ContactDto>> getContactBySlug(@PathVariable String contactSlug) {
+    public ResponseEntity<BaseResponseDto<ContactDto>> getContactBySlug(
+        @Parameter(description = "URL-friendly contact identifier", example = "art-store-hanoi")
+        @PathVariable String contactSlug) {
         logger.info("Requesting contact by slug: {}", contactSlug);
         try {
             Optional<ContactDto> contact = contactService.findContactBySlug(contactSlug);
@@ -55,46 +78,33 @@ public class ContactController {
     }
     
     /**
-     * Get all enabled contacts (customer view)
-     * Public access for browsing contact list
+     * Get contacts with criteria-based filtering and search 
+     * Public access for searching/browsing contacts
      */
-    @GetMapping("/public")
-    public ResponseEntity<BaseResponseDto<List<ContactDto>>> getPublicContacts() {
-        logger.info("Requesting all public (enabled) contacts");
-        try {
-            List<ContactDto> contacts = contactService.findAllEnabledContacts();
-            return ResponseEntity.ok(BaseResponseDto.success(
-                    String.format("Retrieved %d enabled contacts", contacts.size()),
-                    contacts));
-        } catch (Exception e) {
-            logger.error("Error retrieving public contacts: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(
-                    "Failed to retrieve contacts: " + e.getMessage()));
-        }
-    }
-    
-    /**
-     * Search contacts by name (customer search)
-     * Public access for searching contacts
-     */
-    @GetMapping("/search")
-    public ResponseEntity<BaseResponseDto<List<ContactDto>>> searchContacts(
-            @RequestParam(name = "q", required = false) String searchTerm) {
+    @Operation(
+        summary = "Search contacts with criteria", 
+        description = "Filter and search contacts by name, enabled status, and text search across multiple fields. If no parameters provided, returns all contacts."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Contacts retrieved successfully",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid request parameters or system error",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class)))
+    })
+    @GetMapping
+    public ResponseEntity<BaseResponseDto<List<ContactDto>>> getContactsByCriteria(
+        @Parameter(description = "Filter by exact contact name", example = "Art Store Hanoi")
+        @RequestParam(name = "contactName", required = false) String contactName,
+        @Parameter(description = "Filter by enabled status (true/false)")
+        @RequestParam(name = "contactEnabled", required = false) Boolean contactEnabled,
+        @Parameter(description = "Search text in name, slug, address, email, phone, fanpage, remark fields", example = "hanoi")
+        @RequestParam(name = "textSearch", required = false) String textSearch) {
         
-        logger.info("Searching contacts with term: {}", searchTerm);
+        logger.info("Searching contacts with criteria - name: {}, enabled: {}, textSearch: {}", 
+                   contactName, contactEnabled, textSearch);
         
         try {
-            if (searchTerm == null || searchTerm.isBlank()) {
-                return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(
-                        "Search term is required (minimum 2 characters)"));
-            }
-            
-            if (searchTerm.length() < 2) {
-                return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(
-                        "Search term must be at least 2 characters"));
-            }
-            
-            List<ContactDto> results = contactService.searchContactsByName(searchTerm);
+            List<ContactDto> results = contactService.findContactsByCriteria(contactName, contactEnabled, textSearch);
             return ResponseEntity.ok(BaseResponseDto.success(
                     String.format("Found %d matching contact(s)", results.size()),
                     results));
@@ -113,9 +123,26 @@ public class ContactController {
      * Get contact by ID (admin/management lookup)
      * Requires ADMIN role
      */
+    @Operation(
+        summary = "Get contact by ID", 
+        description = "Retrieve contact information using database ID. Restricted to admin users only.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Contact found successfully",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "404", description = "Contact not found with the provided ID",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "401", description = "Unauthorized - Authentication required"),
+        @ApiResponse(responseCode = "403", description = "Forbidden - Admin role required"),
+        @ApiResponse(responseCode = "400", description = "Invalid request or system error",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class)))
+    })
     @GetMapping("/{contactId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<BaseResponseDto<ContactDto>> getContactById(@PathVariable Long contactId) {
+    public ResponseEntity<BaseResponseDto<ContactDto>> getContactById(
+        @Parameter(description = "Contact database ID", example = "1")
+        @PathVariable Long contactId) {
         logger.info("Admin requesting contact by ID: {}", contactId);
         try {
             Optional<ContactDto> contact = contactService.findContactById(contactId);
@@ -137,9 +164,25 @@ public class ContactController {
      * Create new contact
      * Requires ADMIN role
      */
+    @Operation(
+        summary = "Create new contact", 
+        description = "Create a new contact entry with provided information. Auto-generates slug if not provided. Restricted to admin users only.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "201", description = "Contact created successfully",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "400", description = "Validation error or invalid request data",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "401", description = "Unauthorized - Authentication required"),
+        @ApiResponse(responseCode = "403", description = "Forbidden - Admin role required"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<BaseResponseDto<ContactDto>> createContact(@Valid @RequestBody ContactDto contactDto) {
+    public ResponseEntity<BaseResponseDto<ContactDto>> createContact(
+        @Parameter(description = "Contact information to create", required = true)
+        @Valid @RequestBody ContactDto contactDto) {
         logger.info("Creating new contact: {}", contactDto.getContactName());
         try {
             ContactDto created = contactService.createContact(contactDto);
@@ -161,11 +204,28 @@ public class ContactController {
      * Update contact
      * Requires ADMIN role
      */
+    @Operation(
+        summary = "Update existing contact", 
+        description = "Update contact information by ID. Auto-generates slug if not provided. Restricted to admin users only.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Contact updated successfully",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "404", description = "Contact not found with the provided ID",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "400", description = "Validation error or invalid request data",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "401", description = "Unauthorized - Authentication required"),
+        @ApiResponse(responseCode = "403", description = "Forbidden - Admin role required")
+    })
     @PutMapping("/{contactId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BaseResponseDto<ContactDto>> updateContact(
-            @PathVariable Long contactId,
-            @Valid @RequestBody ContactDto contactDto) {
+        @Parameter(description = "Contact ID to update", example = "1")
+        @PathVariable Long contactId,
+        @Parameter(description = "Updated contact information", required = true)
+        @Valid @RequestBody ContactDto contactDto) {
         
         logger.info("Updating contact with ID: {}", contactId);
         try {
@@ -188,11 +248,28 @@ public class ContactController {
      * Update contact status (enable/disable)
      * Requires ADMIN role
      */
+    @Operation(
+        summary = "Update contact status", 
+        description = "Enable or disable a contact by changing its status. Restricted to admin users only.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Contact status updated successfully",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "404", description = "Contact not found with the provided ID",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid request parameters",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "401", description = "Unauthorized - Authentication required"),
+        @ApiResponse(responseCode = "403", description = "Forbidden - Admin role required")
+    })
     @PatchMapping("/{contactId}/status")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BaseResponseDto<ContactDto>> updateContactStatus(
-            @PathVariable Long contactId,
-            @RequestParam Boolean enabled) {
+        @Parameter(description = "Contact ID to update", example = "1")
+        @PathVariable Long contactId,
+        @Parameter(description = "New enabled status (true/false)", required = true)
+        @RequestParam Boolean enabled) {
         
         logger.info("Updating contact status - ID: {}, Enabled: {}", contactId, enabled);
         try {
@@ -215,9 +292,26 @@ public class ContactController {
      * Delete contact
      * Requires ADMIN role only
      */
+    @Operation(
+        summary = "Delete contact", 
+        description = "Permanently delete a contact from the system. This action cannot be undone. Restricted to admin users only.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Contact deleted successfully",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "404", description = "Contact not found with the provided ID",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid request or system error",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "401", description = "Unauthorized - Authentication required"),
+        @ApiResponse(responseCode = "403", description = "Forbidden - Admin role required")
+    })
     @DeleteMapping("/{contactId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<BaseResponseDto<Void>> deleteContact(@PathVariable Long contactId) {
+    public ResponseEntity<BaseResponseDto<Void>> deleteContact(
+        @Parameter(description = "Contact ID to delete", example = "1")
+        @PathVariable Long contactId) {
         logger.info("Deleting contact with ID: {}", contactId);
         try {
             contactService.deleteContact(contactId);
@@ -239,6 +333,19 @@ public class ContactController {
      * Get total contact count (admin dashboard)
      * Requires ADMIN role
      */
+    @Operation(
+        summary = "Get total contact count", 
+        description = "Retrieve the total number of contacts in the system for dashboard statistics. Restricted to admin users only.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Total count retrieved successfully",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "400", description = "System error occurred",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "401", description = "Unauthorized - Authentication required"),
+        @ApiResponse(responseCode = "403", description = "Forbidden - Admin role required")
+    })
     @GetMapping("/admin/total-count")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BaseResponseDto<Long>> getTotalContactCount() {
@@ -252,6 +359,39 @@ public class ContactController {
             logger.error("Error getting total contact count: {}", e.getMessage(), e);
             return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(
                     "Failed to get total count: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * Get all contact names for dropdown/combobox (admin)
+     * Requires ADMIN role
+     */
+    @Operation(
+        summary = "Get all contact names", 
+        description = "Retrieve list of all contact names for use in dropdown/combobox UI elements. Restricted to admin users only.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Contact names retrieved successfully",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "400", description = "System error occurred",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "401", description = "Unauthorized - Authentication required"),
+        @ApiResponse(responseCode = "403", description = "Forbidden - Admin role required")
+    })
+    @GetMapping("/admin/names")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<BaseResponseDto<List<String>>> getAllContactNames() {
+        logger.info("Getting all contact names");
+        try {
+            List<String> names = contactService.getAllContactNames();
+            return ResponseEntity.ok(BaseResponseDto.success(
+                    String.format("Retrieved %d contact names", names.size()),
+                    names));
+        } catch (Exception e) {
+            logger.error("Error retrieving contact names: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(
+                    "Failed to retrieve contact names: " + e.getMessage()));
         }
     }
     

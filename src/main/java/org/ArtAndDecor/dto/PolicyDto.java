@@ -31,9 +31,10 @@ public class PolicyDto {
     @NotBlank(message = "Policy value is required")
     private String policyValue;
     
-    @Size(max = 256, message = "English remark must not exceed 256 characters")
-    private String policyRemarkEn;
+    @Size(max = 256, message = "Policy display name must not exceed 256 characters")
+    private String policyDisplayName;
     
+    @NotBlank(message = "Policy remark is required")
     @Size(max = 256, message = "Remark must not exceed 256 characters")
     private String policyRemark;
     

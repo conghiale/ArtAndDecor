@@ -34,17 +34,18 @@ public class ProductType {
     @Column(name = "PRODUCT_TYPE_NAME", nullable = false, unique = true, length = 64)
     private String productTypeName;
 
-    @Column(name = "PRODUCT_TYPE_REMARK_EN", length = 256)
-    private String productTypeRemarkEn;
-
     @Column(name = "PRODUCT_TYPE_REMARK", nullable = false, length = 256)
     private String productTypeRemark;
+
+    @Column(name = "PRODUCT_TYPE_DISPLAY_NAME", length = 256)
+    private String productTypeDisplayName;
 
     @Column(name = "PRODUCT_TYPE_ENABLED", nullable = false)
     private Boolean productTypeEnabled = true;
 
-    @Column(name = "PRODUCT_TYPE_DISPLAY", nullable = false)
-    private Boolean productTypeDisplay = true;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "IMAGE_ID")
+    private Image image;
 
     @Column(name = "SEO_META_ID")
     private Long seoMetaId;
@@ -53,18 +54,15 @@ public class ProductType {
     @JoinColumn(name = "SEO_META_ID", referencedColumnName = "SEO_META_ID", insertable = false, updatable = false)
     private SeoMeta seoMeta;
 
-    @Column(name = "PRODUCT_TYPE_IMAGE_NAME", length = 256)
-    private String productTypeImageName;
-
     @Column(name = "CREATED_DT", nullable = false, updatable = false)
     private LocalDateTime createdDt;
 
     @Column(name = "MODIFIED_DT", nullable = false)
     private LocalDateTime modifiedDt;
 
-    // One-to-Many relationship with Product
+    // One-to-Many relationship with ProductCategory
     @OneToMany(mappedBy = "productType", fetch = FetchType.LAZY)
-    private List<Product> products;
+    private List<ProductCategory> productCategories;
 
     @PrePersist
     protected void onCreate() {
@@ -74,9 +72,6 @@ public class ProductType {
         this.modifiedDt = now;
         if (this.productTypeEnabled == null) {
             this.productTypeEnabled = true;
-        }
-        if (this.productTypeDisplay == null) {
-            this.productTypeDisplay = true;
         }
     }
 

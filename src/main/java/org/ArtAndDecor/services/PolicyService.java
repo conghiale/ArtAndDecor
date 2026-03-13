@@ -11,13 +11,6 @@ import java.util.Optional;
 public interface PolicyService {
     
     /**
-     * Get policy by name (exact match, most common lookup)
-     * @param policyName the policy name
-     * @return Optional containing PolicyDto if found
-     */
-    Optional<PolicyDto> findPolicyByName(String policyName);
-    
-    /**
      * Get policy by ID
      * @param policyId the policy ID
      * @return Optional containing PolicyDto if found
@@ -32,24 +25,19 @@ public interface PolicyService {
     Optional<PolicyDto> findPolicyBySlug(String policySlug);
     
     /**
-     * Get all enabled policies
-     * @return List of enabled PolicyDto objects
-     */
-    List<PolicyDto> findAllEnabledPolicies();
-    
-    /**
-     * Search policies by name pattern (case-insensitive)
-     * @param namePattern the name pattern to search
+     * Find policies by criteria (with filters)
+     * @param policyName Filter by policy name (exact match)
+     * @param policyEnabled Filter by enabled status
+     * @param textSearch Search text in multiple fields
      * @return List of matching PolicyDto objects
      */
-    List<PolicyDto> searchPoliciesByName(String namePattern);
+    List<PolicyDto> findPoliciesByCriteria(String policyName, Boolean policyEnabled, String textSearch);
     
     /**
-     * Search policies by value pattern (for configuration lookup)
-     * @param valuePattern the value pattern to search
-     * @return List of matching PolicyDto objects
+     * Get all policy names for dropdown/combobox
+     * @return List of all policy names
      */
-    List<PolicyDto> searchPoliciesByValue(String valuePattern);
+    List<String> getAllPolicyNames();
     
     /**
      * Create new policy
@@ -85,13 +73,6 @@ public interface PolicyService {
      * @throws IllegalArgumentException if policy not found
      */
     PolicyDto updatePolicyValue(Long policyId, String newValue);
-    
-    /**
-     * Delete policy by ID
-     * @param policyId the policy ID to delete
-     * @throws IllegalArgumentException if policy not found
-     */
-    void deletePolicy(Long policyId);
     
     /**
      * Get total count of policies

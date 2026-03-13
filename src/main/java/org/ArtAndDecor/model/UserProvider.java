@@ -33,8 +33,8 @@ public class UserProvider {
     @Column(name = "USER_PROVIDER_NAME", nullable = false, unique = true, length = 50)
     private String userProviderName;
 
-    @Column(name = "USER_PROVIDER_REMARK_EN", length = 256)
-    private String userProviderRemarkEn;
+    @Column(name = "USER_PROVIDER_DISPLAY_NAME", length = 256)
+    private String userProviderDisplayName;
 
     @Column(name = "USER_PROVIDER_REMARK", nullable = false, length = 256)
     private String userProviderRemark;

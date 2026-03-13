@@ -46,9 +46,10 @@ public class User implements UserDetails {
     private UserRole userRole;
 
     @Column(name = "USER_ENABLED", nullable = false)
+    @Builder.Default
     private Boolean userEnabled = true;
 
-    @Column(name = "USER_NAME", unique = true, length = 64)
+    @Column(name = "USER_NAME", nullable = false, unique = true, length = 64)
     private String userName;
 
     @Column(name = "PASSWORD", length = 150)
@@ -63,7 +64,7 @@ public class User implements UserDetails {
     @Column(name = "PHONE_NUMBER", length = 15)
     private String phoneNumber;
 
-    @Column(name = "EMAIL", length = 100)
+    @Column(name = "EMAIL", nullable = false, unique = true, length = 100)
     private String email;
 
     @Column(name = "IMAGE_AVATAR_NAME", length = 150)
@@ -94,7 +95,7 @@ public class User implements UserDetails {
     private List<Cart> carts;
 
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    private List<Orders> orders;
+    private List<Order> orders;
 
     @PrePersist
     protected void onCreate() {
@@ -128,6 +129,14 @@ public class User implements UserDetails {
             return firstName;
         }
         return firstName + " " + lastName;
+    }
+
+    /**
+     * Get full name value (alias for getFullName for consistent API)
+     * @return Full name or empty string if both are null
+     */
+    public String getFullNameValue() {
+        return getFullName();
     }
 
     // =============================================

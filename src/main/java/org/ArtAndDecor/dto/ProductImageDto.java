@@ -20,20 +20,16 @@ import java.time.LocalDateTime;
 public class ProductImageDto {
     
     private Long productImageId;
-    
-    private Boolean isPrimary = false;
-    
-    @Min(value = 0, message = "Display order must not be negative")
-    private Integer displayOrder = 0;
-    
-    private Boolean productImageEnabled;
-    
+
+    @Builder.Default
+    private Boolean productImagePrimary = false;
+
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdDt;
-    
+
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime modifiedDt;
-    
+
     // Nested related entities following clean architecture
     private ProductDto product;
     private ImageDto image;
