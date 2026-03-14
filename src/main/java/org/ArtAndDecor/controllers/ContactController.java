@@ -30,7 +30,7 @@ import java.util.Optional;
  * - ADMIN/MANAGER/STAFF APIs: Priority ID > name > slug
  */
 @RestController
-@RequestMapping("/api/contacts")
+@RequestMapping("/contacts")
 @RequiredArgsConstructor
 @Tag(name = "Contact Management", description = "APIs for managing contact information including creation, updates, search and deletion")
 public class ContactController {
@@ -330,7 +330,7 @@ public class ContactController {
     }
     
     /**
-     * Get total contact count (admin dashboard)
+     * Get total contact count (dashboard statistics)
      * Requires ADMIN role
      */
     @Operation(
@@ -346,7 +346,7 @@ public class ContactController {
         @ApiResponse(responseCode = "401", description = "Unauthorized - Authentication required"),
         @ApiResponse(responseCode = "403", description = "Forbidden - Admin role required")
     })
-    @GetMapping("/admin/total-count")
+    @GetMapping("/stats/count")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BaseResponseDto<Long>> getTotalContactCount() {
         logger.info("Getting total contact count");
@@ -363,7 +363,7 @@ public class ContactController {
     }
     
     /**
-     * Get all contact names for dropdown/combobox (admin)
+     * Get all contact names for dropdown/combobox (management)
      * Requires ADMIN role
      */
     @Operation(
@@ -379,7 +379,7 @@ public class ContactController {
         @ApiResponse(responseCode = "401", description = "Unauthorized - Authentication required"),
         @ApiResponse(responseCode = "403", description = "Forbidden - Admin role required")
     })
-    @GetMapping("/admin/names")
+    @GetMapping("/names")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BaseResponseDto<List<String>>> getAllContactNames() {
         logger.info("Getting all contact names");

@@ -35,7 +35,7 @@ import java.util.List;
  * Provides endpoints for shopping cart operations including carts, cart states, cart items, and cart item states
  */
 @RestController
-@RequestMapping("/api/carts")
+@RequestMapping("/carts")
 @RequiredArgsConstructor
 @Tag(name = "Cart Management", description = "APIs for managing shopping carts, cart states, cart items, and cart item states")
 public class CartController {

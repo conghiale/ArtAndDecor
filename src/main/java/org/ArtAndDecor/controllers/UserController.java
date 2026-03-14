@@ -36,7 +36,7 @@ import java.util.Optional;
  */
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/users")
+@RequestMapping("/users")
 @CrossOrigin(origins = "*")
 @Tag(name = "User Management", description = "APIs for managing users, user roles, and user providers with advanced filtering and search capabilities")
 public class UserController {

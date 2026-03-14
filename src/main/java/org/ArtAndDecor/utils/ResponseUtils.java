@@ -1,7 +1,7 @@
 package org.ArtAndDecor.utils;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class ResponseUtils {
     
-    private static final Logger logger = LogManager.getLogger(ResponseUtils.class);
+    private static final Logger logger = LoggerFactory.getLogger(ResponseUtils.class);
 
     // Standard HTTP Response codes
     public static final int SUCCESS = 200;

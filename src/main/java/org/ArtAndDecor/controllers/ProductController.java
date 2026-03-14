@@ -33,7 +33,7 @@ import java.util.Optional;
  * Follows the same pattern as ImageController with customer and admin endpoints
  */
 @RestController
-@RequestMapping("/api/products")
+@RequestMapping("/products")
 @RequiredArgsConstructor
 @Tag(name = "Product Management", description = "Comprehensive APIs for product management including products, categories, types, states, attributes and images")
 public class ProductController {
@@ -287,7 +287,7 @@ public class ProductController {
     /**
      * Get total product count (Admin dashboard)
      */
-    @GetMapping("/admin/total-count")
+    @GetMapping("/stats/count")
     @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     @Operation(summary = "Get total product count", description = "Get total number of products for admin dashboard. Admin/Manager access required.")
     @SecurityRequirement(name = "bearerAuth")

@@ -3,8 +3,8 @@ package org.ArtAndDecor.services.impl;
 import lombok.RequiredArgsConstructor;
 import org.ArtAndDecor.config.MailConfiguration;
 import org.ArtAndDecor.services.EmailService;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
@@ -22,7 +22,7 @@ import java.time.format.DateTimeFormatter;
 @RequiredArgsConstructor
 public class EmailServiceImpl implements EmailService {
 
-    private static final Logger logger = LogManager.getLogger(EmailServiceImpl.class);
+    private static final Logger logger = LoggerFactory.getLogger(EmailServiceImpl.class);
 
     private final JavaMailSender javaMailSender;
     private final MailConfiguration mailConfiguration;

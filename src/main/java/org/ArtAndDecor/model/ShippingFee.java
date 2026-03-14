@@ -4,12 +4,11 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 
 /**
  * ShippingFee Entity
@@ -22,7 +21,7 @@ import java.util.List;
 @AllArgsConstructor
 public class ShippingFee {
     
-    private static final Logger logger = LogManager.getLogger(ShippingFee.class);
+    private static final Logger logger = LoggerFactory.getLogger(ShippingFee.class);
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

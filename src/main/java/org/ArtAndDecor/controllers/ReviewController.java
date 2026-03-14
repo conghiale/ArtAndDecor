@@ -32,7 +32,7 @@ import java.util.Optional;
  * Supports full CRUD operations with advanced filtering, pagination and security
  */
 @RestController
-@RequestMapping("/api/reviews")
+@RequestMapping("/reviews")
 @CrossOrigin(origins = "*")
 @Tag(name = "Review Management", description = "Comprehensive APIs for managing product reviews and review likes with role-based access control")
 public class ReviewController {

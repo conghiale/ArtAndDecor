@@ -30,7 +30,7 @@ import java.util.Optional;
  * Priority ID > name > slug for admin operations
  */
 @RestController
-@RequestMapping("/api/policies")
+@RequestMapping("/policies")
 @RequiredArgsConstructor
 @Tag(name = "Policy Management", description = "APIs for managing system policies and configuration settings")
 public class PolicyController {
@@ -336,7 +336,7 @@ public class PolicyController {
     }
     
     /**
-     * Get total policy count (admin dashboard)
+     * Get total policy count (dashboard statistics)
      * Requires ADMIN role
      */
     @Operation(
@@ -352,7 +352,7 @@ public class PolicyController {
         @ApiResponse(responseCode = "401", description = "Unauthorized - Authentication required"),
         @ApiResponse(responseCode = "403", description = "Forbidden - Admin role required")
     })
-    @GetMapping("/admin/total-count")
+    @GetMapping("/stats/count")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BaseResponseDto<Long>> getTotalPolicyCount() {
         logger.info("Getting total policy count");
@@ -369,7 +369,7 @@ public class PolicyController {
     }
     
     /**
-     * Get all policy names for dropdown/combobox (admin)
+     * Get all policy names for dropdown/combobox (management)
      * Requires ADMIN role
      */
     @Operation(
@@ -385,7 +385,7 @@ public class PolicyController {
         @ApiResponse(responseCode = "401", description = "Unauthorized - Authentication required"),
         @ApiResponse(responseCode = "403", description = "Forbidden - Admin role required")
     })
-    @GetMapping("/admin/names")
+    @GetMapping("/names")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BaseResponseDto<List<String>>> getAllPolicyNames() {
         logger.info("Getting all policy names");

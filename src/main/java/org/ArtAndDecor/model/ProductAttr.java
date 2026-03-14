@@ -4,8 +4,8 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,7 +21,7 @@ import java.util.List;
 @AllArgsConstructor
 public class ProductAttr {
     
-    private static final Logger logger = LogManager.getLogger(ProductAttr.class);
+    private static final Logger logger = LoggerFactory.getLogger(ProductAttr.class);
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

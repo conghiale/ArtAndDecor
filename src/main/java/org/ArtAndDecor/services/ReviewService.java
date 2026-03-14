@@ -1,12 +1,12 @@
 package org.ArtAndDecor.services;
 
+import lombok.RequiredArgsConstructor;
 import org.ArtAndDecor.dto.ReviewDto;
 import org.ArtAndDecor.model.Review;
 import org.ArtAndDecor.repository.ReviewRepository;
 import org.ArtAndDecor.utils.ReviewMapperUtil;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -24,15 +24,14 @@ import java.util.stream.Collectors;
  */
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class ReviewService {
 
-    private static final Logger logger = LogManager.getLogger(ReviewService.class);
+    private static final Logger logger = LoggerFactory.getLogger(ReviewService.class);
 
-    @Autowired
-    private ReviewRepository reviewRepository;
+    private final ReviewRepository reviewRepository;
 
-    @Autowired
-    private ReviewMapperUtil reviewMapperUtil;
+    private final ReviewMapperUtil reviewMapperUtil;
 
     /**
      * Get all reviews with pagination

@@ -36,7 +36,7 @@ import org.springframework.data.web.PageableDefault;
  * with comprehensive file processing, hashing, and metadata storage capabilities
  */
 @RestController
-@RequestMapping("/api/images")
+@RequestMapping("/images")
 @RequiredArgsConstructor
 @Tag(name = "Image Management", description = "APIs for comprehensive image management including upload, retrieval, search, and file processing with SHA-256 hashing and automatic dimension detection")
 public class ImageController {
@@ -245,7 +245,7 @@ public class ImageController {
      * 
      * @return Total number of images stored in the database
      */
-    @GetMapping("/admin/total-count")
+    @GetMapping("/stats/count")
     @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     @Operation(summary = "Get total image count for dashboard",
                description = "Retrieve the total number of images stored in the system. Used for administrative dashboards and system monitoring. Requires Admin or Manager role access.")

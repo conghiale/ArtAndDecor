@@ -1,7 +1,7 @@
 package org.ArtAndDecor.utils;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -17,7 +17,7 @@ import java.util.regex.Pattern;
  */
 public class Utils {
     
-    private static final Logger logger = LogManager.getLogger(Utils.class);
+    private static final Logger logger = LoggerFactory.getLogger(Utils.class);
     
     // Email validation pattern
     private static final String EMAIL_PATTERN = 

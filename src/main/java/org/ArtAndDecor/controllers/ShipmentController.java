@@ -36,7 +36,7 @@ import java.util.List;
  * Following the same pattern as OrderController with role-based access control
  */
 @RestController
-@RequestMapping("/api/shipments")
+@RequestMapping("/shipments")
 @RequiredArgsConstructor
 @Validated
 @Tag(name = "Shipment Management", description = "Complete Shipment System APIs for shipments, states, fees, and fee types")
@@ -210,7 +210,7 @@ public class ShipmentController {
      * API 5: Admin - Get All Shipments
      * Role: ADMIN/MANAGER - Get all shipments with advanced filtering
      */
-    @GetMapping("/admin/shipments")
+    @GetMapping("/management")
     @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     @Operation(
         summary = "Admin - Get all shipments",
@@ -263,7 +263,7 @@ public class ShipmentController {
      * API 6: Admin - Get Shipment Details 
      * Role: ADMIN/MANAGER - Get detailed shipment information
      */
-    @GetMapping("/admin/shipments/{shipmentId}")
+    @GetMapping("/management/{shipmentId}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     @Operation(
         summary = "Admin - Get shipment details",
@@ -288,7 +288,7 @@ public class ShipmentController {
      * API 7: Admin - Create Shipment
      * Role: ADMIN/MANAGER - Create new shipment for an order
      */
-    @PostMapping("/admin/shipments")
+    @PostMapping("/management")
     @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     @Operation(
         summary = "Admin - Create shipment",
@@ -317,7 +317,7 @@ public class ShipmentController {
      * API 8: Admin - Update Shipment
      * Role: ADMIN/MANAGER - Update shipment details
      */
-    @PutMapping("/admin/shipments/{shipmentId}")
+    @PutMapping("/management/{shipmentId}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     @Operation(
         summary = "Admin - Update shipment",
@@ -343,7 +343,7 @@ public class ShipmentController {
      * API 9: Admin - Update Shipment State
      * Role: ADMIN/MANAGER - Change shipment state (PREPARING → SHIPPED → IN_TRANSIT → DELIVERED)
      */
-    @PutMapping("/admin/shipments/{shipmentId}/state")
+    @PutMapping("/management/{shipmentId}/state")
     @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     @Operation(
         summary = "Admin - Update shipment state",
@@ -369,7 +369,7 @@ public class ShipmentController {
      * API 10: Admin - Mark as Shipped
      * Role: ADMIN/MANAGER - Mark shipment as shipped with timestamp
      */
-    @PutMapping("/admin/shipments/{shipmentId}/shipped")
+    @PutMapping("/management/{shipmentId}/shipped")
     @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     @Operation(
         summary = "Admin - Mark shipment as shipped", 
@@ -396,7 +396,7 @@ public class ShipmentController {
      * API 11: Admin - Mark as Delivered
      * Role: ADMIN/MANAGER - Mark shipment as delivered with timestamp  
      */
-    @PutMapping("/admin/shipments/{shipmentId}/delivered")
+    @PutMapping("/management/{shipmentId}/delivered")
     @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     @Operation(
         summary = "Admin - Mark shipment as delivered",
@@ -423,7 +423,7 @@ public class ShipmentController {
      * API 12: Admin - Delete Shipment
      * Role: ADMIN - Delete shipment (restricted to ADMIN only)
      */
-    @DeleteMapping("/admin/shipments/{shipmentId}")
+    @DeleteMapping("/management/{shipmentId}")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(
         summary = "Admin - Delete shipment",
@@ -483,7 +483,7 @@ public class ShipmentController {
      * API 14: Admin - Create Shipment State
      * Role: ADMIN - Create new shipment state
      */
-    @PostMapping("/admin/states")
+    @PostMapping("/states/management")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(
         summary = "Admin - Create shipment state",
@@ -509,7 +509,7 @@ public class ShipmentController {
      * API 15: Admin - Update Shipment State
      * Role: ADMIN - Update shipment state configuration
      */
-    @PutMapping("/admin/states/{shipmentStateId}")
+    @PutMapping("/states/management/{shipmentStateId}")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(
         summary = "Admin - Update shipment state",
@@ -535,7 +535,7 @@ public class ShipmentController {
      * API 16: Admin - Toggle Shipment State
      * Role: ADMIN - Enable/disable shipment state
      */
-    @PutMapping("/admin/states/{shipmentStateId}/toggle")
+    @PutMapping("/states/management/{shipmentStateId}/toggle")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(
         summary = "Admin - Toggle shipment state",

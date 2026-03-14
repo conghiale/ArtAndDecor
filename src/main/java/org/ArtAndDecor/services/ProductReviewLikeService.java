@@ -1,12 +1,12 @@
 package org.ArtAndDecor.services;
 
+import lombok.RequiredArgsConstructor;
 import org.ArtAndDecor.dto.ProductReviewLikeDto;
 import org.ArtAndDecor.model.ProductReviewLike;
 import org.ArtAndDecor.repository.ProductReviewLikeRepository;
 import org.ArtAndDecor.utils.ProductReviewLikeMapperUtil;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -22,15 +22,14 @@ import java.util.Optional;
  */
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class ProductReviewLikeService {
 
-    private static final Logger logger = LogManager.getLogger(ProductReviewLikeService.class);
+    private static final Logger logger = LoggerFactory.getLogger(ProductReviewLikeService.class);
 
-    @Autowired
-    private ProductReviewLikeRepository productReviewLikeRepository;
+    private final ProductReviewLikeRepository productReviewLikeRepository;
 
-    @Autowired
-    private ProductReviewLikeMapperUtil productReviewLikeMapperUtil;
+    private final ProductReviewLikeMapperUtil productReviewLikeMapperUtil;
 
     /**
      * Get all product review likes with pagination

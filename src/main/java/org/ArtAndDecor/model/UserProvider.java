@@ -6,8 +6,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -23,7 +23,7 @@ import java.util.List;
 @AllArgsConstructor
 public class UserProvider {
     
-    private static final Logger logger = LogManager.getLogger(UserProvider.class);
+    private static final Logger logger = LoggerFactory.getLogger(UserProvider.class);
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

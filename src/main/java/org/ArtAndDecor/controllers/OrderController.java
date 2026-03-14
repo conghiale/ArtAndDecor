@@ -37,7 +37,7 @@ import java.util.List;
  * Version: 7.0 - According to ORDER MANAGEMENT API SPEC
  */
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/orders")
 @RequiredArgsConstructor
 @Tag(name = "Order Management", description = "Order Management APIs - 15 essential endpoints per specification")
 public class OrderController {
@@ -56,7 +56,7 @@ public class OrderController {
      * Role: CUSTOMER - Customer creates order from existing shopping cart
      * Business Flow: Cart validation → Product inventory check → Discount application → Shipping calculation → Order creation → Cart clearing
      */
-    @PostMapping("/orders/checkout")
+    @PostMapping("/checkout")
     @PreAuthorize("hasRole('CUSTOMER')")
     @Operation(
         summary = "Checkout cart to create order",
@@ -127,7 +127,7 @@ public class OrderController {
      * Role: CUSTOMER - Customer views their own order history with filtering and pagination
      * Business Flow: User validation → Apply filters (state, date range) → Pagination → Return order list
      */
-    @GetMapping("/orders/my-orders")
+    @GetMapping("/my-orders")
     @PreAuthorize("hasRole('CUSTOMER')")
     @Operation(
         summary = "Get customer's order history",
@@ -199,7 +199,7 @@ public class OrderController {
      * Role: CUSTOMER - Customer views detailed information about their specific order
      * Business Flow: Ownership validation → Retrieve order details with items → Return complete order information
      */
-    @GetMapping("/orders/my-orders/{orderId}")
+    @GetMapping("/my-orders/{orderId}")
     @PreAuthorize("hasRole('CUSTOMER')")
     @Operation(
         summary = "Get customer's order detail",
@@ -260,7 +260,7 @@ public class OrderController {
      * Business Flow: Ownership validation → State validation → Update order state → Create audit history
      * Allowed States: Orders can only be cancelled when in NEW or CONFIRMED states
      */
-    @PutMapping("/orders/my-orders/{orderId}/cancel")
+    @PutMapping("/my-orders/{orderId}/cancel")
     @PreAuthorize("hasRole('CUSTOMER')")
     @Operation(
         summary = "Cancel customer's order",
@@ -322,14 +322,14 @@ public class OrderController {
     // ===== ADMIN ORDER MANAGEMENT APIs (4 endpoints) =====
 
     /**
-     * API 5: Admin Search Orders
-     * Role: ADMIN/MANAGER - Admin searches and views all orders with advanced filtering
+     * API 5: Search All Orders
+     * Role: ADMIN/MANAGER - Search and view all orders with advanced filtering
      * Business Flow: Multi-criteria filtering → Pagination → Return comprehensive order list
      */
-    @GetMapping("/admin/orders")
+    @GetMapping("/management")
     @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     @Operation(
-        summary = "Admin search orders with advanced filters",
+        summary = "Search orders with advanced filters",
         description = "Admin and Managers can search through all orders with comprehensive filtering options including order ID, customer, state, date range, and amount range. Supports pagination for large datasets.",
         tags = {"Admin Order Management"}
     )
@@ -416,14 +416,14 @@ public class OrderController {
     }
 
     /**
-     * API 6: Admin Get Order Detail
-     * Role: ADMIN/MANAGER - Admin views detailed information about any order in the system
+     * API 6: Get Order Detail
+     * Role: ADMIN/MANAGER - View detailed information about any order in the system
      * Business Flow: Direct order retrieval with full details including customer info and order history
      */
-    @GetMapping("/admin/orders/{orderId}")
+    @GetMapping("/management/{orderId}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     @Operation(
-        summary = "Admin get any order detail",
+        summary = "Get order detail",
         description = "Admin and Managers can view detailed information about any order in the system including complete order details, customer information, order items, and payment status.",
         tags = {"Admin Order Management"}
     )
@@ -473,15 +473,15 @@ public class OrderController {
     }
 
     /**
-     * API 7: Admin Create Order
-     * Role: ADMIN/MANAGER - Admin creates order manually on behalf of customers
+     * API 7: Create Order
+     * Role: ADMIN/MANAGER - Create order manually on behalf of customers
      * Business Flow: Customer validation → Product validation → Inventory check → Discount application → Order creation
      * Use Cases: Phone orders, Facebook orders, Manual orders, Chat orders
      */
-    @PostMapping("/admin/orders")
+    @PostMapping("/management")
     @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     @Operation(
-        summary = "Admin create order on behalf of customer",
+        summary = "Create order on behalf of customer",
         description = "Admin and Managers can manually create orders for customers. This is useful for phone orders, social media orders, or any manual order entry. The system validates customer, products, inventory, and calculates totals automatically.",
         tags = {"Admin Order Management"}
     )
@@ -542,11 +542,11 @@ public class OrderController {
 
     /**
      * API 8: Update Order State
-     * Role: ADMIN/MANAGER - Admin updates order state with business rules validation
+     * Role: ADMIN/MANAGER - Update order state with business rules validation
      * Business Flow: State transition validation → Order update → Audit history creation
      * Allowed Transitions: NEW→CONFIRMED→PROCESSING→SHIPPING→DELIVERED→COMPLETED, ANY→CANCELLED
      */
-    @PutMapping("/admin/orders/{orderId}/state")
+    @PutMapping("/management/{orderId}/state")
     @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     @Operation(
         summary = "Update order state with validation",
@@ -676,7 +676,7 @@ public class OrderController {
      * Role: ADMIN/MANAGER - Retrieve all available order states for system management
      * Business Flow: Master data retrieval for order state management and UI dropdown population
      */
-    @GetMapping("/admin/order-states")
+    @GetMapping("/states")
     @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     @Operation(
         summary = "Get all order states for management",
@@ -789,13 +789,13 @@ public class OrderController {
 
     /**
      * API 12: Get Discounts
-     * Role: ADMIN/MANAGER - Admin views all discounts with comprehensive filtering
+     * Role: ADMIN/MANAGER - View all discounts with comprehensive filtering
      * Business Flow: Apply filters → Retrieve discount list → Return with usage statistics
      */
-    @GetMapping("/admin/discounts")
+    @GetMapping("/discounts")
     @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     @Operation(
-        summary = "Admin get all discounts with filters",
+        summary = "Get all discounts with filters",
         description = "Admin and Managers retrieve all discounts in the system with comprehensive filtering options including code, active status, expiration status, discount type, and date range. Includes usage statistics and effectiveness data.",
         tags = {"Admin Discount Management"}
     )
@@ -872,13 +872,13 @@ public class OrderController {
 
     /**
      * API 13: Create Discount
-     * Role: ADMIN/MANAGER - Admin creates new discount campaigns with business rules validation
+     * Role: ADMIN/MANAGER - Create new discount campaigns with business rules validation
      * Business Flow: Validation (code uniqueness, date ranges, amounts) → Creation → Return created discount
      */
-    @PostMapping("/admin/discounts")
+    @PostMapping("/discounts")
     @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     @Operation(
-        summary = "Admin create new discount campaign",
+        summary = "Create new discount campaign",
         description = "Admin and Managers create new discount campaigns with comprehensive validation including code uniqueness, valid date ranges, appropriate discount values, and usage limits. Supports both percentage and fixed amount discounts.",
         tags = {"Admin Discount Management"}
     )
@@ -930,14 +930,14 @@ public class OrderController {
 
     /**
      * API 14: Update Discount
-     * Role: ADMIN/MANAGER - Admin updates existing discount campaigns with validation
+     * Role: ADMIN/MANAGER - Update existing discount campaigns with validation
      * Business Flow: Existence check → Validation → Update → Return updated discount
      * Note: Discounts are not deleted to preserve order history integrity
      */
-    @PutMapping("/admin/discounts/{id}")
+    @PutMapping("/discounts/{id}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     @Operation(
-        summary = "Admin update existing discount campaign",
+        summary = "Update existing discount campaign",
         description = "Admin and Managers update existing discount campaigns. Validates business rules including date ranges, discount values, and usage limits. Discounts are never deleted to preserve order history integrity, but can be disabled.",
         tags = {"Admin Discount Management"}
     )
@@ -1003,7 +1003,7 @@ public class OrderController {
      * Business Flow: Master data retrieval for discount type management and UI dropdown population
      * Available Types: PERCENTAGE (e.g., 15% off), FIXED_AMOUNT (e.g., 50,000 VND off)
      */
-    @GetMapping("/admin/discount-types")
+    @GetMapping("/discount-types")
     @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     @Operation(
         summary = "Get all discount types for management",
