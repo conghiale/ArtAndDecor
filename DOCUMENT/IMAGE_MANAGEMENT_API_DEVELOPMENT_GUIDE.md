@@ -1251,8 +1251,8 @@ logger.error() - Upload failures, database errors
 
 Enable debug logging:
 ```properties
-logging.level.org.ArtAndDecor.services.impl.ImageFileServiceImpl=DEBUG
-logging.level.org.ArtAndDecor.services.impl.ImageServiceImpl=DEBUG
+logging.level.org.artanddecor.services.impl.ImageFileServiceImpl=DEBUG
+logging.level.org.artanddecor.services.impl.ImageServiceImpl=DEBUG
 ```
 
 ---

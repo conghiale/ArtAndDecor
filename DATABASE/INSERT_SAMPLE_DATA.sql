@@ -243,21 +243,21 @@ INSERT INTO `USER` (`USER_PROVIDER_ID`, `USER_ROLE_ID`, `USER_ENABLED`, `USER_NA
 (1, 1, TRUE, 'customer03', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqyPw5TCGb2/nX8stqZqIvK', 'Le', 'Van C', '0906789012', 'customer3@yahoo.com', '89012345678901234567890ABCDEF123456', NULL, '2026-01-17 16:25:00');
 
 -- INSERT SAMPLE IMAGES
-INSERT INTO `IMAGE` (`IMAGE_NAME`, `IMAGE_DISPLAY_NAME`, `IMAGE_SLUG`, `IMAGE_SIZE`, `IMAGE_FORMAT`, `IMAGE_REMARK`) VALUES
-('1A2B3C4D5E6F789012345678901234567890ABCD', 'Tranh Phông Cảnh Hoàng Hôn Biển', 'sunset-landscape-001', '1920x1080', 'JPEG', 'Hình ảnh phong cảnh hoàng hôn trên biển rất đẹp'),
-('2B3C4D5E6F789012345678901234567890ABCDE1', 'Tranh Núi Non Hùng Vĩ', 'mountain-view-002', '1920x1200', 'PNG', 'Cảnh quan núi non hùng vĩ trong sương mù'),
-('3C4D5E6F789012345678901234567890ABCDEF12', 'Nghệ Thuật Trừa Tượng Hiện Đại', 'abstract-art-001', '1500x1500', 'JPEG', 'Tác phẩm nghệ thuật trừa tượng hiện đại'),
-('4D5E6F789012345678901234567890ABCDEF123', 'Tranh Nghệ Thuật Hiện Đại', 'modern-art-002', '1600x1200', 'JPEG', 'Tranh nghệ thuật hiện đại phong cách độc đáo'),
-('5E6F789012345678901234567890ABCDEF1234', 'Trang Trí Nội Thất Cao Cấp', 'home-decor-001', '1200x800', 'JPEG', 'Sản phẩm trang trí nội thất cao cấp'),
-('6F789012345678901234567890ABCDEF12345', 'Tranh Trang Trí Treo Tường', 'wall-decoration-002', '1400x1000', 'PNG', 'Tranh trang trí để treo tường phòng khách'),
-('789012345678901234567890ABCDEF123456', 'Chân Dung Người Phụ Nữ Cổ Điển', 'portrait-woman-001', '1000x1200', 'JPEG', 'Tranh chân dung người phụ nữ phong cách cổ điển'),
-('89012345678901234567890ABCDEF1234567', 'Chân Dung Người Đàn Ông Nghệ Thuật', 'portrait-man-002', '1000x1200', 'JPEG', 'Tranh chân dung người đàn ông nghệ thuật'),
-('9012345678901234567890ABCDEF12345678', 'Tượng Phật Trang Nghiêm', 'buddha-statue-001', '1200x1600', 'JPEG', 'Tượng Phật trang nghiêm mang ý nghĩa tâm linh'),
-('012345678901234567890ABCDEF123456789', 'Tranh Chúa Giê-su Tâm Linh', 'jesus-painting-002', '1100x1400', 'JPEG', 'Tranh Chúa Giê-su mang ý nghĩa tâm linh sâu sắc'),
-('12345678901234567890ABCDEF123456789A', 'Avatar Người Dùng Cá Nhân', 'user-avatar-001', '300x300', 'PNG', 'Ảnh đại diện người dùng cá nhân'),
-('2345678901234567890ABCDEF123456789AB', 'Ảnh Đại Diện Nghệ Thuật', 'user-avatar-002', '300x300', 'PNG', 'Ảnh đại diện phong cách nghệ thuật'),
-('345678901234567890ABCDEF123456789ABC', 'Banner Trang Chủ Gallery', 'banner-homepage-001', '1920x600', 'JPEG', 'Banner trang chủ của gallery nghệ thuật'),
-('45678901234567890ABCDEF123456789ABCD', 'Banner Khuyến Mãi Nghệ Thuật', 'banner-sale-002', '1920x400', 'JPEG', 'Banner quảng cáo khuyến mãi nghệ thuật'),
+INSERT INTO `IMAGE` (`IMAGE_NAME`, `IMAGE_DISPLAY_NAME`, `IMAGE_SLUG`, `IMAGE_SIZE`, `IMAGE_FORMAT`, `PATH_FILE`, `IMAGE_REMARK`) VALUES
+('1A2B3C4D5E6F789012345678901234567890ABCD.jpg', 'Tranh Phông Cảnh Hoàng Hôn Biển', 'sunset-landscape-001', '1920x1080', 'jpg', '/1a/2b/1A2B3C4D5E6F789012345678901234567890ABCD.jpg', 'Hình ảnh phong cảnh hoàng hôn trên biển rất đẹp'),
+('2B3C4D5E6F789012345678901234567890ABCDE1.png', 'Tranh Núi Non Hùng Vĩ', 'mountain-view-002', '1920x1200', 'png', '/2b/3c/2B3C4D5E6F789012345678901234567890ABCDE1.png', 'Cảnh quan núi non hùng vĩ trong sương mù'),
+('3C4D5E6F789012345678901234567890ABCDEF12.jpg', 'Nghệ Thuật Trừa Tượng Hiện Đại', 'abstract-art-001', '1500x1500', 'jpg', '/3c/4d/3C4D5E6F789012345678901234567890ABCDEF12.jpg', 'Tác phẩm nghệ thuật trừa tượng hiện đại'),
+('4D5E6F789012345678901234567890ABCDEF123.jpg', 'Tranh Nghệ Thuật Hiện Đại', 'modern-art-002', '1600x1200', 'jpg', '/4d/5e/4D5E6F789012345678901234567890ABCDEF123.jpg', 'Tranh nghệ thuật hiện đại phong cách độc đáo'),
+('5E6F789012345678901234567890ABCDEF1234.jpg', 'Trang Trí Nội Thất Cao Cấp', 'home-decor-001', '1200x800', 'jpg', '/5e/6f/5E6F789012345678901234567890ABCDEF1234.jpg', 'Sản phẩm trang trí nội thất cao cấp'),
+('6F789012345678901234567890ABCDEF12345.png', 'Tranh Trang Trí Treo Tường', 'wall-decoration-002', '1400x1000', 'png', '/6f/78/6F789012345678901234567890ABCDEF12345.png', 'Tranh trang trí để treo tường phòng khách'),
+('789012345678901234567890ABCDEF123456.jpg', 'Chân Dung Người Phụ Nữ Cổ Điển', 'portrait-woman-001', '1000x1200', 'jpg', '/78/90/789012345678901234567890ABCDEF123456.jpg', 'Tranh chân dung người phụ nữ phong cách cổ điển'),
+('89012345678901234567890ABCDEF1234567.jpg', 'Chân Dung Người Đàn Ông Nghệ Thuật', 'portrait-man-002', '1000x1200', 'jpg', '/89/01/89012345678901234567890ABCDEF1234567.jpg', 'Tranh chân dung người đàn ông nghệ thuật'),
+('9012345678901234567890ABCDEF12345678.jpg', 'Tượng Phật Trang Nghiêm', 'buddha-statue-001', '1200x1600', 'jpg', '/90/12/9012345678901234567890ABCDEF12345678.jpg', 'Tượng Phật trang nghiêm mang ý nghĩa tâm linh'),
+('012345678901234567890ABCDEF123456789.jpg', 'Tranh Chúa Giê-su Tâm Linh', 'jesus-painting-002', '1100x1400', 'jpg', '/01/23/012345678901234567890ABCDEF123456789.jpg', 'Tranh Chúa Giê-su mang ý nghĩa tâm linh sâu sắc'),
+('12345678901234567890ABCDEF123456789A.png', 'Avatar Người Dùng Cá Nhân', 'user-avatar-001', '300x300', 'png', '/12/34/12345678901234567890ABCDEF123456789A.png', 'Ảnh đại diện người dùng cá nhân'),
+('2345678901234567890ABCDEF123456789AB.png', 'Ảnh Đại Diện Nghệ Thuật', 'user-avatar-002', '300x300', 'png', '/23/45/2345678901234567890ABCDEF123456789AB.png', 'Ảnh đại diện phong cách nghệ thuật'),
+('345678901234567890ABCDEF123456789ABC.jpg', 'Banner Trang Chủ Gallery', 'banner-homepage-001', '1920x600', 'jpg', '/34/56/345678901234567890ABCDEF123456789ABC.jpg', 'Banner trang chủ của gallery nghệ thuật'),
+('45678901234567890ABCDEF123456789ABCD.jpg', 'Banner Khuyến Mãi Nghệ Thuật', 'banner-sale-002', '1920x400', 'jpg', '/45/67/45678901234567890ABCDEF123456789ABCD.jpg', 'Banner quảng cáo khuyến mãi nghệ thuật'),
 ('5678901234567890ABCDEF123456789ABCDE', 'Tranh Rừng Thiên Nhiên Hoang Dã', 'nature-forest-003', '1920x1080', 'JPEG', 'Cảnh rừng thiên nhiên hoang dã tuyệt đẹp');
 
 -- INSERT SAMPLE PRODUCTS

@@ -1,115 +1,135 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="WARN">
-    
+
     <Properties>
         <Property name="LOG_PATTERN">%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%t] %logger{36} [%M:%L] - %msg%n</Property>
         <Property name="LOG_DIR">${sys:java.io.tmpdir}/ArtAndDecorLogs</Property>
+<!--        <Property name="LOG_DIR">${sys:jboss.server.log.dir}</Property>-->
     </Properties>
-    
+
     <Appenders>
         <!-- Console Appender -->
         <Console name="Console" target="SYSTEM_OUT">
             <PatternLayout pattern="${LOG_PATTERN}"/>
         </Console>
-        
+
         <!-- File Appender -->
-        <RollingFile name="FileAppender" 
-                     fileName="${LOG_DIR}/ArtAndDecor.log"
-                     filePattern="${LOG_DIR}/ArtAndDecor.%d{yyyy-MM-dd}.%i.log.gz">
-            
+        <RollingFile name="FileAppender"
+                     fileName="${LOG_DIR}/artanddecor.log"
+                     filePattern="${LOG_DIR}/artanddecor.%d{yyyy-MM-dd}.%i.log.gz">
+
             <PatternLayout pattern="${LOG_PATTERN}"/>
-            
+
             <Policies>
                 <!-- Roll over daily -->
                 <TimeBasedTriggeringPolicy />
                 <!-- Roll over when file reaches 50MB -->
                 <SizeBasedTriggeringPolicy size="50MB"/>
             </Policies>
-            
+
             <!-- Keep maximum 30 files -->
             <DefaultRolloverStrategy max="30"/>
         </RollingFile>
-        
+
         <!-- Error File Appender -->
-        <RollingFile name="ErrorFileAppender" 
-                     fileName="${LOG_DIR}/ArtAndDecor-Error.log"
-                     filePattern="${LOG_DIR}/ArtAndDecor-Error.%d{yyyy-MM-dd}.%i.log.gz">
-            
+        <RollingFile name="ErrorFileAppender"
+                     fileName="${LOG_DIR}/artanddecor-error.log"
+                     filePattern="${LOG_DIR}/artanddecor-error.%d{yyyy-MM-dd}.%i.log.gz">
+
             <PatternLayout pattern="${LOG_PATTERN}"/>
-            
+
             <!-- Only log WARN and ERROR level messages -->
             <ThresholdFilter level="WARN" onMatch="ACCEPT" onMismatch="DENY"/>
-            
+
             <Policies>
                 <TimeBasedTriggeringPolicy />
                 <SizeBasedTriggeringPolicy size="50MB"/>
             </Policies>
-            
+
             <DefaultRolloverStrategy max="30"/>
         </RollingFile>
     </Appenders>
-    
+
     <Loggers>
         <!-- Application specific loggers -->
-        <Logger name="org.ArtAndDecor" level="INFO" additivity="false">
+        <Logger name="org.artanddecor" level="DEBUG" additivity="false">
             <AppenderRef ref="Console"/>
             <AppenderRef ref="FileAppender"/>
             <AppenderRef ref="ErrorFileAppender"/>
         </Logger>
-        
+
         <!-- Spring Framework loggers -->
         <Logger name="org.springframework" level="INFO" additivity="false">
             <AppenderRef ref="Console"/>
             <AppenderRef ref="FileAppender"/>
             <AppenderRef ref="ErrorFileAppender"/>
         </Logger>
-        
+
         <Logger name="org.springframework.data" level="WARN" additivity="false">
             <AppenderRef ref="Console"/>
             <AppenderRef ref="FileAppender"/>
         </Logger>
-        
-        <!-- Database related loggers -->
-        <Logger name="org.hibernate" level="WARN" additivity="false">
-            <AppenderRef ref="Console"/>
-            <AppenderRef ref="FileAppender"/>
-        </Logger>
-        
-        <Logger name="com.mysql" level="WARN" additivity="false">
-            <AppenderRef ref="Console"/>
-            <AppenderRef ref="FileAppender"/>
-        </Logger>
-        
+
         <!-- Mail related loggers -->
         <Logger name="org.springframework.mail" level="WARN" additivity="false">
             <AppenderRef ref="Console"/>
             <AppenderRef ref="FileAppender"/>
         </Logger>
-        
-        <!-- Jackson JSON loggers -->
-        <Logger name="com.fasterxml.jackson" level="WARN" additivity="false">
-            <AppenderRef ref="Console"/>
-            <AppenderRef ref="FileAppender"/>
-        </Logger>
-        
+
         <!-- Security related loggers -->
         <Logger name="org.springframework.security" level="INFO" additivity="false">
             <AppenderRef ref="Console"/>
             <AppenderRef ref="FileAppender"/>
             <AppenderRef ref="ErrorFileAppender"/>
         </Logger>
-        
+
+        <!-- Database related loggers -->
+        <Logger name="org.hibernate" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="FileAppender"/>
+        </Logger>
+
+        <!-- HikariCP -->
+        <Logger name="com.zaxxer.hikari" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="FileAppender"/>
+        </Logger>
+
+        <!-- Swagger core -->
+        <Logger name="io.swagger" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="FileAppender"/>
+        </Logger>
+
+        <!-- SpringDoc (Swagger/OpenAPI) loggers -->
+        <Logger name="org.springdoc" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="FileAppender"/>
+        </Logger>
+
+        <!-- Jackson JSON loggers -->
+        <Logger name="com.fasterxml.jackson" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="FileAppender"/>
+        </Logger>
+
         <!-- JWT loggers -->
         <Logger name="io.jsonwebtoken" level="WARN" additivity="false">
             <AppenderRef ref="Console"/>
             <AppenderRef ref="FileAppender"/>
         </Logger>
-        
+
+        <!-- MySQL -->
+        <Logger name="com.mysql" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="FileAppender"/>
+        </Logger>
+
         <!-- Apache HTTP loggers -->
         <Logger name="org.apache.http" level="WARN" additivity="false">
             <AppenderRef ref="FileAppender"/>
         </Logger>
-        
+
         <!-- Root logger -->
         <Root level="INFO">
             <AppenderRef ref="Console"/>
@@ -117,5 +137,5 @@
             <AppenderRef ref="ErrorFileAppender"/>
         </Root>
     </Loggers>
-    
+
 </Configuration>

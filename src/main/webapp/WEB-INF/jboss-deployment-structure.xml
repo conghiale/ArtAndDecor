@@ -1,14 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <jboss-deployment-structure xmlns="urn:jboss:deployment-structure:1.2">
     <deployment>
+        <!-- Exclusions allow you to prevent the server from automatically adding some dependencies -->
         <exclusions>
-            <module name="org.apache.logging.log4j.api"/>
-            <module name="org.apache.logging.log4j.core"/>
-            <module name="org.jboss.logmanager.log4j"/>
+<!--            <module name="org.slf4j" />-->
+<!--            <module name="org.slf4j.impl" />-->
+            <module name="org.apache.log4j" />
+<!--            <module name="org.apache.logging.log4j" />-->
+<!--            <module name="org.apache.commons.logging"/>-->
         </exclusions>
-
-        <dependencies>
-            <module name="org.jboss.logmanager"/>
-        </dependencies>
+        <exclude-subsystems>
+            <subsystem name="logging" />
+        </exclude-subsystems>
     </deployment>
 </jboss-deployment-structure>

@@ -13,7 +13,7 @@
 	</parent>
 
 	<groupId>org</groupId>
-	<artifactId>ArtAndDecor</artifactId>
+	<artifactId>artanddecor</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>war</packaging>
 	<name>ArtAndDecor</name>
@@ -191,7 +191,7 @@
 
 	<build>
 
-		<finalName>ArtAndDecor</finalName>
+		<finalName>artanddecor</finalName>
 
 		<plugins>
 

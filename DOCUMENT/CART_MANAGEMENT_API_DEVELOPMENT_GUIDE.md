@@ -379,8 +379,8 @@ public class CartItemStateDto {
 ## Service Layer Architecture (Interface-Implementation Pattern)
 
 ### CartService Interface
-- **Interface:** `org.ArtAndDecor.services.CartService`
-- **Implementation:** `org.ArtAndDecor.services.impl.CartServiceImpl`
+- **Interface:** `org.artanddecor.services.CartService`
+- **Implementation:** `org.artanddecor.services.impl.CartServiceImpl`
 - **Key Methods:**
   - `getCartById(Long cartId)` - Get cart by ID
   - `getCartBySlug(String cartSlug)` - Get cart by slug
@@ -388,8 +388,8 @@ public class CartItemStateDto {
   - `getCartsByCriteria(...)` - **NEW:** Flexible criteria-based retrieval
 
 ### CartStateService Interface
-- **Interface:** `org.ArtAndDecor.services.CartStateService`
-- **Implementation:** `org.ArtAndDecor.services.impl.CartStateServiceImpl`
+- **Interface:** `org.artanddecor.services.CartStateService`
+- **Implementation:** `org.artanddecor.services.impl.CartStateServiceImpl`
 - **Key Methods:**
   - `getCartStateById(Long cartStateId)` - Get cart state by ID
   - `getCartStateByName(String cartStateName)` - Get by name
@@ -487,8 +487,8 @@ INDEX `idx_cart_item_product` (`PRODUCT_ID`);
 4. **Caching:** Consider caching frequently accessed cart states and item states
 
 ### CartItemService Interface
-- **Interface:** `org.ArtAndDecor.services.CartItemService`
-- **Implementation:** `org.ArtAndDecor.services.impl.CartItemServiceImpl`
+- **Interface:** `org.artanddecor.services.CartItemService`
+- **Implementation:** `org.artanddecor.services.impl.CartItemServiceImpl`
 - **Key Methods:**
   - `getCartItemById(Long cartItemId)` - Get cart item by ID
   - `getCartItemsByCartId(Long cartId)` - Get items by cart
@@ -499,8 +499,8 @@ INDEX `idx_cart_item_product` (`PRODUCT_ID`);
   - `getCartTotalValue(...)`, `getCartTotalQuantity(...)` - Cart calculations
 
 ### CartItemStateService Interface
-- **Interface:** `org.ArtAndDecor.services.CartItemStateService`
-- **Implementation:** `org.ArtAndDecor.services.impl.CartItemStateServiceImpl`
+- **Interface:** `org.artanddecor.services.CartItemStateService`
+- **Implementation:** `org.artanddecor.services.impl.CartItemStateServiceImpl`
 - **Key Methods:**
   - `getCartItemStateById(Long cartItemStateId)` - Get cart item state by ID
   - `getCartItemStateByName(String cartItemStateName)` - Get by name
