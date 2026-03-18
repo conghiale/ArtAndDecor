@@ -17,7 +17,7 @@ INSERT INTO `POLICY` (`POLICY_NAME`, `POLICY_SLUG`, `POLICY_VALUE`, `POLICY_DISP
 ('FAVICON', 'favicon', 'favicon.ico', 'Favicon file name', 'Tên file favicon', TRUE),
 ('SOCIAL_IMAGE', 'social-image', 'social-image.jpg', 'Social image file name', 'Tên file ảnh mạng xã hội', TRUE),
 ('MENU_HEADER_TEXT_03', 'menu-header-text-03', 'Shops', 'Shops menu text', 'Text menu cửa hàng', TRUE),
-('STORAGE_PATH', 'storage-path', '/storage', 'Storage path', 'Đường dẫn lưu trữ', TRUE),
+('STORAGE_PATH', 'storage-path', '/home/masion-art/data/images', 'Storage path', 'Đường dẫn lưu trữ', TRUE),
 ('MENU_HEADER_TEXT_05', 'menu-header-text-05', 'Liên hệ', 'Contact menu text', 'Text menu liên hệ', TRUE),
 ('HERO_SECTION_TITLE', 'hero-section-title', 'Lorem Ipsum', 'Hero section main title', 'Tiêu đề chính của hero section', TRUE),
 ('HERO_SECTION_SUBTITLE', 'hero-section-subtitle', 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Faucibus in libero risus semper habitant arcu eget.', 'Hero section subtitle', 'Phụ đề của hero section', TRUE),
@@ -258,7 +258,7 @@ INSERT INTO `IMAGE` (`IMAGE_NAME`, `IMAGE_DISPLAY_NAME`, `IMAGE_SLUG`, `IMAGE_SI
 ('2345678901234567890ABCDEF123456789AB.png', 'Ảnh Đại Diện Nghệ Thuật', 'user-avatar-002', '300x300', 'png', '/23/45/2345678901234567890ABCDEF123456789AB.png', 'Ảnh đại diện phong cách nghệ thuật'),
 ('345678901234567890ABCDEF123456789ABC.jpg', 'Banner Trang Chủ Gallery', 'banner-homepage-001', '1920x600', 'jpg', '/34/56/345678901234567890ABCDEF123456789ABC.jpg', 'Banner trang chủ của gallery nghệ thuật'),
 ('45678901234567890ABCDEF123456789ABCD.jpg', 'Banner Khuyến Mãi Nghệ Thuật', 'banner-sale-002', '1920x400', 'jpg', '/45/67/45678901234567890ABCDEF123456789ABCD.jpg', 'Banner quảng cáo khuyến mãi nghệ thuật'),
-('5678901234567890ABCDEF123456789ABCDE', 'Tranh Rừng Thiên Nhiên Hoang Dã', 'nature-forest-003', '1920x1080', 'JPEG', 'Cảnh rừng thiên nhiên hoang dã tuyệt đẹp');
+('5678901234567890ABCDEF123456789ABCDE.jpg', 'Tranh Rừng Thiên Nhiên Hoang Dã', 'nature-forest-003', '1920x1080', 'jpg', '/56/78/5678901234567890ABCDEF123456789ABCDE.jpg', 'Cảnh rừng thiên nhiên hoang dã tuyệt đẹp');
 
 -- INSERT SAMPLE PRODUCTS
 INSERT INTO `PRODUCT` (`PRODUCT_NAME`, `PRODUCT_SLUG`, `PRODUCT_CODE`, `PRODUCT_CATEGORY_ID`, `PRODUCT_STATE_ID`, `SOLD_QUANTITY`, `STOCK_QUANTITY`, `PRODUCT_DESCRIPTION`, `PRODUCT_PRICE`, `PRODUCT_FEATURED`, `PRODUCT_HIGHLIGHTED`, `SEO_META_ID`) VALUES
@@ -281,7 +281,7 @@ INSERT INTO `PRODUCT` (`PRODUCT_NAME`, `PRODUCT_SLUG`, `PRODUCT_CODE`, `PRODUCT_
 -- INSERT SAMPLE PRODUCT IMAGES
 INSERT INTO `PRODUCT_IMAGE` (`PRODUCT_ID`, `IMAGE_ID`, `PRODUCT_IMAGE_PRIMARY`) VALUES
 (1, 1, TRUE),
-(1, 15, FALSE),
+(1, 14, FALSE),
 (2, 2, TRUE),
 (3, 3, TRUE),
 (3, 4, FALSE),

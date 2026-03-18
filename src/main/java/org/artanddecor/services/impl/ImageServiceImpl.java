@@ -298,6 +298,27 @@ public class ImageServiceImpl implements ImageService {
     }
 
     // =============================================
+    // FILE SERVING OPERATIONS
+    // =============================================
+
+    @Override
+    public byte[] getImageFileContent(String absolutePath) throws IOException {
+        logger.debug("Getting image file content for path: {}", absolutePath);
+        
+        if (absolutePath == null || absolutePath.trim().isEmpty()) {
+            throw new IllegalArgumentException("File path cannot be null or empty");
+        }
+        
+        return imageFileService.downloadImageByAbsolutePath(absolutePath);
+    }
+
+    @Override
+    public String getImageContentType(String filePath) {
+        logger.debug("Getting content type for file: {}", filePath);
+        return imageFileService.getContentType(filePath);
+    }
+
+    // =============================================
     // FILTER OPERATIONS
     // =============================================
 

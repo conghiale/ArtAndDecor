@@ -234,4 +234,93 @@ public class ImageFileServiceImpl implements ImageFileService {
         
         return "/" + firstLevel + "/" + secondLevel;
     }
+
+    @Override
+    public byte[] downloadImageByAbsolutePath(String absolutePath) throws IOException {
+        logger.debug("Downloading image by absolute path: {}", absolutePath);
+
+        // Validate path for security
+        if (!validatePath(absolutePath)) {
+            logger.warn("Invalid or unsafe path requested: {}", absolutePath);
+            throw new IOException("Invalid file path: " + absolutePath);
+        }
+
+        Path filePath = Paths.get(absolutePath);
+
+        if (!Files.exists(filePath)) {
+            logger.warn("Image file not found: {}", absolutePath);
+            throw new IOException("Image file not found: " + absolutePath);
+        }
+
+        try {
+            return Files.readAllBytes(filePath);
+        } catch (IOException e) {
+            logger.error("Failed to download image {}: {}", absolutePath, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    public String getContentType(String filePath) {
+        logger.debug("Determining content type for file: {}", filePath);
+
+        if (filePath == null) {
+            return "application/octet-stream";
+        }
+
+        String extension = "";
+        int lastDot = filePath.lastIndexOf('.');
+        if (lastDot > 0) {
+            extension = filePath.substring(lastDot + 1).toLowerCase();
+        }
+
+        return switch (extension) {
+            case "jpg", "jpeg" -> "image/jpeg";
+            case "png" -> "image/png";
+            case "gif" -> "image/gif";
+            case "bmp" -> "image/bmp";
+            case "webp" -> "image/webp";
+            case "svg" -> "image/svg+xml";
+            case "tiff", "tif" -> "image/tiff";
+            default -> "application/octet-stream";
+        };
+    }
+
+    @Override
+    public boolean validatePath(String path) {
+        logger.debug("Validating file path: {}", path);
+
+        if (path == null || path.trim().isEmpty()) {
+            return false;
+        }
+
+        // Normalize path to prevent traversal attacks
+        try {
+            Path normalizedPath = Paths.get(path).normalize();
+            String normalizedPathString = normalizedPath.toString();
+            
+            // Check for path traversal attempts and restrict dangerous system directories
+            if (normalizedPathString.contains("..") || 
+                normalizedPathString.contains("~") ||
+                normalizedPathString.startsWith("/etc/") ||
+                normalizedPathString.startsWith("/usr/") ||
+                normalizedPathString.startsWith("/sys/") ||
+                normalizedPathString.startsWith("/proc/") ||
+                normalizedPathString.startsWith("/root/")) {
+                logger.warn("Path traversal or restricted system directory access attempt: {}", path);
+                return false;
+            }
+
+            // Ensure the path is absolute and exists
+            if (!normalizedPath.isAbsolute()) {
+                logger.warn("Relative path not allowed: {}", path);
+                return false;
+            }
+
+            return true;
+        } catch (Exception e) {
+            logger.warn("Path validation error for {}: {}", path, e.getMessage());
+            return false;
+        }
+    }
 }

@@ -1,6 +1,7 @@
 package org.artanddecor.services;
 
 import org.artanddecor.dto.ProductDto;
+import org.artanddecor.dto.ProductCreateDto;
 import org.artanddecor.dto.ProductImageDto;
 import org.artanddecor.dto.ProductAttributeDto;
 import org.springframework.data.domain.Page;
@@ -30,6 +31,7 @@ public interface ProductService {
      * @param textSearch Text search in name, slug, code, description, remark (partial match, case-insensitive)
      * @param enabled Filter by enabled status
      * @param categoryId Filter by category ID
+     * @param typeId Filter by product type ID
      * @param stateId Filter by state ID
      * @param minPrice Minimum price filter
      * @param maxPrice Maximum price filter
@@ -40,7 +42,7 @@ public interface ProductService {
      * @param pageable Pagination and sorting information
      * @return Page of ProductDto matching criteria
      */
-    Page<ProductDto> getProductsByCriteria(String textSearch, Boolean enabled, Long categoryId, Long stateId, 
+    Page<ProductDto> getProductsByCriteria(String textSearch, Boolean enabled, Long categoryId, Long typeId, Long stateId, 
                                          BigDecimal minPrice, BigDecimal maxPrice, Boolean inStock, String productCode, 
                                          Boolean featured, Boolean highlighted, Pageable pageable);
 
@@ -71,6 +73,11 @@ public interface ProductService {
      * Create new product
      */
     ProductDto createProduct(ProductDto productDto);
+    
+    /**
+     * Create new product using simplified DTO with IDs
+     */
+    ProductDto createProduct(ProductCreateDto productCreateDto);
 
     /**
      * Update existing product

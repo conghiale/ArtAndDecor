@@ -68,6 +68,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
            ")) " +
            "AND (:enabled IS NULL OR p.productEnabled = :enabled) " +
            "AND (:categoryId IS NULL OR p.productCategory.productCategoryId = :categoryId) " +
+           "AND (:typeId IS NULL OR p.productCategory.productType.productTypeId = :typeId) " +
            "AND (:stateId IS NULL OR p.productState.productStateId = :stateId) " +
            "AND (:minPrice IS NULL OR p.productPrice >= :minPrice) " +
            "AND (:maxPrice IS NULL OR p.productPrice <= :maxPrice) " +
@@ -80,6 +81,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         @Param("textSearch") String textSearch,
         @Param("enabled") Boolean enabled,
         @Param("categoryId") Long categoryId,
+        @Param("typeId") Long typeId,
         @Param("stateId") Long stateId,
         @Param("minPrice") BigDecimal minPrice,
         @Param("maxPrice") BigDecimal maxPrice,

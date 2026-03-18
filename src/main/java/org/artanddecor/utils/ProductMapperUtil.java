@@ -96,6 +96,20 @@ public class ProductMapperUtil {
         productCategory.setProductCategoryVisible(productCategoryDto.getProductCategoryVisible());
         productCategory.setSeoMetaId(productCategoryDto.getSeoMetaId());
         
+        // Set ProductType reference if productTypeId is provided
+        if (productCategoryDto.getProductTypeId() != null) {
+            ProductType productType = new ProductType();
+            productType.setProductTypeId(productCategoryDto.getProductTypeId());
+            productCategory.setProductType(productType);
+        }
+        
+        // Set Parent Category reference if parentCategoryId is provided
+        if (productCategoryDto.getParentCategoryId() != null) {
+            ProductCategory parentCategory = new ProductCategory();
+            parentCategory.setProductCategoryId(productCategoryDto.getParentCategoryId());
+            productCategory.setParentCategory(parentCategory);
+        }
+        
         if (productCategoryDto.getCreatedDt() == null) {
             productCategory.setCreatedDt(LocalDateTime.now());
         } else {
@@ -273,12 +287,68 @@ public class ProductMapperUtil {
         product.setProductDescription(productDto.getProductDescription());
         product.setProductPrice(productDto.getProductPrice());
         product.setProductEnabled(productDto.getProductEnabled());
+        product.setProductFeatured(productDto.getProductFeatured());
+        product.setProductHighlighted(productDto.getProductHighlighted());
+        product.setSeoMetaId(productDto.getSeoMeta() != null ? productDto.getSeoMeta().getSeoMetaId() : null);
+        
+        // Set ProductCategory reference if available
+        if (productDto.getProductCategory() != null && productDto.getProductCategory().getProductCategoryId() != null) {
+            ProductCategory productCategory = new ProductCategory();
+            productCategory.setProductCategoryId(productDto.getProductCategory().getProductCategoryId());
+            product.setProductCategory(productCategory);
+        }
+        
+        // Set ProductState reference if available
+        if (productDto.getProductState() != null && productDto.getProductState().getProductStateId() != null) {
+            ProductState productState = new ProductState();
+            productState.setProductStateId(productDto.getProductState().getProductStateId());
+            product.setProductState(productState);
+        }
         
         if (productDto.getCreatedDt() == null) {
             product.setCreatedDt(LocalDateTime.now());
         } else {
             product.setCreatedDt(productDto.getCreatedDt());
         }
+        product.setModifiedDt(LocalDateTime.now());
+        
+        return product;
+    }
+    
+    /**
+     * Create Product entity from ProductCreateDto
+     */
+    public static Product toProductEntityFromCreateDto(ProductCreateDto productCreateDto) {
+        if (productCreateDto == null) return null;
+        
+        Product product = new Product();
+        product.setProductName(productCreateDto.getProductName());
+        product.setProductSlug(productCreateDto.getProductSlug());
+        product.setProductCode(productCreateDto.getProductCode());
+        product.setSoldQuantity(productCreateDto.getSoldQuantity());
+        product.setStockQuantity(productCreateDto.getStockQuantity());
+        product.setProductDescription(productCreateDto.getProductDescription());
+        product.setProductPrice(productCreateDto.getProductPrice());
+        product.setProductEnabled(productCreateDto.getProductEnabled());
+        product.setProductFeatured(productCreateDto.getProductFeatured());
+        product.setProductHighlighted(productCreateDto.getProductHighlighted());
+        product.setSeoMetaId(productCreateDto.getSeoMetaId());
+        
+        // Set ProductCategory reference
+        if (productCreateDto.getProductCategoryId() != null) {
+            ProductCategory productCategory = new ProductCategory();
+            productCategory.setProductCategoryId(productCreateDto.getProductCategoryId());
+            product.setProductCategory(productCategory);
+        }
+        
+        // Set ProductState reference
+        if (productCreateDto.getProductStateId() != null) {
+            ProductState productState = new ProductState();
+            productState.setProductStateId(productCreateDto.getProductStateId());
+            product.setProductState(productState);
+        }
+        
+        product.setCreatedDt(LocalDateTime.now());
         product.setModifiedDt(LocalDateTime.now());
         
         return product;

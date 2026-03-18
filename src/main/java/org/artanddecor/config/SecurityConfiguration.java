@@ -81,17 +81,18 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/contacts/names", "/contacts/stats/**").hasRole("ADMIN")
                         .requestMatchers("/contacts/**").hasRole("ADMIN")
 
-                        // Image endpoints - public read and upload
+                        // Image endpoints - public read and upload, file serving endpoints
                         .requestMatchers(HttpMethod.GET, "/images/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/images/upload", "/images/*/upload").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/images/file/**", "/images/download/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/images/upload", "/images/*/upload").permitAll()
                         .requestMatchers(HttpMethod.GET, "/images/stats/**").hasAnyRole("ADMIN", "MANAGER")
                         .requestMatchers("/images/**").hasAnyRole("ADMIN", "MANAGER")
 
                         // Order endpoints - structured by functionality
                         // Customer order operations  
-                        .requestMatchers(HttpMethod.POST, "/orders/checkout").hasRole("CUSTOMER")
-                        .requestMatchers(HttpMethod.GET, "/orders/my-orders", "/orders/my-orders/**").hasRole("CUSTOMER")
-                        .requestMatchers(HttpMethod.PUT, "/orders/my-orders/*/cancel").hasRole("CUSTOMER")
+                        .requestMatchers(HttpMethod.POST, "/orders/checkout").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/orders/my-orders", "/orders/my-orders/**").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/orders/my-orders/*/cancel").authenticated()
                         
                         // Order management operations (Admin/Manager)
                         .requestMatchers(HttpMethod.GET, "/orders/management", "/orders/management/**").hasAnyRole("ADMIN", "MANAGER")
@@ -117,12 +118,12 @@ public class SecurityConfiguration {
 
                         // Review endpoints - public read access, authenticated for write/admin operations
                         .requestMatchers(HttpMethod.GET, "/reviews/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/reviews").hasRole("CUSTOMER")
+                        .requestMatchers(HttpMethod.POST, "/reviews").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/reviews/**").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/reviews/**").hasAnyRole("ADMIN", "MANAGER")
 
                         // Shipment endpoints - structured by functionality
-                        .requestMatchers(HttpMethod.GET, "/shipments/my-shipments/**").hasRole("CUSTOMER")
+                        .requestMatchers(HttpMethod.GET, "/shipments/my-shipments/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/shipments/track/**", "/shipments/calculate-shipping-fee").permitAll()
                         .requestMatchers(HttpMethod.GET, "/shipments/states").permitAll()
                         .requestMatchers("/shipments/states/management/**").hasRole("ADMIN")

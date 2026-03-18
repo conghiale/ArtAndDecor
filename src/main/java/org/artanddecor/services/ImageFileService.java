@@ -102,4 +102,32 @@ public interface ImageFileService {
      * @throws IOException If file cannot be read
      */
     String getImageDimensions(MultipartFile file) throws IOException;
+
+    /**
+     * Download image file by absolute path
+     * Used for file serving and download endpoints
+     * 
+     * @param absolutePath Absolute file path on server
+     * @return File bytes
+     * @throws IOException If file not found or read fails
+     */
+    byte[] downloadImageByAbsolutePath(String absolutePath) throws IOException;
+
+    /**
+     * Get MIME content type based on file extension
+     * Used for proper Content-Type header in HTTP responses
+     * 
+     * @param filePath File path to analyze
+     * @return MIME type (e.g., "image/jpeg", "image/png")
+     */
+    String getContentType(String filePath);
+
+    /**
+     * Validate file path for security
+     * Prevents path traversal attacks and ensures path is within allowed directories
+     * 
+     * @param path File path to validate
+     * @return true if path is safe to use
+     */
+    boolean validatePath(String path);
 }

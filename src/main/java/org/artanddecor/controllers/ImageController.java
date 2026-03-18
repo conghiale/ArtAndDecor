@@ -23,12 +23,15 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import jakarta.validation.Valid;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.MediaType;
 
 /**
  * Image Management REST Controller
@@ -122,10 +125,15 @@ public class ImageController {
      * Handles batch image upload with SHA-256 hashing, dimension detection, and database persistence
      * Public endpoint accessible for product and content image uploads
      * 
-     * @param imageUploadDto Form data containing files and metadata arrays
+     * @param imageFiles Array of image files to upload
+     * @param imageDisplayNames Optional display names for images
+     * @param imageSizes Optional size metadata for images
+     * @param imageFormats Optional format metadata for images
+     * @param imageRemarks Optional remarks for images
+     * @param imageSlugs Optional slugs for images
      * @return Upload response with success/failure details and uploaded image information
      */
-    @PostMapping("/upload")
+    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Upload multiple images with metadata",
                description = "Upload one or more images with optional metadata. Each image is processed with SHA-256 hashing for unique filename generation, automatic dimension detection, format validation, and comprehensive metadata storage. Supports parallel arrays for batch metadata assignment.")
     @ApiResponses(value = {
@@ -137,18 +145,42 @@ public class ImageController {
         @ApiResponse(responseCode = "500", description = "Internal server error or file processing failure")
     })
     public ResponseEntity<BaseResponseDto<ImageUploadResponseDto>> uploadImages(
-            @Parameter(description = "Form data containing image files and optional metadata arrays. Files are required, metadata arrays are optional and should match file array length.",
-                       content = @Content(mediaType = "multipart/form-data"))
-            @Valid @ModelAttribute ImageUploadDto imageUploadDto) {
+            @Parameter(description = "Image files to upload", required = true)
+            @RequestPart("imageFiles") MultipartFile[] imageFiles,
+            
+            @Parameter(description = "Optional display names for each image")
+            @RequestPart(value = "imageDisplayNames", required = false) String[] imageDisplayNames,
+            
+            @Parameter(description = "Optional size metadata for each image (e.g., '1920x1080')")
+            @RequestPart(value = "imageSizes", required = false) String[] imageSizes,
+            
+            @Parameter(description = "Optional format metadata for each image (e.g., 'JPG', 'PNG')")
+            @RequestPart(value = "imageFormats", required = false) String[] imageFormats,
+            
+            @Parameter(description = "Optional remarks for each image")
+            @RequestPart(value = "imageRemarks", required = false) String[] imageRemarks,
+            
+            @Parameter(description = "Optional URL-friendly identifiers for each image")
+            @RequestPart(value = "imageSlugs", required = false) String[] imageSlugs) {
         
-        logger.info("Uploading {} images via API", imageUploadDto.getImageFiles() != null ? imageUploadDto.getImageFiles().length : 0);
+        logger.info("Uploading {} images via API", imageFiles != null ? imageFiles.length : 0);
         
         try {
             // Validate required parameters
-            if (imageUploadDto.getImageFiles() == null || imageUploadDto.getImageFiles().length == 0) {
+            if (imageFiles == null || imageFiles.length == 0) {
                 return ResponseEntity.badRequest()
                         .body(BaseResponseDto.badRequest("No image files provided"));
             }
+            
+            // Create ImageUploadDto from parts
+            ImageUploadDto imageUploadDto = ImageUploadDto.builder()
+                    .imageFiles(imageFiles)
+                    .imageDisplayNames(imageDisplayNames)
+                    .imageSizes(imageSizes)
+                    .imageFormats(imageFormats)
+                    .imageRemarks(imageRemarks)
+                    .imageSlugs(imageSlugs)
+                    .build();
             
             // Process upload
             ImageUploadResponseDto response = imageService.uploadImages(imageUploadDto);
@@ -364,6 +396,120 @@ public class ImageController {
         } catch (Exception e) {
             logger.error("Error getting images: {}", e.getMessage(), e);
             return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to get images: " + e.getMessage()));
+        }
+    }
+
+    /*=============================================
+     FILE SERVING ENDPOINTS - Image Rendering & Download
+     =============================================*/
+
+    /**
+     * Render image file directly for browser display
+     * Serves image content with proper Content-Type headers for browser rendering
+     * URL pattern: /images/file/**
+     * Example: /images/file/home/masion-art/images/2b/3c/file.png
+     * 
+     * @param request HttpServletRequest to extract the full path from URI
+     * @return Image bytes with appropriate Content-Type header
+     */
+    @GetMapping("/file/**")
+    @Operation(summary = "Render image file for browser display",
+               description = "Serve image file content directly with proper MIME type headers. The path is extracted from the URI after /images/file/. Browser will display the image inline.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Image rendered successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid file path or path traversal attempt"),
+        @ApiResponse(responseCode = "404", description = "Image file not found"),
+        @ApiResponse(responseCode = "500", description = "Internal server error or file read failure")
+    })
+    public ResponseEntity<byte[]> renderImageFile(HttpServletRequest request) {
+        
+        String requestURI = request.getRequestURI();
+        String contextPath = request.getContextPath(); // /api
+        String basePath = contextPath + "/images/file/";
+        
+        String path = requestURI.substring(basePath.length());
+        String absolutePath = "/" + path;
+        
+        logger.info("Rendering image file: {}", absolutePath);
+
+        try {
+            // Get image content
+            byte[] imageContent = imageService.getImageFileContent(absolutePath);
+            
+            // Determine content type
+            String contentType = imageService.getImageContentType(absolutePath);
+            
+            // Return image with proper headers
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(contentType))
+                    .body(imageContent);
+                    
+        } catch (IOException e) {
+            logger.error("File not found or read error: {}", e.getMessage());
+            return ResponseEntity.notFound().build();
+        } catch (IllegalArgumentException e) {
+            logger.error("Invalid file path: {}", e.getMessage());
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            logger.error("Error rendering image file: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Download image file with attachment disposition
+     * Forces browser to download the file instead of displaying it
+     * URL pattern: /images/download/**
+     * Example: /images/download/home/masion-art/images/2b/3c/file.png
+     * 
+     * @param request HttpServletRequest to extract the full path from URI
+     * @return Image bytes with Content-Disposition: attachment header
+     */
+    @GetMapping("/download/**")
+    @Operation(summary = "Download image file",
+               description = "Download image file with Content-Disposition attachment header. Browser will download the file instead of displaying it. The path is extracted from the URI after /images/download/.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Image downloaded successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid file path or path traversal attempt"),
+        @ApiResponse(responseCode = "404", description = "Image file not found"),
+        @ApiResponse(responseCode = "500", description = "Internal server error or file read failure")
+    })
+    public ResponseEntity<byte[]> downloadImageFile(HttpServletRequest request) {
+        
+        String requestURI = request.getRequestURI();
+        String contextPath = request.getContextPath();
+        String basePath = contextPath + "/images/download/";
+        
+        String path = requestURI.substring(basePath.length());
+        String absolutePath = "/" + path;
+        
+        logger.info("Downloading image file: {}", absolutePath);
+
+        try {
+            // Get image content
+            byte[] imageContent = imageService.getImageFileContent(absolutePath);
+            
+            // Extract filename for download
+            String fileName = absolutePath.substring(absolutePath.lastIndexOf('/') + 1);
+            
+            // Determine content type
+            String contentType = imageService.getImageContentType(absolutePath);
+            
+            // Return image with download headers
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(contentType))
+                    .header("Content-Disposition", "attachment; filename=\"" + fileName + "\"")
+                    .body(imageContent);
+                    
+        } catch (IOException e) {
+            logger.error("File not found or read error: {}", e.getMessage());
+            return ResponseEntity.notFound().build();
+        } catch (IllegalArgumentException e) {
+            logger.error("Invalid file path: {}", e.getMessage());
+            return ResponseEntity.badRequest().build(); 
+        } catch (Exception e) {
+            logger.error("Error downloading image file: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().build();
         }
     }
 }

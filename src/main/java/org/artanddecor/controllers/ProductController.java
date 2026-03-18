@@ -134,6 +134,10 @@ public class ProductController {
                       example = "1") 
             @RequestParam(value = "categoryId", required = false) Long categoryId,
             
+            @Parameter(description = "Filter by type ID from PRODUCT_TYPE table", 
+                      example = "1") 
+            @RequestParam(value = "typeId", required = false) Long typeId,
+            
             @Parameter(description = "Filter by state ID from PRODUCT_STATE table (1=Active, 2=Inactive, etc.)", 
                       example = "1") 
             @RequestParam(value = "stateId", required = false) Long stateId,
@@ -165,12 +169,12 @@ public class ProductController {
             @Parameter(description = "Pagination settings: page number (0-based), size, sort field, and direction") 
             @PageableDefault(page = 0, size = 10, sort = "createdDt", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable) {
         
-        logger.info("Getting products with criteria - textSearch: {}, enabled: {}, categoryId: {}, stateId: {}, featured: {}, highlighted: {}", 
-                   textSearch, enabled, categoryId, stateId, featured, highlighted);
+        logger.info("Getting products with criteria - textSearch: {}, enabled: {}, categoryId: {}, typeId: {}, stateId: {}, featured: {}, highlighted: {}", 
+                   textSearch, enabled, categoryId, typeId, stateId, featured, highlighted);
         
         try {
             Page<ProductDto> productsPage = productService.getProductsByCriteria(
-                textSearch, enabled, categoryId, stateId, minPrice, maxPrice, inStock, productCode, 
+                textSearch, enabled, categoryId, typeId, stateId, minPrice, maxPrice, inStock, productCode, 
                 featured, highlighted, pageable);
             return ResponseEntity.ok(BaseResponseDto.success("Products retrieved successfully", productsPage));
         } catch (Exception e) {
@@ -186,7 +190,7 @@ public class ProductController {
     @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     @Operation(
         summary = "Create new product", 
-        description = "Create a new product in the system. This operation is restricted to users with ADMIN or MANAGER roles. All required fields must be provided including product name, slug, code, category, state, price, and description."
+        description = "Create a new product in the system using simplified input with IDs. This operation is restricted to users with ADMIN or MANAGER roles. All required fields must be provided including product name, slug, code, categoryId, stateId, price, and description."
     )
     @ApiResponses(value = {
         @ApiResponse(responseCode = "201", description = "Product created successfully",
@@ -199,73 +203,18 @@ public class ProductController {
     })
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<BaseResponseDto<ProductDto>> createProduct(
-            @Parameter(description = "Product data to create. All required fields must be provided.") 
-            @Valid @RequestBody ProductDto productDto) {
-        logger.info("Creating new product: {}", productDto.getProductName());
+            @Parameter(description = "Product data to create with IDs for foreign keys. All required fields must be provided.") 
+            @Valid @RequestBody ProductCreateDto productCreateDto) {
+        logger.info("Creating new product: {}", productCreateDto.getProductName());
         try {
-            ProductDto createdProduct = productService.createProduct(productDto);
+            ProductDto createdProduct = productService.createProduct(productCreateDto);
             return ResponseEntity.status(HttpStatus.CREATED).body(BaseResponseDto.success("Product created successfully", createdProduct));
+        } catch (IllegalArgumentException e) {
+            logger.error("Validation error creating product: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(e.getMessage()));
         } catch (Exception e) {
             logger.error("Error creating product: {}", e.getMessage(), e);
             return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to create product: " + e.getMessage()));
-        }
-    }
-
-    /**
-     * Get enabled products by category slug
-     */
-    @GetMapping("/category/{categorySlug}")
-    @Operation(
-        summary = "Get enabled products by category slug",
-        description = "Retrieve all enabled products filtered by category slug with pagination support. This endpoint returns products that belong to a specific category and are currently enabled. No authentication required."
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Products retrieved successfully with pagination info"),
-        @ApiResponse(responseCode = "404", description = "Category not found or no products available"),
-        @ApiResponse(responseCode = "500", description = "Internal server error occurred while retrieving products")
-    })
-    public ResponseEntity<BaseResponseDto<Page<ProductDto>>> getEnabledProductsByCategorySlug(
-            @Parameter(description = "Category slug identifier (e.g., 'modern-art', 'classical-paintings')", 
-                      example = "modern-art") 
-            @PathVariable String categorySlug,
-            @Parameter(description = "Pagination settings: page number (0-based), size, sort field, and direction")
-            @PageableDefault(page = 0, size = 10, sort = "createdDt", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable) {
-        logger.info("Getting enabled products by category slug: {} with pagination", categorySlug);
-        try {
-            Page<ProductDto> products = productService.getEnabledProductsByCategorySlug(categorySlug, pageable);
-            return ResponseEntity.ok(BaseResponseDto.success("Products retrieved successfully by category", products));
-        } catch (Exception e) {
-            logger.error("Error retrieving products by category slug {}: {}", categorySlug, e.getMessage(), e);
-            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to retrieve products by category: " + e.getMessage()));
-        }
-    }
-
-    /**
-     * Get enabled products by type slug
-     */
-    @GetMapping("/type/{typeSlug}")
-    @Operation(
-        summary = "Get enabled products by type slug",
-        description = "Retrieve all enabled products filtered by product type slug with pagination support. This endpoint returns products that belong to a specific type (e.g., 'art', 'tools', 'decor') and are currently enabled. No authentication required."
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Products retrieved successfully with pagination info"),
-        @ApiResponse(responseCode = "404", description = "Product type not found or no products available"),
-        @ApiResponse(responseCode = "500", description = "Internal server error occurred while retrieving products")
-    })
-    public ResponseEntity<BaseResponseDto<Page<ProductDto>>> getEnabledProductsByTypeSlug(
-            @Parameter(description = "Product type slug identifier (e.g., 'art', 'tools', 'decoration')", 
-                      example = "art") 
-            @PathVariable String typeSlug,
-            @Parameter(description = "Pagination settings: page number (0-based), size, sort field, and direction")
-            @PageableDefault(page = 0, size = 10, sort = "createdDt", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable) {
-        logger.info("Getting enabled products by type slug: {} with pagination", typeSlug);
-        try {
-            Page<ProductDto> products = productService.getEnabledProductsByTypeSlug(typeSlug, pageable);
-            return ResponseEntity.ok(BaseResponseDto.success("Products retrieved successfully by type", products));
-        } catch (Exception e) {
-            logger.error("Error retrieving products by type slug {}: {}", typeSlug, e.getMessage(), e);
-            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to retrieve products by type: " + e.getMessage()));
         }
     }
 

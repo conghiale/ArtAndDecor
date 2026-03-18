@@ -98,4 +98,28 @@ public interface ImageService {
      * Used for UI combobox/dropdown options
      */
     List<String> getAllImageFormats();
+
+    // =============================================
+    // FILE SERVING OPERATIONS
+    // =============================================
+
+    /**
+     * Get image file content by absolute path
+     * Used for rendering and downloading images directly from file system
+     * 
+     * @param absolutePath Absolute file path on server
+     * @return Image file content as byte array
+     * @throws IOException If file not found or read fails
+     * @throws IllegalArgumentException If path is invalid or unsafe
+     */
+    byte[] getImageFileContent(String absolutePath) throws IOException;
+
+    /**
+     * Get MIME content type for image file
+     * Determines appropriate Content-Type header based on file extension
+     * 
+     * @param filePath File path to analyze
+     * @return MIME type (e.g., "image/jpeg", "image/png")
+     */
+    String getImageContentType(String filePath);
 }

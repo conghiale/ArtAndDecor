@@ -2,6 +2,7 @@ package org.artanddecor.services.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.artanddecor.dto.ProductDto;
+import org.artanddecor.dto.ProductCreateDto;
 import org.artanddecor.dto.ProductImageDto;
 import org.artanddecor.dto.ProductAttributeDto;
 import org.artanddecor.model.Product;
@@ -46,14 +47,14 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public Page<ProductDto> getProductsByCriteria(String textSearch, Boolean enabled, Long categoryId, Long stateId, 
+    public Page<ProductDto> getProductsByCriteria(String textSearch, Boolean enabled, Long categoryId, Long typeId, Long stateId, 
                                                 BigDecimal minPrice, BigDecimal maxPrice, Boolean inStock, String productCode, 
                                                 Boolean featured, Boolean highlighted, Pageable pageable) {
-        logger.debug("Getting products with criteria - textSearch: {}, enabled: {}, categoryId: {}, stateId: {}, featured: {}, highlighted: {}", 
-                    textSearch, enabled, categoryId, stateId, featured, highlighted);
+        logger.debug("Getting products with criteria - textSearch: {}, enabled: {}, categoryId: {}, typeId: {}, stateId: {}, featured: {}, highlighted: {}", 
+                    textSearch, enabled, categoryId, typeId, stateId, featured, highlighted);
         
         Page<Product> productPage = productRepository.findProductsByCriteriaPaginated(
-            textSearch, enabled, categoryId, stateId, minPrice, maxPrice, inStock, productCode, 
+            textSearch, enabled, categoryId, typeId, stateId, minPrice, maxPrice, inStock, productCode, 
             featured, highlighted, pageable);
         
         return productPage.map(this::convertToDto);
@@ -105,6 +106,28 @@ public class ProductServiceImpl implements ProductService {
         }
         
         Product product = convertToEntity(productDto);
+        Product savedProduct = productRepository.save(product);
+        
+        return convertToDto(savedProduct);
+    }
+    
+    @Override
+    @Transactional
+    public ProductDto createProduct(ProductCreateDto productCreateDto) {
+        logger.info("Creating new product from create DTO: {}", productCreateDto.getProductName());
+        
+        // Validation
+        if (existsBySlug(productCreateDto.getProductSlug())) {
+            throw new IllegalArgumentException("Product slug already exists: " + productCreateDto.getProductSlug());
+        }
+        if (existsByName(productCreateDto.getProductName())) {
+            throw new IllegalArgumentException("Product name already exists: " + productCreateDto.getProductName());
+        }
+        if (existsByCode(productCreateDto.getProductCode())) {
+            throw new IllegalArgumentException("Product code already exists: " + productCreateDto.getProductCode());
+        }
+        
+        Product product = ProductMapperUtil.toProductEntityFromCreateDto(productCreateDto);
         Product savedProduct = productRepository.save(product);
         
         return convertToDto(savedProduct);
@@ -252,12 +275,12 @@ public class ProductServiceImpl implements ProductService {
         logger.debug("Getting featured products with pagination");
         
         // First try to get featured products
-        Page<ProductDto> featuredProducts = getProductsByCriteria(null, true, null, null, null, null, null, null, true, null, pageable);
+        Page<ProductDto> featuredProducts = getProductsByCriteria(null, true, null, null, null, null, null, null, null, true, null, pageable);
         
         // If no featured products found, fallback to all enabled products
         if (featuredProducts.getTotalElements() == 0) {
             logger.debug("No featured products found, falling back to all enabled products");
-            return getProductsByCriteria(null, true, null, null, null, null, null, null, null, null, pageable);
+            return getProductsByCriteria(null, true, null, null, null, null, null, null, null, null, null, pageable);
         }
         
         return featuredProducts;
@@ -268,12 +291,12 @@ public class ProductServiceImpl implements ProductService {
         logger.debug("Getting highlighted products with pagination");
         
         // First try to get highlighted products
-        Page<ProductDto> highlightedProducts = getProductsByCriteria(null, true, null, null, null, null, null, null, null, true, pageable);
+        Page<ProductDto> highlightedProducts = getProductsByCriteria(null, true, null, null, null, null, null, null, null, null, true, pageable);
         
         // If no highlighted products found, fallback to all enabled products
         if (highlightedProducts.getTotalElements() == 0) {
             logger.debug("No highlighted products found, falling back to all enabled products");
-            return getProductsByCriteria(null, true, null, null, null, null, null, null, null, null, pageable);
+            return getProductsByCriteria(null, true, null, null, null, null, null, null, null, null, null, pageable);
         }
         
         return highlightedProducts;
@@ -284,7 +307,7 @@ public class ProductServiceImpl implements ProductService {
         logger.debug("Getting latest products with pagination");
         
         // Get all enabled products sorted by creation date (this should always have results if any products exist)
-        Page<ProductDto> latestProducts = getProductsByCriteria(null, true, null, null, null, null, null, null, null, null, pageable);
+        Page<ProductDto> latestProducts = getProductsByCriteria(null, true, null, null, null, null, null, null, null, null, null, pageable);
         
         // If somehow no enabled products found, this fallback won't help much, but log the issue
         if (latestProducts.getTotalElements() == 0) {
