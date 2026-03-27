@@ -1,6 +1,7 @@
 package org.artanddecor.services;
 
 import org.artanddecor.dto.CartItemDto;
+import org.artanddecor.dto.CartItemUpdateRequestDto;
 import org.springframework.data.domain.Page;
 
 import java.math.BigDecimal;
@@ -21,38 +22,11 @@ public interface CartItemService {
     CartItemDto getCartItemById(Long cartItemId);
 
     /**
-     * Get cart items by cart ID
-     * @param cartId Cart ID
-     * @return List of CartItemDto
-     */
-    List<CartItemDto> getCartItemsByCartId(Long cartId);
-
-    /**
      * Get active cart items by user
      * @param userId User ID
      * @return List of active cart items
      */
     List<CartItemDto> getActiveCartItemsByUser(Long userId);
-
-    /**
-     * Get cart items by quantity range
-     * @param minQuantity Minimum quantity
-     * @param maxQuantity Maximum quantity
-     * @param page Page number
-     * @param size Page size
-     * @return Page of cart items
-     */
-    Page<CartItemDto> getCartItemsByQuantityRange(Integer minQuantity, Integer maxQuantity, int page, int size);
-
-    /**
-     * Get cart items by date range
-     * @param startDate Start date
-     * @param endDate End date
-     * @param page Page number
-     * @param size Page size
-     * @return Page of cart items
-     */
-    Page<CartItemDto> getCartItemsByDateRange(LocalDateTime startDate, LocalDateTime endDate, int page, int size);
 
     /**
      * Add item to cart
@@ -64,6 +38,15 @@ public interface CartItemService {
     CartItemDto addItemToCart(Long cartId, Long productId, Integer quantity);
 
     /**
+     * Add product to guest cart (creates cart if needed)
+     * @param sessionId Session ID (creates new if null)
+     * @param productId Product ID
+     * @param quantity Quantity
+     * @return CartItemDto
+     */
+    CartItemDto addProductToGuestCart(String sessionId, Long productId, Integer quantity);
+
+    /**
      * Update cart item quantity
      * @param cartItemId Cart item ID
      * @param quantity New quantity
@@ -72,10 +55,19 @@ public interface CartItemService {
     CartItemDto updateCartItemQuantity(Long cartItemId, Integer quantity);
 
     /**
-     * Remove cart item
+     * Remove cart item (set state to REMOVED)
      * @param cartItemId Cart item ID
+     * @return Updated CartItemDto
      */
-    void removeCartItem(Long cartItemId);
+    CartItemDto removeCartItem(Long cartItemId);
+
+    /**
+     * Update cart item using request DTO (for admin)
+     * @param cartItemId Cart item ID
+     * @param request Updated cart item data from request DTO
+     * @return Updated CartItemDto
+     */
+    CartItemDto updateCartItemByRequest(Long cartItemId, CartItemUpdateRequestDto request);
 
     /**
      * Clear all items from cart
@@ -98,10 +90,22 @@ public interface CartItemService {
     Integer getCartTotalQuantity(Long cartId);
 
     /**
-     * Get cart item statistics by category
-     * @return List of statistics
+     * Get cart items count with filters - priority lookup by cartId, userId, or sessionId
+     * @param cartId Cart ID (highest priority)
+     * @param userId User ID (medium priority, optional)
+     * @param sessionId Session ID (lowest priority, optional) 
+     * @param cartItemStateId Cart item state ID (optional)
+     * @return Cart items count
      */
-    List<Object[]> getCartItemStatisticsByCategory();
+    Long getCartItemsCount(Long cartId, Long userId, String sessionId, Long cartItemStateId);
+
+    /**
+     * Get cart items by cart ID with state filter
+     * @param cartId Cart ID
+     * @param cartItemStateId Cart item state ID filter (optional)
+     * @return List of CartItemDto
+     */
+    List<CartItemDto> getCartItemsByCartId(Long cartId, Long cartItemStateId);
 
     /**
      * Convert CartItem entity to DTO
@@ -109,29 +113,6 @@ public interface CartItemService {
      * @return CartItemDto
      */
     CartItemDto convertToDto(org.artanddecor.model.CartItem cartItem);
-
-    /**
-     * Get cart items by various criteria with flexible filtering
-     * @param cartItemId Filter by cart item ID (optional)
-     * @param cartId Filter by cart ID (optional)
-     * @param productId Filter by product ID (optional)
-     * @param userId Filter by user ID (optional)
-     * @param minPrice Filter by minimum price (optional)
-     * @param maxPrice Filter by maximum price (optional)
-     * @param minQuantity Filter by minimum quantity (optional)
-     * @param maxQuantity Filter by maximum quantity (optional)
-     * @param cartItemStateId Filter by cart item state ID (optional)
-     * @param page Page number
-     * @param size Page size
-     * @param sortBy Sort field
-     * @param sortDirection Sort direction
-     * @return Page of cart items matching criteria
-     */
-    Page<CartItemDto> getCartItemsByCriteria(Long cartItemId, Long cartId, Long productId, 
-                                           Long userId, BigDecimal minPrice, BigDecimal maxPrice,
-                                           Integer minQuantity, Integer maxQuantity, 
-                                           Long cartItemStateId, int page, int size, 
-                                           String sortBy, String sortDirection);
 
     /**
      * Get active cart items by cart ID (for CUSTOMER role)

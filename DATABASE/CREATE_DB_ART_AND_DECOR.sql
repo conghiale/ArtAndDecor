@@ -49,7 +49,7 @@ CREATE TABLE `USER` (
     `USER_ROLE_ID` BIGINT NOT NULL,
     `USER_ENABLED` BOOLEAN NOT NULL DEFAULT TRUE,
     `USER_NAME` VARCHAR(64) NOT NULL UNIQUE,
-    `PASSWORD` VARCHAR(150),
+    `PASSWORD` VARCHAR(255),
     `FIRST_NAME` VARCHAR(50),
     `LAST_NAME` VARCHAR(50),
     `PHONE_NUMBER` VARCHAR(15),
@@ -238,12 +238,14 @@ CREATE TABLE `PRODUCT_ATTRIBUTE` (
     `PRODUCT_ID` BIGINT NOT NULL,
     `PRODUCT_ATTR_ID` BIGINT NOT NULL,
     `PRODUCT_ATTRIBUTE_VALUE` VARCHAR(256) NOT NULL,
+    `PRODUCT_ATTRIBUTE_QUANTITY` INT NOT NULL DEFAULT 0,
     `PRODUCT_ATTRIBUTE_ENABLED` BOOLEAN NOT NULL DEFAULT TRUE,
     `CREATED_DT` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `MODIFIED_DT` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (`PRODUCT_ID`) REFERENCES `PRODUCT`(`PRODUCT_ID`) ON DELETE CASCADE,
     FOREIGN KEY (`PRODUCT_ATTR_ID`) REFERENCES `PRODUCT_ATTR`(`PRODUCT_ATTR_ID`) ON DELETE RESTRICT,
-    UNIQUE KEY `idx_product_attribute_unique` (`PRODUCT_ID`, `PRODUCT_ATTR_ID`)
+    UNIQUE KEY `idx_product_attribute_value_unique` (`PRODUCT_ID`, `PRODUCT_ATTR_ID`, `PRODUCT_ATTRIBUTE_VALUE`),
+    INDEX `idx_product_attribute_quantity` (`PRODUCT_ATTRIBUTE_QUANTITY`)
 );
 
 -- =============================================
@@ -804,8 +806,116 @@ CREATE TABLE `PAGE` (
 );
 
 -- =============================================
+-- PRODUCT STOCK MANAGEMENT TRIGGERS
+-- =============================================
+
+-- These triggers automatically update PRODUCT.STOCK_QUANTITY
+-- when PRODUCT_ATTRIBUTE quantities change
+
+DELIMITER $$
+
+-- Trigger for INSERT - updates product stock when new attribute added
+CREATE TRIGGER `trg_product_attribute_insert_update_stock`
+    AFTER INSERT ON `PRODUCT_ATTRIBUTE`
+    FOR EACH ROW
+BEGIN
+    UPDATE `PRODUCT` 
+    SET `STOCK_QUANTITY` = (
+        SELECT COALESCE(SUM(`PRODUCT_ATTRIBUTE_QUANTITY`), 0)
+        FROM `PRODUCT_ATTRIBUTE` 
+        WHERE `PRODUCT_ID` = NEW.`PRODUCT_ID` 
+        AND `PRODUCT_ATTRIBUTE_ENABLED` = TRUE
+    )
+    WHERE `PRODUCT_ID` = NEW.`PRODUCT_ID`;
+END$$
+
+-- Trigger for UPDATE - updates product stock when attribute quantity changes
+CREATE TRIGGER `trg_product_attribute_update_update_stock`
+    AFTER UPDATE ON `PRODUCT_ATTRIBUTE`
+    FOR EACH ROW
+BEGIN
+    UPDATE `PRODUCT` 
+    SET `STOCK_QUANTITY` = (
+        SELECT COALESCE(SUM(`PRODUCT_ATTRIBUTE_QUANTITY`), 0)
+        FROM `PRODUCT_ATTRIBUTE` 
+        WHERE `PRODUCT_ID` = NEW.`PRODUCT_ID` 
+        AND `PRODUCT_ATTRIBUTE_ENABLED` = TRUE
+    )
+    WHERE `PRODUCT_ID` = NEW.`PRODUCT_ID`;
+    
+    -- Also update old product if PRODUCT_ID changed (rare case)
+    IF OLD.`PRODUCT_ID` != NEW.`PRODUCT_ID` THEN
+        UPDATE `PRODUCT` 
+        SET `STOCK_QUANTITY` = (
+            SELECT COALESCE(SUM(`PRODUCT_ATTRIBUTE_QUANTITY`), 0)
+            FROM `PRODUCT_ATTRIBUTE` 
+            WHERE `PRODUCT_ID` = OLD.`PRODUCT_ID` 
+            AND `PRODUCT_ATTRIBUTE_ENABLED` = TRUE
+        )
+        WHERE `PRODUCT_ID` = OLD.`PRODUCT_ID`;
+    END IF;
+END$$
+
+-- Trigger for DELETE - updates product stock when attribute removed
+CREATE TRIGGER `trg_product_attribute_delete_update_stock`
+    AFTER DELETE ON `PRODUCT_ATTRIBUTE`
+    FOR EACH ROW
+BEGIN
+    UPDATE `PRODUCT` 
+    SET `STOCK_QUANTITY` = (
+        SELECT COALESCE(SUM(`PRODUCT_ATTRIBUTE_QUANTITY`), 0)
+        FROM `PRODUCT_ATTRIBUTE` 
+        WHERE `PRODUCT_ID` = OLD.`PRODUCT_ID` 
+        AND `PRODUCT_ATTRIBUTE_ENABLED` = TRUE
+    )
+    WHERE `PRODUCT_ID` = OLD.`PRODUCT_ID`;
+END$$
+
+DELIMITER ;
+
+-- =============================================
+-- HELPFUL VIEWS FOR STOCK MANAGEMENT
+-- =============================================
+
+-- View to see product stock summary
+CREATE VIEW `v_product_stock_summary` AS
+SELECT 
+    p.`PRODUCT_ID`,
+    p.`PRODUCT_NAME`,
+    p.`PRODUCT_CODE`,
+    p.`STOCK_QUANTITY` AS `TOTAL_STOCK`,
+    COUNT(pa.`PRODUCT_ATTRIBUTE_ID`) as `ATTRIBUTE_COUNT`,
+    SUM(CASE WHEN pa.`PRODUCT_ATTRIBUTE_ENABLED` = TRUE THEN pa.`PRODUCT_ATTRIBUTE_QUANTITY` ELSE 0 END) as `CALCULATED_STOCK`
+FROM `PRODUCT` p
+LEFT JOIN `PRODUCT_ATTRIBUTE` pa ON p.`PRODUCT_ID` = pa.`PRODUCT_ID`
+GROUP BY p.`PRODUCT_ID`, p.`PRODUCT_NAME`, p.`PRODUCT_CODE`, p.`STOCK_QUANTITY`;
+
+-- View to see detailed attribute quantities  
+CREATE VIEW `v_product_attribute_detail` AS
+SELECT 
+    p.`PRODUCT_ID`,
+    p.`PRODUCT_NAME`,
+    p.`PRODUCT_CODE`,
+    pat.`PRODUCT_ATTR_NAME` as `ATTRIBUTE_TYPE`,
+    pa.`PRODUCT_ATTRIBUTE_VALUE` as `ATTRIBUTE_VALUE`,
+    pa.`PRODUCT_ATTRIBUTE_QUANTITY`,
+    pa.`PRODUCT_ATTRIBUTE_ENABLED`
+FROM `PRODUCT` p
+JOIN `PRODUCT_ATTRIBUTE` pa ON p.`PRODUCT_ID` = pa.`PRODUCT_ID`
+JOIN `PRODUCT_ATTR` pat ON pa.`PRODUCT_ATTR_ID` = pat.`PRODUCT_ATTR_ID`
+ORDER BY p.`PRODUCT_ID`, pat.`PRODUCT_ATTR_NAME`, pa.`PRODUCT_ATTRIBUTE_VALUE`;
+
+-- =============================================
 -- SCHEMA CREATION COMPLETE
 -- =============================================
--- All INSERT statements have been moved to INSERT_SAMPLE_DATA.sql
--- This file now contains only table definitions and constraints
+-- Database now includes:
+-- 1. PRODUCT_ATTRIBUTE_QUANTITY field for inventory management per attribute
+-- 2. Automatic triggers to update PRODUCT.STOCK_QUANTITY from attribute totals
+-- 3. Views for easy stock monitoring and reporting
+-- 4. Support for multiple attribute values per product (e.g., multiple colors/sizes)
+-- 
+-- Usage:
+-- - PRODUCT.STOCK_QUANTITY = Sum of all enabled PRODUCT_ATTRIBUTE.PRODUCT_ATTRIBUTE_QUANTITY
+-- - Each attribute variant can have its own stock quantity
+-- - Triggers ensure data consistency automatically
 -- =============================================

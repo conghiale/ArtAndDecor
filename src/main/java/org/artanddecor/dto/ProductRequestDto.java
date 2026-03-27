@@ -7,17 +7,18 @@ import lombok.NoArgsConstructor;
 
 import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
- * Product Create DTO for API create requests
- * Contains minimal required information for creating a product with IDs instead of nested objects
+ * Product Request DTO for API create and update requests
+ * Contains minimal required information for creating/updating a product with IDs instead of nested objects
  * This provides a cleaner and simpler interface for client integration
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProductCreateDto {
+public class ProductRequestDto {
     
     @NotBlank(message = "Product name is required")
     @Size(max = 100, message = "Product name must not exceed 100 characters")
@@ -58,4 +59,17 @@ public class ProductCreateDto {
     private Boolean productHighlighted = false;
     
     private Long seoMetaId;
+    
+    /**
+     * List of image IDs to associate with this product
+     * Client should upload images first and get image IDs, then include them here
+     * These will be saved to PRODUCT_IMAGE table with appropriate primary/secondary flags
+     */
+    private List<Long> imageIds;
+    
+    /**
+     * ID of the image to set as primary (must be included in imageIds list)
+     * If not specified, the first image in imageIds will be set as primary
+     */
+    private Long primaryImageId;
 }

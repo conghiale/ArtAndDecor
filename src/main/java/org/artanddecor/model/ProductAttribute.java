@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "PRODUCT_ATTRIBUTE",
-       uniqueConstraints = @UniqueConstraint(columnNames = {"PRODUCT_ID", "PRODUCT_ATTR_ID"}))
+       uniqueConstraints = @UniqueConstraint(columnNames = {"PRODUCT_ID", "PRODUCT_ATTR_ID", "PRODUCT_ATTRIBUTE_VALUE"}))
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -38,6 +38,9 @@ public class ProductAttribute {
 
     @Column(name = "PRODUCT_ATTRIBUTE_VALUE", nullable = false, length = 256)
     private String productAttributeValue;
+
+    @Column(name = "PRODUCT_ATTRIBUTE_QUANTITY", nullable = false)
+    private Integer productAttributeQuantity = 0;
 
     @Column(name = "PRODUCT_ATTRIBUTE_ENABLED", nullable = false)
     private Boolean productAttributeEnabled = true;

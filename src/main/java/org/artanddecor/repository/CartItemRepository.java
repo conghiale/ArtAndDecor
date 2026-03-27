@@ -7,6 +7,7 @@ import org.artanddecor.model.Product;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -258,4 +259,32 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long> {
            "WHERE ci.cart.cartId = :cartId " +
            "AND ci.cartItemState.cartItemStateName = 'ACTIVE'")
     List<CartItem> findActiveCartItemsByCartId(@Param("cartId") Long cartId);
+
+    /**
+     * Find cart items by cart ID and cart item state ID
+     * @param cartId Cart ID
+     * @param cartItemStateId Cart item state ID
+     * @return List of cart items
+     */
+    @Query("SELECT ci FROM CartItem ci WHERE ci.cart.cartId = :cartId AND ci.cartItemState.cartItemStateId = :cartItemStateId")
+    List<CartItem> findByCartIdAndCartItemStateId(@Param("cartId") Long cartId, @Param("cartItemStateId") Long cartItemStateId);
+
+    /**
+     * Count cart items with optional state filter
+     * @param cartId Cart ID
+     * @param cartItemStateId Cart item state ID (optional)
+     * @return Count of cart items
+     */
+    @Query("SELECT COUNT(ci) FROM CartItem ci WHERE ci.cart.cartId = :cartId " +
+           "AND (:cartItemStateId IS NULL OR ci.cartItemState.cartItemStateId = :cartItemStateId)")
+    Long countCartItems(@Param("cartId") Long cartId, @Param("cartItemStateId") Long cartItemStateId);
+
+    /**
+     * Get total quantity of active cart items in a cart
+     * @param cartId Cart ID
+     * @return Total quantity of active items
+     */
+    @Query("SELECT COALESCE(SUM(ci.cartItemQuantity), 0) FROM CartItem ci " +
+           "WHERE ci.cart.cartId = :cartId AND ci.cartItemState.cartItemStateName = 'ACTIVE'")
+    Integer getActiveCartItemsTotalQuantity(@Param("cartId") Long cartId);
 }

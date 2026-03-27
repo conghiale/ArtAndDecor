@@ -1,5 +1,6 @@
 package org.artanddecor.controllers;
 
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import lombok.RequiredArgsConstructor;
 import org.artanddecor.dto.BaseResponseDto;
 import org.artanddecor.dto.ImageDto;
@@ -145,7 +146,11 @@ public class ImageController {
         @ApiResponse(responseCode = "500", description = "Internal server error or file processing failure")
     })
     public ResponseEntity<BaseResponseDto<ImageUploadResponseDto>> uploadImages(
-            @Parameter(description = "Image files to upload", required = true)
+            @Parameter(description = "Image files to upload", required = true,
+                    content = @Content(
+                    mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
+                    array = @ArraySchema(schema = @Schema(type = "string", format = "binary"))
+            ))
             @RequestPart("imageFiles") MultipartFile[] imageFiles,
             
             @Parameter(description = "Optional display names for each image")
@@ -212,16 +217,21 @@ public class ImageController {
      * Public access for content management and image replacement operations
      * 
      * @param imageId Database ID of the image to update
-     * @param imageUploadDto Form data containing the new image file and optional metadata
+     * @param imageFile Single image file to replace the existing one
+     * @param imageDisplayName Optional display name for the updated image
+     * @param imageSize Optional size metadata for the updated image
+     * @param imageFormat Optional format metadata for the updated image
+     * @param imageRemark Optional remark for the updated image
+     * @param imageSlug Optional URL-friendly identifier for the updated image
      * @return Updated image information with new file details
      */
-    @PostMapping("/{imageId}/upload")
+    @PutMapping(value = "/{imageId}/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Update existing image with new file",
                description = "Replace an existing image file while maintaining the same database record. Updates both the file content and associated metadata. The new file undergoes the same processing as new uploads including SHA-256 hashing and dimension detection.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Image updated successfully",
                      content = @Content(schema = @Schema(implementation = ImageDto.class))),
-        @ApiResponse(responseCode = "400", description = "Invalid request data or exactly one file required for update"),
+        @ApiResponse(responseCode = "400", description = "Invalid request data or image file is required for update"),
         @ApiResponse(responseCode = "404", description = "Image not found with provided ID"),
         @ApiResponse(responseCode = "413", description = "File size exceeds maximum limit (50MB)"),
         @ApiResponse(responseCode = "415", description = "Unsupported file format"),
@@ -230,23 +240,47 @@ public class ImageController {
     public ResponseEntity<BaseResponseDto<ImageDto>> updateImage(
             @Parameter(description = "Database ID of the image to update", example = "1")
             @PathVariable Long imageId,
-            @Parameter(description = "Form data containing exactly one image file and optional metadata for the update",
-                       content = @Content(mediaType = "multipart/form-data"))
-            @Valid @ModelAttribute ImageUploadDto imageUploadDto) {
+            
+            @Parameter(description = "Image file to replace the existing one", required = true,
+                    content = @Content(
+                    mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
+                    schema = @Schema(type = "string", format = "binary")
+            ))
+            @RequestPart("imageFile") MultipartFile imageFile,
+            
+            @Parameter(description = "Optional display name for the updated image")
+            @RequestPart(value = "imageDisplayName", required = false) String imageDisplayName,
+            
+            @Parameter(description = "Optional size metadata for the updated image (e.g., '1920x1080')")
+            @RequestPart(value = "imageSize", required = false) String imageSize,
+            
+            @Parameter(description = "Optional format metadata for the updated image (e.g., 'JPG', 'PNG')")
+            @RequestPart(value = "imageFormat", required = false) String imageFormat,
+            
+            @Parameter(description = "Optional remark for the updated image")
+            @RequestPart(value = "imageRemark", required = false) String imageRemark,
+            
+            @Parameter(description = "Optional URL-friendly identifier for the updated image")
+            @RequestPart(value = "imageSlug", required = false) String imageSlug) {
         
         logger.info("Updating image with file - ID: {}", imageId);
         
         try {
             // Validate required parameters
-            if (imageUploadDto.getImageFiles() == null || imageUploadDto.getImageFiles().length != 1) {
+            if (imageFile == null || imageFile.isEmpty()) {
                 return ResponseEntity.badRequest()
-                        .body(BaseResponseDto.badRequest("Exactly one file is required for update"));
+                        .body(BaseResponseDto.badRequest("Image file is required for update"));
             }
             
-            if (imageUploadDto.getImageFiles()[0].isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(BaseResponseDto.badRequest("Image file cannot be empty"));
-            }
+            // Create ImageUploadDto from individual parameters for service layer compatibility
+            ImageUploadDto imageUploadDto = ImageUploadDto.builder()
+                    .imageFiles(new MultipartFile[]{imageFile})
+                    .imageDisplayNames(imageDisplayName != null ? new String[]{imageDisplayName} : null)
+                    .imageSizes(imageSize != null ? new String[]{imageSize} : null)
+                    .imageFormats(imageFormat != null ? new String[]{imageFormat} : null)
+                    .imageRemarks(imageRemark != null ? new String[]{imageRemark} : null)
+                    .imageSlugs(imageSlug != null ? new String[]{imageSlug} : null)
+                    .build();
             
             // Process update using ImageUploadDto
             ImageDto updatedImage = imageService.updateImage(imageId, imageUploadDto);
@@ -510,6 +544,46 @@ public class ImageController {
         } catch (Exception e) {
             logger.error("Error downloading image file: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Delete image by ID (Admin operation)
+     * Removes both database record and associated file from storage
+     * Requires proper authorization for destructive operations
+     * 
+     * @param imageId Database ID of the image to delete
+     * @return Success confirmation or error response
+     */
+    @DeleteMapping("/{imageId}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
+    @Operation(summary = "Delete image by ID",
+               description = "Permanently delete an image record and its associated file from storage. This is a destructive operation that cannot be undone. Requires Admin or Manager role access.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Image deleted successfully"),
+        @ApiResponse(responseCode = "403", description = "Access denied - Admin or Manager role required"),
+        @ApiResponse(responseCode = "404", description = "Image not found with provided ID"),
+        @ApiResponse(responseCode = "500", description = "Internal server error or file deletion failure")
+    })
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<BaseResponseDto<Void>> deleteImage(
+            @Parameter(description = "Database ID of the image to delete", example = "1")
+            @PathVariable Long imageId) {
+        
+        logger.info("Deleting image by ID: {}", imageId);
+        
+        try {
+            imageService.deleteImageById(imageId);
+            return ResponseEntity.ok(BaseResponseDto.success("Image deleted successfully"));
+            
+        } catch (IllegalArgumentException e) {
+            logger.error("Image not found for deletion - ID: {}", imageId);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(BaseResponseDto.notFound("Image not found with ID: " + imageId));
+        } catch (Exception e) {
+            logger.error("Error deleting image {}: {}", imageId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(BaseResponseDto.serverError("Failed to delete image: " + e.getMessage()));
         }
     }
 }

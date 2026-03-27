@@ -1,9 +1,11 @@
 package org.artanddecor.services.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.artanddecor.exception.UnsupportedImageFormatException;
 import org.artanddecor.model.Policy;
 import org.artanddecor.repository.PolicyRepository;
 import org.artanddecor.services.ImageFileService;
+import org.artanddecor.services.ImageFormatDetectionService;
 import org.artanddecor.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +21,7 @@ import java.nio.file.Paths;
  * Image File Service Implementation
  * Handles file operations for images stored on local disk
  * Files are hashed using SHA-256, original names stored in database
+ * Supports JPG, JPEG, PNG, WEBP, HEIC formats with strict validation
  */
 @Service
 @RequiredArgsConstructor
@@ -28,6 +31,7 @@ public class ImageFileServiceImpl implements ImageFileService {
     private static final long MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
     private final PolicyRepository policyRepository;
+    private final ImageFormatDetectionService formatDetectionService;
 
     @Override
     public FileUploadResult uploadImage(MultipartFile file, String imageDisplayName) throws IOException {
@@ -156,9 +160,10 @@ public class ImageFileServiceImpl implements ImageFileService {
 
     /**
      * Get image dimensions (width x height) from uploaded file
-     * Delegates to Utils.getImageDimensions() for reusable image analysis
+     * Uses enhanced Utils.getImageDimensions() with format-specific decoders
+     * Supports: JPG, JPEG, PNG, WEBP, HEIC formats
      * Example: "2048x1024"
-     * Returns "unknown" if dimensions cannot be determined
+     * Returns "unknown" only if all format-specific decoders fail
      *
      * @param file Image file to analyze
      * @return Image dimensions as "widthxheight" string
@@ -166,7 +171,7 @@ public class ImageFileServiceImpl implements ImageFileService {
      */
     @Override
     public String getImageDimensions(MultipartFile file) throws IOException {
-        logger.debug("Reading image dimensions from file");
+        logger.debug("Reading image dimensions from file with enhanced format support");
         
         if (file == null || file.isEmpty()) {
             logger.warn("File is null or empty");
@@ -174,10 +179,18 @@ public class ImageFileServiceImpl implements ImageFileService {
         }
         
         try {
+            // Validate format first
+            String detectedFormat = formatDetectionService.detectFormat(file);
+            logger.debug("Detected format for dimension analysis: {}", detectedFormat);
+            
             byte[] imageBytes = file.getBytes();
             String dimensions = Utils.getImageDimensions(imageBytes);
-            logger.debug("Image dimensions retrieved: {}", dimensions);
+            logger.debug("Image dimensions retrieved with enhanced support: {}", dimensions);
             return dimensions;
+            
+        } catch (UnsupportedImageFormatException e) {
+            logger.warn("Unsupported format for dimension detection: {}", e.getMessage());
+            throw new IOException("Cannot analyze dimensions for unsupported format: " + e.getMessage());
         } catch (IOException e) {
             logger.warn("Failed to read image dimensions: {}", e.getMessage());
             throw e;
@@ -186,10 +199,12 @@ public class ImageFileServiceImpl implements ImageFileService {
 
     /**
      * Validate uploaded file
-     * Check file size, MIME type, etc.
+     * Check file size, format using binary signature detection
+     * Only allows JPG, JPEG, PNG, WEBP, HEIC formats
      *
      * @param file File to validate
      * @throws IOException If validation fails
+     * @throws UnsupportedImageFormatException If format is not supported
      */
     private void validateFile(MultipartFile file) throws IOException {
         if (file == null || file.isEmpty()) {
@@ -200,20 +215,40 @@ public class ImageFileServiceImpl implements ImageFileService {
             throw new IOException("File size exceeds maximum limit: " + MAX_FILE_SIZE);
         }
 
+        // Validate format using binary signature detection (most reliable)
+        try {
+            formatDetectionService.validateSupportedFormat(file);
+            logger.debug("File format validation passed for: {}", file.getOriginalFilename());
+        } catch (UnsupportedImageFormatException e) {
+            logger.warn("Unsupported image format detected: {}", e.getMessage());
+            throw new IOException("Unsupported file format. Only JPG, JPEG, PNG, WEBP, HEIC are allowed: " + e.getMessage());
+        }
+
+        // Additional MIME type validation as secondary check
         String contentType = file.getContentType();
-        if (!isValidImageType(contentType)) {
-            throw new IOException("Invalid file type. Only image files are allowed: " + contentType);
+        if (!isValidImageMimeType(contentType)) {
+            logger.warn("Invalid MIME type: {}", contentType);
+            throw new IOException("Invalid MIME type. Expected image content type, got: " + contentType);
         }
     }
 
     /**
-     * Check if file type is valid image format
-     *
-     * @param contentType MIME type
-     * @return true if valid image type
+     * Check if MIME type is valid for supported image formats
+     * This is a secondary validation after binary signature check
      */
-    private boolean isValidImageType(String contentType) {
-        return contentType != null && contentType.startsWith("image/");
+    private boolean isValidImageMimeType(String contentType) {
+        if (contentType == null) {
+            return false;
+        }
+        
+        String lowerContentType = contentType.toLowerCase();
+        return lowerContentType.equals("image/jpeg") ||
+               lowerContentType.equals("image/jpg") ||
+               lowerContentType.equals("image/png") ||
+               lowerContentType.equals("image/webp") ||
+               lowerContentType.equals("image/heic") ||
+               lowerContentType.equals("image/heif") ||
+               lowerContentType.startsWith("image/"); // Additional flexibility for other image types
     }
 
     /**

@@ -71,7 +71,7 @@ public class ProductDto {
     
     // Related information
     private List<ProductImageDto> productImages;
-    private List<ProductAttributeDto> productAttributes;
+    private List<ProductAttrWithAttributesDto> productAttributeGroups; // New grouped structure
     private List<ReviewDto> reviews;
     
     // Computed fields

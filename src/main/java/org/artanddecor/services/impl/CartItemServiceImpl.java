@@ -2,6 +2,7 @@ package org.artanddecor.services.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.artanddecor.dto.CartItemDto;
+import org.artanddecor.dto.CartItemUpdateRequestDto;
 import org.artanddecor.model.Cart;
 import org.artanddecor.model.CartItem;
 import org.artanddecor.model.CartItemState;
@@ -11,6 +12,8 @@ import org.artanddecor.repository.CartRepository;
 import org.artanddecor.repository.CartItemStateRepository;
 import org.artanddecor.repository.ProductRepository;
 import org.artanddecor.services.CartItemService;
+import org.artanddecor.services.CartService;
+import org.artanddecor.utils.CartMapper;
 import org.artanddecor.exception.ResourceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,7 +32,7 @@ import java.util.stream.Collectors;
 
 /**
  * Cart Item Service Implementation
- * Handles business logic for shopping cart item management
+ * Handles business logic for shopping cart item management optimized for workflow
  */
 @Service
 @RequiredArgsConstructor
@@ -42,12 +45,13 @@ public class CartItemServiceImpl implements CartItemService {
     private final CartRepository cartRepository;
     private final CartItemStateRepository cartItemStateRepository;
     private final ProductRepository productRepository;
+    private final CartService cartService;
+    private final CartMapper cartMapper;
 
     /**
      * Get cart item by ID
      * @param cartItemId Cart item ID
      * @return CartItemDto
-     * @throws ResourceNotFoundException if cart item not found
      */
     @Override
     @Transactional(readOnly = true)
@@ -57,69 +61,89 @@ public class CartItemServiceImpl implements CartItemService {
         CartItem cartItem = cartItemRepository.findById(cartItemId)
             .orElseThrow(() -> new ResourceNotFoundException("Cart item not found with ID: " + cartItemId));
 
-        return convertToDto(cartItem);
+        return cartMapper.toDto(cartItem);
     }
 
     /**
-     * Get cart items by cart ID
+     * Get cart items by cart ID with state filter
      * @param cartId Cart ID
+     * @param cartItemStateId Cart item state ID filter (optional)
      * @return List of CartItemDto
      */
     @Override
     @Transactional(readOnly = true)
-    public List<CartItemDto> getCartItemsByCartId(Long cartId) {
-        logger.info("Fetching cart items for cart ID: {}", cartId);
+    public List<CartItemDto> getCartItemsByCartId(Long cartId, Long cartItemStateId) {
+        logger.info("Fetching cart items for cart ID: {}, state filter: {}", cartId, cartItemStateId);
 
-        List<CartItem> cartItems = cartItemRepository.findByCart_CartId(cartId);
-        return cartItems.stream().map(this::convertToDto).collect(Collectors.toList());
+        List<CartItem> cartItems;
+        if (cartItemStateId != null) {
+            cartItems = cartItemRepository.findByCartIdAndCartItemStateId(cartId, cartItemStateId);
+        } else {
+            cartItems = cartItemRepository.findByCart_CartId(cartId);
+        }
+        
+        return cartMapper.toCartItemDto(cartItems);
     }
 
     /**
      * Get active cart items by user
      * @param userId User ID
      * @return List of active CartItemDto
-     */    @Override    @Transactional(readOnly = true)
+     */
+    @Override
+    @Transactional(readOnly = true)
     public List<CartItemDto> getActiveCartItemsByUser(Long userId) {
         logger.info("Fetching active cart items for user ID: {}", userId);
 
         List<CartItem> cartItems = cartItemRepository.findActiveCartItemsByUser(userId);
-        return cartItems.stream().map(this::convertToDto).collect(Collectors.toList());
+        return cartMapper.toCartItemDto(cartItems);
     }
 
     /**
-     * Get cart items by quantity range
-     * @param minQuantity Minimum quantity
-     * @param maxQuantity Maximum quantity
-     * @param page Page number
-     * @param size Page size
-     * @return Page of CartItemDto
+     * Get cart items count with filters - priority lookup by cartId, userId, or sessionId
+     * @param cartId Cart ID (highest priority)
+     * @param userId User ID (medium priority, optional)
+     * @param sessionId Session ID (lowest priority, optional) 
+     * @param cartItemStateId Cart item state ID (optional)
+     * @return Cart items count
      */
+    @Override
     @Transactional(readOnly = true)
-    public Page<CartItemDto> getCartItemsByQuantityRange(Integer minQuantity, Integer maxQuantity, int page, int size) {
-        logger.info("Fetching cart items with quantity range: {} - {}", minQuantity, maxQuantity);
+    public Long getCartItemsCount(Long cartId, Long userId, String sessionId, Long cartItemStateId) {
+        logger.info("Getting cart items count - cartId: {}, userId: {}, sessionId: {}, cartItemStateId: {}", 
+                   cartId, userId, sessionId, cartItemStateId);
 
-        Pageable pageable = PageRequest.of(page, size);
-        Page<CartItem> cartItemPage = cartItemRepository.findByQuantityRange(minQuantity, maxQuantity, pageable);
+        try {
+            // Priority logic: cartId -> userId -> sessionId
+            Long targetCartId = null;
+            
+            if (cartId != null) {
+                targetCartId = cartId;
+            } else if (userId != null) {
+                // Get active cart for user
+                Optional<Cart> activeCart = cartRepository.findActiveCartByUser(userId);
+                if (activeCart.isPresent()) {
+                    targetCartId = activeCart.get().getCartId();
+                }
+            } else if (sessionId != null) {
+                // Get active cart for session
+                Optional<Cart> sessionCart = cartRepository.findActiveCartBySession(sessionId);
+                if (sessionCart.isPresent()) {
+                    targetCartId = sessionCart.get().getCartId();
+                }
+            }
 
-        return cartItemPage.map(this::convertToDto);
-    }
+            if (targetCartId == null) {
+                return 0L;
+            }
 
-    /**
-     * Get cart items by date range
-     * @param startDate Start date
-     * @param endDate End date
-     * @param page Page number
-     * @param size Page size
-     * @return Page of CartItemDto
-     */
-    @Transactional(readOnly = true)
-    public Page<CartItemDto> getCartItemsByDateRange(LocalDateTime startDate, LocalDateTime endDate, int page, int size) {
-        logger.info("Fetching cart items between {} and {}", startDate, endDate);
-
-        Pageable pageable = PageRequest.of(page, size);
-        Page<CartItem> cartItemPage = cartItemRepository.findByDateRange(startDate, endDate, pageable);
-
-        return cartItemPage.map(this::convertToDto);
+            // Count items with optional state filter
+            return cartItemRepository.countCartItems(targetCartId, cartItemStateId);
+            
+        } catch (Exception e) {
+            logger.error("Error getting cart items count: {}", e.getMessage(), e);
+            return 0L;
+        }
     }
 
     /**
@@ -129,6 +153,7 @@ public class CartItemServiceImpl implements CartItemService {
      * @param quantity Item quantity
      * @return Created or updated CartItemDto
      */
+    @Override
     public CartItemDto addItemToCart(Long cartId, Long productId, Integer quantity) {
         logger.info("Adding item to cart - cartId: {}, productId: {}, quantity: {}", cartId, productId, quantity);
 
@@ -138,28 +163,39 @@ public class CartItemServiceImpl implements CartItemService {
         Product product = productRepository.findById(productId)
             .orElseThrow(() -> new ResourceNotFoundException("Product not found with ID: " + productId));
 
-        // Check if item already exists in cart
+        // Get active and removed states
+        CartItemState activeState = cartItemStateRepository.findActiveCartItemState()
+            .orElseThrow(() -> new ResourceNotFoundException("Active cart item state not found"));
+        
+        Optional<CartItemState> removedState = cartItemStateRepository.findByCartItemStateName("REMOVED");
+
+        // Check if item already exists in cart (any state)
         Optional<CartItem> existingCartItem = cartItemRepository.findByCartIdAndProductId(cartId, productId);
 
         CartItem cartItem;
         if (existingCartItem.isPresent()) {
-            // Update quantity if item already exists
             cartItem = existingCartItem.get();
-            cartItem.setCartItemQuantity(cartItem.getCartItemQuantity() + quantity);
+            
+            // Check current state
+            if (removedState.isPresent() && 
+                cartItem.getCartItemState().getCartItemStateId().equals(removedState.get().getCartItemStateId())) {
+                // Item was removed, now reactivate with quantity 1
+                cartItem.setCartItemQuantity(1);
+                cartItem.setCartItemState(activeState);
+                logger.info("Reactivated removed cart item with quantity 1");
+            } else {
+                // Item is active, increase quantity
+                cartItem.setCartItemQuantity(cartItem.getCartItemQuantity() + quantity);
+                logger.info("Updated existing cart item quantity to: {}", cartItem.getCartItemQuantity());
+            }
             cartItem.calculateTotalPrice();
-            logger.info("Updated existing cart item with new quantity: {}", cartItem.getCartItemQuantity());
         } else {
             // Create new cart item
             cartItem = new CartItem();
             cartItem.setCart(cart);
             cartItem.setProduct(product);
             cartItem.setCartItemQuantity(quantity);
-            
-            // Set active cart item state
-            CartItemState activeState = cartItemStateRepository.findActiveCartItemState()
-                .orElseThrow(() -> new ResourceNotFoundException("Active cart item state not found"));
             cartItem.setCartItemState(activeState);
-            
             cartItem.calculateTotalPrice();
             logger.info("Created new cart item");
         }
@@ -169,7 +205,26 @@ public class CartItemServiceImpl implements CartItemService {
         // Update cart total quantity
         updateCartTotalQuantity(cartId);
 
-        return convertToDto(savedCartItem);
+        return cartMapper.toDto(savedCartItem);
+    }
+
+    /**
+     * Add product to guest cart (creates cart if needed)
+     * @param sessionId Session ID (creates new if null)
+     * @param productId Product ID
+     * @param quantity Quantity
+     * @return CartItemDto
+     */
+    @Override
+    public CartItemDto addProductToGuestCart(String sessionId, Long productId, Integer quantity) {
+        logger.info("Adding product to guest cart - sessionId: {}, productId: {}, quantity: {}", 
+                   sessionId, productId, quantity);
+
+        // Get or create cart for session
+        var cartDto = cartService.createOrGetActiveCartForSession(sessionId);
+        
+        // Add item to cart
+        return addItemToCart(cartDto.getCartId(), productId, quantity);
     }
 
     /**
@@ -186,7 +241,8 @@ public class CartItemServiceImpl implements CartItemService {
             .orElseThrow(() -> new ResourceNotFoundException("Cart item not found with ID: " + cartItemId));
 
         if (quantity <= 0) {
-            throw new IllegalArgumentException("Quantity must be greater than 0");
+            // Quantity is 0 or negative, set state to REMOVED
+            return removeCartItem(cartItemId);
         }
 
         cartItem.setCartItemQuantity(quantity);
@@ -198,32 +254,112 @@ public class CartItemServiceImpl implements CartItemService {
         updateCartTotalQuantity(cartItem.getCart().getCartId());
 
         logger.info("Cart item quantity updated successfully");
-        return convertToDto(updatedCartItem);
+        return cartMapper.toDto(updatedCartItem);
     }
 
     /**
-     * Remove item from cart
+     * Remove cart item (set state to REMOVED)
      * @param cartItemId Cart item ID
+     * @return Updated CartItemDto
      */
-    public void removeCartItem(Long cartItemId) {
+    @Override
+    public CartItemDto removeCartItem(Long cartItemId) {
         logger.info("Removing cart item with ID: {}", cartItemId);
 
         CartItem cartItem = cartItemRepository.findById(cartItemId)
             .orElseThrow(() -> new ResourceNotFoundException("Cart item not found with ID: " + cartItemId));
 
-        Long cartId = cartItem.getCart().getCartId();
-        cartItemRepository.delete(cartItem);
+        // Get REMOVED state
+        CartItemState removedState = cartItemStateRepository.findByCartItemStateName("REMOVED")
+            .orElseThrow(() -> new ResourceNotFoundException("REMOVED cart item state not found"));
+
+        cartItem.setCartItemState(removedState);
+        CartItem updatedCartItem = cartItemRepository.save(cartItem);
         
         // Update cart total quantity
-        updateCartTotalQuantity(cartId);
+        updateCartTotalQuantity(cartItem.getCart().getCartId());
 
-        logger.info("Cart item removed successfully");
+        logger.info("Cart item removed successfully (state changed to REMOVED)");
+        return cartMapper.toDto(updatedCartItem);
+    }
+
+    /**
+     * Update cart item using request DTO (for admin)
+     * @param cartItemId Cart item ID
+     * @param request Updated cart item data from request DTO
+     * @return Updated CartItemDto
+     */
+    @Override
+    public CartItemDto updateCartItemByRequest(Long cartItemId, CartItemUpdateRequestDto request) {
+        logger.info("Admin updating cart item with request DTO: {}", cartItemId);
+
+        CartItem existingCartItem = cartItemRepository.findById(cartItemId)
+            .orElseThrow(() -> new ResourceNotFoundException("Cart item not found with ID: " + cartItemId));
+
+        // Special logic: quantity = 0 should automatically set state to REMOVED (ID=3)
+        if (request.getQuantity() != null) {
+            if (request.getQuantity() == 0) {
+                logger.info("Quantity is 0, setting cart item state to REMOVED");
+                CartItemState removedState = cartItemStateRepository.findByCartItemStateName("REMOVED")
+                    .orElseThrow(() -> new ResourceNotFoundException("REMOVED cart item state not found"));
+                existingCartItem.setCartItemState(removedState);
+                existingCartItem.setCartItemQuantity(0);
+            } else if (request.getQuantity() > 0) {
+                existingCartItem.setCartItemQuantity(request.getQuantity());
+                // If setting quantity > 0, ensure state is ACTIVE if currently REMOVED
+                if (existingCartItem.getCartItemState().getCartItemStateName().equals("REMOVED")) {
+                    CartItemState activeState = cartItemStateRepository.findActiveCartItemState()
+                        .orElseThrow(() -> new ResourceNotFoundException("ACTIVE cart item state not found"));
+                    existingCartItem.setCartItemState(activeState);
+                }
+            } else {
+                throw new IllegalArgumentException("Quantity cannot be negative");
+            }
+        }
+
+        // Update prices if provided
+        if (request.getTotalPrice() != null) {
+            existingCartItem.setCartItemTotalPrice(request.getTotalPrice());
+        }
+
+        // Update foreign key references if provided
+        if (request.getCartId() != null) {
+            Cart newCart = cartRepository.findById(request.getCartId())
+                .orElseThrow(() -> new ResourceNotFoundException("Cart not found with ID: " + request.getCartId()));
+            existingCartItem.setCart(newCart);
+        }
+
+        if (request.getProductId() != null) {
+            Product newProduct = productRepository.findById(request.getProductId())
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with ID: " + request.getProductId()));
+            existingCartItem.setProduct(newProduct);
+        }
+
+        if (request.getCartItemStateId() != null) {
+            CartItemState newState = cartItemStateRepository.findById(request.getCartItemStateId())
+                .orElseThrow(() -> new ResourceNotFoundException("Cart item state not found with ID: " + request.getCartItemStateId()));
+            existingCartItem.setCartItemState(newState);
+        }
+
+        // Recalculate total price if not explicitly provided and quantity > 0
+        if (request.getTotalPrice() == null && request.getQuantity() != null && request.getQuantity() > 0) {
+            existingCartItem.calculateTotalPrice();
+        }
+
+        CartItem updatedCartItem = cartItemRepository.save(existingCartItem);
+        
+        // Update cart total quantity
+        updateCartTotalQuantity(existingCartItem.getCart().getCartId());
+
+        logger.info("Cart item updated successfully with quantity logic");
+        return cartMapper.toDto(updatedCartItem);
     }
 
     /**
      * Clear all items from cart
      * @param cartId Cart ID
      */
+    @Override
     public void clearCart(Long cartId) {
         logger.info("Clearing all items from cart ID: {}", cartId);
 
@@ -255,20 +391,12 @@ public class CartItemServiceImpl implements CartItemService {
      * Get cart total quantity
      * @param cartId Cart ID
      * @return Total cart quantity
-     */    @Override    @Transactional(readOnly = true)
+     */
+    @Override
+    @Transactional(readOnly = true)
     public Integer getCartTotalQuantity(Long cartId) {
         logger.info("Calculating total quantity for cart ID: {}", cartId);
         return cartItemRepository.getCartTotalQuantity(cartId);
-    }
-
-    /**
-     * Get cart item statistics by category
-     * @return List of cart item statistics by category
-     */
-    @Transactional(readOnly = true)
-    public List<Object[]> getCartItemStatisticsByCategory() {
-        logger.info("Fetching cart item statistics by category");
-        return cartItemRepository.getCartItemStatisticsByCategory();
     }
 
     /**
@@ -276,12 +404,26 @@ public class CartItemServiceImpl implements CartItemService {
      * @param cartId Cart ID
      */
     private void updateCartTotalQuantity(Long cartId) {
-        Integer totalQuantity = cartItemRepository.getCartTotalQuantity(cartId);
+        Integer totalQuantity = cartItemRepository.getActiveCartItemsTotalQuantity(cartId);
         Cart cart = cartRepository.findById(cartId).orElse(null);
         if (cart != null) {
-            cart.setTotalQuantity(totalQuantity);
+            cart.setTotalQuantity(totalQuantity != null ? totalQuantity : 0);
             cartRepository.save(cart);
         }
+    }
+
+    /**
+     * Get active cart items by cart ID (for CUSTOMER role)
+     * @param cartId Cart ID
+     * @return List of active CartItemDto
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<CartItemDto> getActiveCartItemsByCartId(Long cartId) {
+        logger.info("Fetching active cart items for cart ID: {}", cartId);
+        
+        List<CartItem> cartItems = cartItemRepository.findActiveCartItemsByCartId(cartId);
+        return cartMapper.toCartItemDto(cartItems);
     }
 
     /**
@@ -291,93 +433,6 @@ public class CartItemServiceImpl implements CartItemService {
      */
     @Override
     public CartItemDto convertToDto(CartItem cartItem) {
-        CartItemDto dto = new CartItemDto();
-        dto.setCartItemId(cartItem.getCartItemId());
-        dto.setQuantity(cartItem.getCartItemQuantity());
-        dto.setTotalPrice(cartItem.getCartItemTotalPrice());
-        dto.setCreatedDt(cartItem.getCreatedDt());
-        dto.setModifiedDt(cartItem.getModifiedDt());
-
-        // Set unit price from product
-        if (cartItem.getProduct() != null && cartItem.getProduct().getProductPrice() != null) {
-            dto.setUnitPrice(cartItem.getProduct().getProductPrice());
-        }
-
-        // Set nested DTOs (implement based on your existing services)
-        // dto.setCart(cartService.convertToDto(cartItem.getCart()));
-        // dto.setProduct(productService.convertToDto(cartItem.getProduct()));
-        // dto.setCartItemState(cartItemStateService.convertToDto(cartItem.getCartItemState()));
-
-        return dto;
-    }
-
-    /**
-     * Convert CartItemDto to CartItem entity
-     * @param dto CartItemDto
-     * @return CartItem entity
-     */
-    private CartItem convertToEntity(CartItemDto dto) {
-        CartItem cartItem = new CartItem();
-        cartItem.setCartItemId(dto.getCartItemId());
-        cartItem.setCartItemQuantity(dto.getQuantity());
-        cartItem.setCartItemTotalPrice(dto.getTotalPrice());
-
-        // Set related entities based on IDs in nested DTOs
-        // Implementation depends on your DTO structure
-
-        return cartItem;
-    }
-
-    /**
-     * Get cart items by various criteria with flexible filtering
-     * @param cartItemId Filter by cart item ID (optional)
-     * @param cartId Filter by cart ID (optional)
-     * @param productId Filter by product ID (optional)
-     * @param userId Filter by user ID (optional)
-     * @param minPrice Filter by minimum price (optional)
-     * @param maxPrice Filter by maximum price (optional)
-     * @param minQuantity Filter by minimum quantity (optional)
-     * @param maxQuantity Filter by maximum quantity (optional)
-     * @param cartItemStateId Filter by cart item state ID (optional)
-     * @param page Page number (0-indexed)
-     * @param size Page size
-     * @param sortBy Sort field
-     * @param sortDirection Sort direction
-     * @return Page of CartItemDto matching criteria
-     */
-    @Override
-    @Transactional(readOnly = true)
-    public Page<CartItemDto> getCartItemsByCriteria(Long cartItemId, Long cartId, Long productId, 
-                                                   Long userId, BigDecimal minPrice, BigDecimal maxPrice,
-                                                   Integer minQuantity, Integer maxQuantity, 
-                                                   Long cartItemStateId, int page, int size, 
-                                                   String sortBy, String sortDirection) {
-        logger.info("Fetching cart items by criteria - cartItemId: {}, cartId: {}, productId: {}, userId: {}, " +
-                   "minPrice: {}, maxPrice: {}, minQuantity: {}, maxQuantity: {}, cartItemStateId: {}",
-                   cartItemId, cartId, productId, userId, minPrice, maxPrice, 
-                   minQuantity, maxQuantity, cartItemStateId);
-
-        Sort sort = sortDirection.equalsIgnoreCase("desc") ?
-            Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
-        Pageable pageable = PageRequest.of(page, size, sort);
-
-        Page<CartItem> cartItemsPage = cartItemRepository.findCartItemsByCriteria(
-            cartItemId, cartId, productId, userId, minPrice, maxPrice,
-            minQuantity, maxQuantity, cartItemStateId, pageable);
-
-        return cartItemsPage.map(this::convertToDto);
-    }
-
-    /**
-     * Get active cart items by cart ID (for CUSTOMER role)
-     * @param cartId Cart ID
-     * @return List of active CartItemDto
-     */
-    @Transactional(readOnly = true)
-    public List<CartItemDto> getActiveCartItemsByCartId(Long cartId) {
-        logger.info("Fetching active cart items for cart ID: {}", cartId);
-        
-        List<CartItem> cartItems = cartItemRepository.findActiveCartItemsByCartId(cartId);
-        return cartItems.stream().map(this::convertToDto).collect(Collectors.toList());
+        return cartMapper.toDto(cartItem);
     }
 }

@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -211,12 +212,10 @@ public class ProductMapperUtil {
                     .collect(Collectors.toList());
         }
         
-        // Map product attributes
-        List<ProductAttributeDto> productAttributesDto = null;
+        // Map product attributes (grouped by ProductAttr, only quantity > 0)
+        List<ProductAttrWithAttributesDto> productAttributeGroupsDto = null;
         if (product.getProductAttributes() != null) {
-            productAttributesDto = product.getProductAttributes().stream()
-                    .map(ProductMapperUtil::toProductAttributeDto)
-                    .collect(Collectors.toList());
+            productAttributeGroupsDto = toProductAttrWithAttributesDtoList(product.getProductAttributes());
         }
         
         // Map reviews (simplified version without circular reference)
@@ -243,7 +242,7 @@ public class ProductMapperUtil {
                 .productState(toProductStateDto(product.getProductState()))
                 .seoMeta(toSeoMetaDto(product.getSeoMeta()))
                 .productImages(productImagesDto)
-                .productAttributes(productAttributesDto)
+                .productAttributeGroups(productAttributeGroupsDto)
                 .reviews(reviewsDto)
                 .createdDt(product.getCreatedDt())
                 .modifiedDt(product.getModifiedDt())
@@ -314,37 +313,39 @@ public class ProductMapperUtil {
         
         return product;
     }
-    
+
     /**
-     * Create Product entity from ProductCreateDto
+     * Convert ProductRequestDto to Product entity for create operations
+     * @param productRequestDto Product request DTO
+     * @return Product entity
      */
-    public static Product toProductEntityFromCreateDto(ProductCreateDto productCreateDto) {
-        if (productCreateDto == null) return null;
+    public static Product toProductEntityFromRequestDto(ProductRequestDto productRequestDto) {
+        if (productRequestDto == null) return null;
         
         Product product = new Product();
-        product.setProductName(productCreateDto.getProductName());
-        product.setProductSlug(productCreateDto.getProductSlug());
-        product.setProductCode(productCreateDto.getProductCode());
-        product.setSoldQuantity(productCreateDto.getSoldQuantity());
-        product.setStockQuantity(productCreateDto.getStockQuantity());
-        product.setProductDescription(productCreateDto.getProductDescription());
-        product.setProductPrice(productCreateDto.getProductPrice());
-        product.setProductEnabled(productCreateDto.getProductEnabled());
-        product.setProductFeatured(productCreateDto.getProductFeatured());
-        product.setProductHighlighted(productCreateDto.getProductHighlighted());
-        product.setSeoMetaId(productCreateDto.getSeoMetaId());
+        product.setProductName(productRequestDto.getProductName());
+        product.setProductSlug(productRequestDto.getProductSlug());
+        product.setProductCode(productRequestDto.getProductCode());
+        product.setSoldQuantity(productRequestDto.getSoldQuantity());
+        product.setStockQuantity(productRequestDto.getStockQuantity());
+        product.setProductDescription(productRequestDto.getProductDescription());
+        product.setProductPrice(productRequestDto.getProductPrice());
+        product.setProductEnabled(productRequestDto.getProductEnabled());
+        product.setProductFeatured(productRequestDto.getProductFeatured());
+        product.setProductHighlighted(productRequestDto.getProductHighlighted());
+        product.setSeoMetaId(productRequestDto.getSeoMetaId());
         
         // Set ProductCategory reference
-        if (productCreateDto.getProductCategoryId() != null) {
+        if (productRequestDto.getProductCategoryId() != null) {
             ProductCategory productCategory = new ProductCategory();
-            productCategory.setProductCategoryId(productCreateDto.getProductCategoryId());
+            productCategory.setProductCategoryId(productRequestDto.getProductCategoryId());
             product.setProductCategory(productCategory);
         }
         
         // Set ProductState reference
-        if (productCreateDto.getProductStateId() != null) {
+        if (productRequestDto.getProductStateId() != null) {
             ProductState productState = new ProductState();
-            productState.setProductStateId(productCreateDto.getProductStateId());
+            productState.setProductStateId(productRequestDto.getProductStateId());
             product.setProductState(productState);
         }
         
@@ -354,22 +355,46 @@ public class ProductMapperUtil {
         return product;
     }
 
+    /**
+     * Update Product entity from ProductRequestDto for update operations
+     * @param product Existing Product entity to update
+     * @param productRequestDto Product request DTO with updated data
+     */
+    public static void updateProductEntityFromRequestDto(Product product, ProductRequestDto productRequestDto) {
+        if (product == null || productRequestDto == null) return;
+        
+        product.setProductName(productRequestDto.getProductName());
+        product.setProductSlug(productRequestDto.getProductSlug());
+        product.setProductCode(productRequestDto.getProductCode());
+        product.setSoldQuantity(productRequestDto.getSoldQuantity());
+        product.setStockQuantity(productRequestDto.getStockQuantity());
+        product.setProductDescription(productRequestDto.getProductDescription());
+        product.setProductPrice(productRequestDto.getProductPrice());
+        product.setProductEnabled(productRequestDto.getProductEnabled());
+        product.setProductFeatured(productRequestDto.getProductFeatured());
+        product.setProductHighlighted(productRequestDto.getProductHighlighted());
+        product.setSeoMetaId(productRequestDto.getSeoMetaId());
+        
+        // Update ProductCategory reference
+        if (productRequestDto.getProductCategoryId() != null) {
+            ProductCategory productCategory = new ProductCategory();
+            productCategory.setProductCategoryId(productRequestDto.getProductCategoryId());
+            product.setProductCategory(productCategory);
+        }
+        
+        // Update ProductState reference
+        if (productRequestDto.getProductStateId() != null) {
+            ProductState productState = new ProductState();
+            productState.setProductStateId(productRequestDto.getProductStateId());
+            product.setProductState(productState);
+        }
+        
+        product.setModifiedDt(LocalDateTime.now());
+    }
+
     // =============================================
     // PRODUCT IMAGE MAPPING METHODS
     // =============================================
-
-    public static ProductImageDto toProductImageDto(ProductImage productImage) {
-        if (productImage == null) return null;
-        
-        return ProductImageDto.builder()
-                .productImageId(productImage.getProductImageId())
-                .productImagePrimary(productImage.getProductImagePrimary())
-                .product(toProductDto(productImage.getProduct()))
-                .image(toImageDto(productImage.getImage()))
-                .createdDt(productImage.getCreatedDt())
-                .modifiedDt(productImage.getModifiedDt())
-                .build();
-    }
     
     /**
      * Map ProductImage to DTO without Product reference to avoid circular dependency
@@ -397,10 +422,57 @@ public class ProductMapperUtil {
         return ProductAttributeDto.builder()
                 .productAttributeId(productAttribute.getProductAttributeId())
                 .productAttributeValue(productAttribute.getProductAttributeValue())
+                .productAttributeQuantity(productAttribute.getProductAttributeQuantity())
+                .productAttributeEnabled(productAttribute.getProductAttributeEnabled())
                 .productAttr(toProductAttrDto(productAttribute.getProductAttr()))
                 .createdDt(productAttribute.getCreatedDt())
                 .modifiedDt(productAttribute.getModifiedDt())
                 .build();
+    }
+    
+    /**
+     * Map List of ProductAttributes to grouped ProductAttrWithAttributesDto
+     * Only includes attributes with quantity > 0
+     */
+    public static List<ProductAttrWithAttributesDto> toProductAttrWithAttributesDtoList(List<ProductAttribute> productAttributes) {
+        if (productAttributes == null) return null;
+        
+        // Filter attributes with quantity > 0 and group by ProductAttr
+        Map<Long, List<ProductAttribute>> groupedByAttr = productAttributes.stream()
+                .filter(attr -> attr.getProductAttributeQuantity() != null && attr.getProductAttributeQuantity() > 0)
+                .filter(attr -> attr.getProductAttributeEnabled() != null && attr.getProductAttributeEnabled())
+                .collect(Collectors.groupingBy(
+                    attr -> attr.getProductAttr().getProductAttrId()
+                ));
+        
+        return groupedByAttr.entrySet().stream()
+                .map(entry -> {
+                    List<ProductAttribute> attributes = entry.getValue();
+                    if (attributes.isEmpty()) return null;
+                    
+                    // Get ProductAttr from first attribute in group
+                    ProductAttr productAttr = attributes.get(0).getProductAttr();
+                    
+                    // Convert attributes to DTOs
+                    List<ProductAttributeDto> attributeDtos = attributes.stream()
+                            .map(ProductMapperUtil::toProductAttributeDto)
+                            .collect(Collectors.toList());
+                    
+                    ProductAttrWithAttributesDto dto = ProductAttrWithAttributesDto.builder()
+                            .productAttr(toProductAttrDto(productAttr))
+                            .attributeValues(attributeDtos)
+                            .build();
+                    
+                    // Calculate computed fields
+                    dto.setTotalQuantity(dto.calculateTotalQuantity());
+                    dto.setVariantCount(dto.calculateVariantCount());
+                    dto.setHasStock(dto.calculateHasStock());
+                    
+                    return dto;
+                })
+                .filter(dto -> dto != null)
+                .sorted((a, b) -> a.getProductAttr().getProductAttrName().compareTo(b.getProductAttr().getProductAttrName()))
+                .collect(Collectors.toList());
     }
 
     // =============================================
@@ -465,6 +537,7 @@ public class ProductMapperUtil {
                 .imageSize(image.getImageSize())
                 .imageFormat(image.getImageFormat())
                 .imageRemark(image.getImageRemark())
+                .pathFile(image.getPathFile())
                 .createdDt(image.getCreatedDt())
                 .modifiedDt(image.getModifiedDt())
                 .build();

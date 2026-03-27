@@ -2,12 +2,17 @@ package org.artanddecor.services.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.artanddecor.dto.ProductDto;
-import org.artanddecor.dto.ProductCreateDto;
+import org.artanddecor.dto.ProductRequestDto;
 import org.artanddecor.dto.ProductImageDto;
 import org.artanddecor.dto.ProductAttributeDto;
 import org.artanddecor.model.Product;
+import org.artanddecor.model.ProductImage;
+import org.artanddecor.model.Image;
 import org.artanddecor.repository.ProductRepository;
+import org.artanddecor.repository.ProductImageRepository;
+import org.artanddecor.repository.ImageRepository;
 import org.artanddecor.services.ProductService;
+import org.artanddecor.services.ProductAttributeService;
 import org.artanddecor.utils.ProductMapperUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,6 +22,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -34,6 +42,9 @@ public class ProductServiceImpl implements ProductService {
     private static final Logger logger = LoggerFactory.getLogger(ProductServiceImpl.class);
     
     private final ProductRepository productRepository;
+    private final ProductImageRepository productImageRepository;
+    private final ImageRepository imageRepository;
+    private final ProductAttributeService productAttributeService;
 
     // =============================================
     // CUSTOMER-FOCUSED OPERATIONS
@@ -110,25 +121,87 @@ public class ProductServiceImpl implements ProductService {
         
         return convertToDto(savedProduct);
     }
-    
     @Override
     @Transactional
-    public ProductDto createProduct(ProductCreateDto productCreateDto) {
-        logger.info("Creating new product from create DTO: {}", productCreateDto.getProductName());
+    public ProductDto updateProduct(Long productId, ProductRequestDto productRequestDto) {
+        logger.info("Updating product ID: {} with request DTO and {} images", productId, 
+                   productRequestDto.getImageIds() != null ? productRequestDto.getImageIds().size() : 0);
+        
+        Product existingProduct = productRepository.findById(productId)
+                .orElseThrow(() -> new IllegalArgumentException("Product not found with ID: " + productId));
+        
+        // Validation - check if slug/name/code exists for other records
+        if (!existingProduct.getProductSlug().equals(productRequestDto.getProductSlug()) && 
+            existsBySlug(productRequestDto.getProductSlug())) {
+            throw new IllegalArgumentException("Product slug already exists: " + productRequestDto.getProductSlug());
+        }
+        if (!existingProduct.getProductName().equals(productRequestDto.getProductName()) && 
+            existsByName(productRequestDto.getProductName())) {
+            throw new IllegalArgumentException("Product name already exists: " + productRequestDto.getProductName());
+        }
+        if (!existingProduct.getProductCode().equals(productRequestDto.getProductCode()) && 
+            existsByCode(productRequestDto.getProductCode())) {
+            throw new IllegalArgumentException("Product code already exists: " + productRequestDto.getProductCode());
+        }
+        
+        // Validate image IDs if provided
+        if (productRequestDto.getImageIds() != null && !productRequestDto.getImageIds().isEmpty()) {
+            validateImageIds(productRequestDto.getImageIds());
+            if (productRequestDto.getPrimaryImageId() != null && !productRequestDto.getImageIds().contains(productRequestDto.getPrimaryImageId())) {
+                throw new IllegalArgumentException("Primary image ID must be included in image IDs list");
+            }
+        }
+        
+        // Update product fields
+        ProductMapperUtil.updateProductEntityFromRequestDto(existingProduct, productRequestDto);
+        Product updatedProduct = productRepository.save(existingProduct);
+        
+        // Update images if provided
+        if (productRequestDto.getImageIds() != null) {
+            // Remove existing images
+            productImageRepository.deleteByProductProductId(productId);
+            
+            // Associate new images if list is not empty
+            if (!productRequestDto.getImageIds().isEmpty()) {
+                associateImagesToProduct(updatedProduct, productRequestDto.getImageIds(), productRequestDto.getPrimaryImageId());
+            }
+        }
+        
+        return convertToDto(updatedProduct);
+    }    
+    @Override
+    @Transactional
+    public ProductDto createProduct(ProductRequestDto productRequestDto) {
+        logger.info("Creating new product from request DTO: {} with {} images", 
+                   productRequestDto.getProductName(), 
+                   productRequestDto.getImageIds() != null ? productRequestDto.getImageIds().size() : 0);
         
         // Validation
-        if (existsBySlug(productCreateDto.getProductSlug())) {
-            throw new IllegalArgumentException("Product slug already exists: " + productCreateDto.getProductSlug());
+        if (existsBySlug(productRequestDto.getProductSlug())) {
+            throw new IllegalArgumentException("Product slug already exists: " + productRequestDto.getProductSlug());
         }
-        if (existsByName(productCreateDto.getProductName())) {
-            throw new IllegalArgumentException("Product name already exists: " + productCreateDto.getProductName());
+        if (existsByName(productRequestDto.getProductName())) {
+            throw new IllegalArgumentException("Product name already exists: " + productRequestDto.getProductName());
         }
-        if (existsByCode(productCreateDto.getProductCode())) {
-            throw new IllegalArgumentException("Product code already exists: " + productCreateDto.getProductCode());
+        if (existsByCode(productRequestDto.getProductCode())) {
+            throw new IllegalArgumentException("Product code already exists: " + productRequestDto.getProductCode());
         }
         
-        Product product = ProductMapperUtil.toProductEntityFromCreateDto(productCreateDto);
+        // Validate image IDs if provided
+        if (productRequestDto.getImageIds() != null && !productRequestDto.getImageIds().isEmpty()) {
+            validateImageIds(productRequestDto.getImageIds());
+            if (productRequestDto.getPrimaryImageId() != null && !productRequestDto.getImageIds().contains(productRequestDto.getPrimaryImageId())) {
+                throw new IllegalArgumentException("Primary image ID must be included in image IDs list");
+            }
+        }
+        
+        Product product = ProductMapperUtil.toProductEntityFromRequestDto(productRequestDto);
         Product savedProduct = productRepository.save(product);
+        
+        // Associate images if provided
+        if (productRequestDto.getImageIds() != null && !productRequestDto.getImageIds().isEmpty()) {
+            associateImagesToProduct(savedProduct, productRequestDto.getImageIds(), productRequestDto.getPrimaryImageId());
+        }
         
         return convertToDto(savedProduct);
     }
@@ -182,8 +255,27 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public void removeImageFromProduct(Long productId, Long imageId) {
-        // Implementation to be added based on ProductImageService
-        throw new UnsupportedOperationException("Method not yet implemented");
+        logger.info("Removing image {} from product {}", imageId, productId);
+        
+        // Validate product exists
+        if (!productRepository.existsById(productId)) {
+            throw new IllegalArgumentException("Product not found with ID: " + productId);
+        }
+        
+        // Validate image exists
+        if (!imageRepository.existsById(imageId)) {
+            throw new IllegalArgumentException("Image not found with ID: " + imageId);
+        }
+        
+        // Check if product-image association exists
+        if (!productImageRepository.existsByProductProductIdAndImageImageId(productId, imageId)) {
+            logger.warn("Product-image association not found - productId: {}, imageId: {}", productId, imageId);
+            return; // Silently ignore if association doesn't exist
+        }
+        
+        // Delete the association
+        productImageRepository.deleteByProductProductIdAndImageImageId(productId, imageId);
+        logger.info("Successfully removed image {} from product {}", imageId, productId);
     }
 
     @Override
@@ -199,26 +291,8 @@ public class ProductServiceImpl implements ProductService {
     }
 
     // =============================================
-    // PRODUCT ATTRIBUTE OPERATIONS
-    // =============================================
-
-    @Override
-    public ProductAttributeDto addAttributeToProduct(Long productId, Long attrId, String attrValue) {
-        // Implementation to be added based on ProductAttributeService
-        throw new UnsupportedOperationException("Method not yet implemented");
-    }
-
-    @Override
-    public void removeAttributeFromProduct(Long productId, Long attrId) {
-        // Implementation to be added based on ProductAttributeService
-        throw new UnsupportedOperationException("Method not yet implemented");
-    }
-
-    @Override
-    public List<ProductAttributeDto> getProductAttributes(Long productId) {
-        // Implementation to be added based on ProductAttributeService
-        throw new UnsupportedOperationException("Method not yet implemented");
-    }
+    // PRODUCT ATTRIBUTE OPERATIONS (Reserved for future use)
+    // =============================
 
     // =============================================
     // UTILITY OPERATIONS
@@ -394,5 +468,45 @@ public class ProductServiceImpl implements ProductService {
 
     private Product convertToEntity(ProductDto productDto) {
         return ProductMapperUtil.toProductEntity(productDto);
+    }
+    
+    /**
+     * Validate that all provided image IDs exist in the database
+     * @param imageIds List of image IDs to validate
+     * @throws IllegalArgumentException if any image ID doesn't exist
+     */
+    private void validateImageIds(List<Long> imageIds) {
+        for (Long imageId : imageIds) {
+            if (!imageRepository.existsById(imageId)) {
+                throw new IllegalArgumentException("Image not found with ID: " + imageId);
+            }
+        }
+    }
+    
+    /**
+     * Associate images to a product and set primary image
+     * @param product Product entity
+     * @param imageIds List of image IDs to associate
+     * @param primaryImageId ID of primary image (can be null)
+     */
+    private void associateImagesToProduct(Product product, List<Long> imageIds, Long primaryImageId) {
+        logger.debug("Associating {} images to product {}", imageIds.size(), product.getProductId());
+        
+        // Determine primary image ID if not specified
+        Long actualPrimaryImageId = (primaryImageId != null) ? primaryImageId : imageIds.get(0);
+        
+        for (Long imageId : imageIds) {
+            Image image = imageRepository.findById(imageId)
+                .orElseThrow(() -> new IllegalArgumentException("Image not found with ID: " + imageId));
+            
+            ProductImage productImage = new ProductImage();
+            productImage.setProduct(product);
+            productImage.setImage(image);
+            productImage.setProductImagePrimary(imageId.equals(actualPrimaryImageId));
+            
+            productImageRepository.save(productImage);
+        }
+        
+        logger.info("Successfully associated {} images to product {} (primary: {})", imageIds.size(), product.getProductId(), actualPrimaryImageId);
     }
 }

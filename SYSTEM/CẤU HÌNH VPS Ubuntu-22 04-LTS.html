@@ -1,0 +1,950 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/><title>CẤU HÌNH VPS Ubuntu-22.04-LTS</title><style>
+/* cspell:disable-file */
+/* webkit printing magic: print all background colors */
+html {
+	-webkit-print-color-adjust: exact;
+}
+* {
+	box-sizing: border-box;
+	-webkit-print-color-adjust: exact;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+}
+@media only screen {
+	body {
+		margin: 2em auto;
+		max-width: 900px;
+		color: rgb(55, 53, 47);
+	}
+}
+
+body {
+	line-height: 1.5;
+	white-space: pre-wrap;
+}
+
+a,
+a.visited {
+	color: inherit;
+	text-decoration: underline;
+}
+
+.pdf-relative-link-path {
+	font-size: 80%;
+	color: #444;
+}
+
+h1,
+h2,
+h3 {
+	letter-spacing: -0.01em;
+	line-height: 1.2;
+	font-weight: 600;
+	margin-bottom: 0;
+}
+
+/* Override strong tags inside headings to maintain consistent weight */
+h1 strong,
+h2 strong,
+h3 strong {
+	font-weight: 600;
+}
+
+.page-title {
+	font-size: 2.5rem;
+	font-weight: 700;
+	margin-top: 0;
+	margin-bottom: 0.75em;
+}
+
+h1 {
+	font-size: 1.875rem;
+	margin-top: 1.875rem;
+}
+
+h2 {
+	font-size: 1.5rem;
+	margin-top: 1.5rem;
+}
+
+h3 {
+	font-size: 1.25rem;
+	margin-top: 1.25rem;
+}
+
+.source {
+	border: 1px solid #ddd;
+	border-radius: 3px;
+	padding: 1.5em;
+	word-break: break-all;
+}
+
+.callout {
+	border-radius: 10px;
+	padding: 1rem;
+}
+
+figure {
+	margin: 1.25em 0;
+	page-break-inside: avoid;
+}
+
+figcaption {
+	opacity: 0.5;
+	font-size: 85%;
+	margin-top: 0.5em;
+}
+
+mark {
+	background-color: transparent;
+}
+
+.indented {
+	padding-left: 1.5em;
+}
+
+hr {
+	background: transparent;
+	display: block;
+	width: 100%;
+	height: 1px;
+	visibility: visible;
+	border: none;
+	border-bottom: 1px solid rgba(55, 53, 47, 0.09);
+}
+
+img {
+	max-width: 100%;
+}
+
+@media only print {
+	img {
+		max-height: 100vh;
+		object-fit: contain;
+	}
+}
+
+@page {
+	margin: 1in;
+}
+
+.collection-content {
+	font-size: 0.875rem;
+}
+
+.collection-content td {
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.column-list {
+	display: flex;
+	gap: 46px;
+}
+
+.column {
+	min-width: 0;
+	overflow: hidden;
+}
+
+.column > *:first-child {
+	margin-top: 0;
+}
+
+.table_of_contents-item {
+	display: block;
+	font-size: 0.875rem;
+	line-height: 1.3;
+	padding: 0.125rem;
+}
+
+.table_of_contents-indent-1 {
+	margin-left: 1.5rem;
+}
+
+.table_of_contents-indent-2 {
+	margin-left: 3rem;
+}
+
+.table_of_contents-indent-3 {
+	margin-left: 4.5rem;
+}
+
+.table_of_contents-link {
+	text-decoration: none;
+	opacity: 0.7;
+	border-bottom: 1px solid rgba(55, 53, 47, 0.18);
+}
+
+table,
+th,
+td {
+	border: 1px solid rgba(55, 53, 47, 0.09);
+	border-collapse: collapse;
+}
+
+table {
+	border-left: none;
+	border-right: none;
+}
+
+th,
+td {
+	font-weight: normal;
+	padding: 0.25em 0.5em;
+	line-height: 1.5;
+	min-height: 1.5em;
+	text-align: left;
+}
+
+th {
+	color: rgba(55, 53, 47, 0.6);
+}
+
+ol,
+ul {
+	margin: 0;
+	margin-block-start: 0.6em;
+	margin-block-end: 0.6em;
+}
+
+li > ol:first-child,
+li > ul:first-child {
+	margin-block-start: 0.6em;
+}
+
+ul > li {
+	list-style: disc;
+}
+
+ul.to-do-list {
+	padding-inline-start: 0;
+}
+
+ul.to-do-list > li {
+	list-style: none;
+}
+
+.to-do-children-checked {
+	text-decoration: line-through;
+	opacity: 0.375;
+}
+
+ul.toggle > li {
+	list-style: none;
+}
+
+ul {
+	padding-inline-start: 1.7em;
+}
+
+ul > li {
+	padding-left: 0.1em;
+}
+
+ol {
+	padding-inline-start: 1.6em;
+}
+
+ol > li {
+	padding-left: 0.2em;
+}
+
+.mono ol {
+	padding-inline-start: 2em;
+}
+
+.mono ol > li {
+	text-indent: -0.4em;
+}
+
+.toggle {
+	padding-inline-start: 0em;
+	list-style-type: none;
+}
+
+/* Indent toggle children */
+.toggle > li > details {
+	padding-left: 1.7em;
+}
+
+.toggle > li > details > summary {
+	margin-left: -1.1em;
+}
+
+.selected-value {
+	display: inline-block;
+	padding: 0 0.5em;
+	background: rgba(206, 205, 202, 0.5);
+	border-radius: 3px;
+	margin-right: 0.5em;
+	margin-top: 0.3em;
+	margin-bottom: 0.3em;
+	white-space: nowrap;
+}
+
+.collection-title {
+	display: inline-block;
+	margin-right: 1em;
+}
+
+.page-description {
+	margin-bottom: 2em;
+}
+
+.simple-table {
+	margin-top: 1em;
+	font-size: 0.875rem;
+	empty-cells: show;
+}
+.simple-table td {
+	height: 29px;
+	min-width: 120px;
+}
+
+.simple-table th {
+	height: 29px;
+	min-width: 120px;
+}
+
+.simple-table-header-color {
+	background: rgb(247, 246, 243);
+	color: black;
+}
+.simple-table-header {
+	font-weight: 500;
+}
+
+time {
+	opacity: 0.5;
+}
+
+.icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	max-width: 1.2em;
+	max-height: 1.2em;
+	text-decoration: none;
+	vertical-align: text-bottom;
+	margin-right: 0.5em;
+}
+
+img.icon {
+	border-radius: 3px;
+}
+
+.callout img.notion-static-icon {
+	width: 1em;
+	height: 1em;
+}
+
+.callout p {
+	margin: 0;
+}
+
+.callout h1,
+.callout h2,
+.callout h3 {
+	margin: 0 0 0.6rem;
+}
+
+.user-icon {
+	width: 1.5em;
+	height: 1.5em;
+	border-radius: 100%;
+	margin-right: 0.5rem;
+}
+
+.user-icon-inner {
+	font-size: 0.8em;
+}
+
+.text-icon {
+	border: 1px solid #000;
+	text-align: center;
+}
+
+.page-cover-image {
+	display: block;
+	object-fit: cover;
+	width: 100%;
+	max-height: 30vh;
+}
+
+.page-header-icon {
+	font-size: 3rem;
+	margin-bottom: 1rem;
+}
+
+.page-header-icon-with-cover {
+	margin-top: -0.72em;
+	margin-left: 0.07em;
+}
+
+.page-header-icon img {
+	border-radius: 3px;
+}
+
+.link-to-page {
+	margin: 1em 0;
+	padding: 0;
+	border: none;
+	font-weight: 500;
+}
+
+p > .user {
+	opacity: 0.5;
+}
+
+td > .user,
+td > time {
+	white-space: nowrap;
+}
+
+input[type="checkbox"] {
+	transform: scale(1.5);
+	margin-right: 0.6em;
+	vertical-align: middle;
+}
+
+p {
+	margin-top: 0.5em;
+	margin-bottom: 0.5em;
+}
+
+.image {
+	border: none;
+	margin: 1.5em 0;
+	padding: 0;
+	border-radius: 0;
+	text-align: center;
+}
+
+.code,
+code {
+	background: rgba(135, 131, 120, 0.15);
+	border-radius: 3px;
+	padding: 0.2em 0.4em;
+	border-radius: 3px;
+	font-size: 85%;
+	tab-size: 2;
+}
+
+code {
+	color: #eb5757;
+}
+
+.code {
+	padding: 1.5em 1em;
+}
+
+.code-wrap {
+	white-space: pre-wrap;
+	word-break: break-all;
+}
+
+.code > code {
+	background: none;
+	padding: 0;
+	font-size: 100%;
+	color: inherit;
+}
+
+blockquote {
+	font-size: 1em;
+	margin: 1em 0;
+	padding-left: 1em;
+	border-left: 3px solid rgb(55, 53, 47);
+}
+
+blockquote.quote-large {
+	font-size: 1.25em;
+}
+
+.bookmark {
+	text-decoration: none;
+	max-height: 8em;
+	padding: 0;
+	display: flex;
+	width: 100%;
+	align-items: stretch;
+}
+
+.bookmark-title {
+	font-size: 0.85em;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	height: 1.75em;
+	white-space: nowrap;
+}
+
+.bookmark-text {
+	display: flex;
+	flex-direction: column;
+}
+
+.bookmark-info {
+	flex: 4 1 180px;
+	padding: 12px 14px 14px;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+}
+
+.bookmark-image {
+	width: 33%;
+	flex: 1 1 180px;
+	display: block;
+	position: relative;
+	object-fit: cover;
+	border-radius: 1px;
+}
+
+.bookmark-description {
+	color: rgba(55, 53, 47, 0.6);
+	font-size: 0.75em;
+	overflow: hidden;
+	max-height: 4.5em;
+	word-break: break-word;
+}
+
+.bookmark-href {
+	font-size: 0.75em;
+	margin-top: 0.25em;
+}
+
+.sans { font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", "Noto Sans Arabic", "Noto Sans Hebrew", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol"; }
+.code { font-family: "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace; }
+.serif { font-family: Lyon-Text, Georgia, ui-serif, serif; }
+.mono { font-family: iawriter-mono, Nitti, Menlo, Courier, monospace; }
+.pdf .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", "Noto Sans Arabic", "Noto Sans Hebrew", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK JP'; }
+.pdf:lang(zh-CN) .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", "Noto Sans Arabic", "Noto Sans Hebrew", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK SC'; }
+.pdf:lang(zh-TW) .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", "Noto Sans Arabic", "Noto Sans Hebrew", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK TC'; }
+.pdf:lang(ko-KR) .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", "Noto Sans Arabic", "Noto Sans Hebrew", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK KR'; }
+.pdf .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK JP'; }
+.pdf:lang(zh-CN) .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK SC'; }
+.pdf:lang(zh-TW) .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK TC'; }
+.pdf:lang(ko-KR) .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK KR'; }
+.pdf .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK JP'; }
+.pdf:lang(zh-CN) .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK SC'; }
+.pdf:lang(zh-TW) .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK TC'; }
+.pdf:lang(ko-KR) .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK KR'; }
+.pdf .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK JP'; }
+.pdf:lang(zh-CN) .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK SC'; }
+.pdf:lang(zh-TW) .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK TC'; }
+.pdf:lang(ko-KR) .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK KR'; }
+.highlight-default {
+	color: rgba(44, 44, 43, 1);
+}
+.highlight-gray {
+	color: rgba(125, 122, 117, 1);
+	fill: rgba(125, 122, 117, 1);
+}
+.highlight-brown {
+	color: rgba(159, 118, 90, 1);
+	fill: rgba(159, 118, 90, 1);
+}
+.highlight-orange {
+	color: rgba(210, 123, 45, 1);
+	fill: rgba(210, 123, 45, 1);
+}
+.highlight-yellow {
+	color: rgba(203, 148, 52, 1);
+	fill: rgba(203, 148, 52, 1);
+}
+.highlight-teal {
+	color: rgba(80, 148, 110, 1);
+	fill: rgba(80, 148, 110, 1);
+}
+.highlight-blue {
+	color: rgba(56, 125, 201, 1);
+	fill: rgba(56, 125, 201, 1);
+}
+.highlight-purple {
+	color: rgba(154, 107, 180, 1);
+	fill: rgba(154, 107, 180, 1);
+}
+.highlight-pink {
+	color: rgba(193, 76, 138, 1);
+	fill: rgba(193, 76, 138, 1);
+}
+.highlight-red {
+	color: rgba(207, 81, 72, 1);
+	fill: rgba(207, 81, 72, 1);
+}
+.highlight-default_background {
+	color: rgba(44, 44, 43, 1);
+}
+.highlight-gray_background {
+	background: rgba(42, 28, 0, 0.07);
+}
+.highlight-brown_background {
+	background: rgba(139, 46, 0, 0.086);
+}
+.highlight-orange_background {
+	background: rgba(224, 101, 1, 0.129);
+}
+.highlight-yellow_background {
+	background: rgba(211, 168, 0, 0.137);
+}
+.highlight-teal_background {
+	background: rgba(0, 100, 45, 0.09);
+}
+.highlight-blue_background {
+	background: rgba(0, 124, 215, 0.094);
+}
+.highlight-purple_background {
+	background: rgba(102, 0, 178, 0.078);
+}
+.highlight-pink_background {
+	background: rgba(197, 0, 93, 0.086);
+}
+.highlight-red_background {
+	background: rgba(223, 22, 0, 0.094);
+}
+.block-color-default {
+	color: inherit;
+	fill: inherit;
+}
+.block-color-gray {
+	color: rgba(125, 122, 117, 1);
+	fill: rgba(125, 122, 117, 1);
+}
+.block-color-brown {
+	color: rgba(159, 118, 90, 1);
+	fill: rgba(159, 118, 90, 1);
+}
+.block-color-orange {
+	color: rgba(210, 123, 45, 1);
+	fill: rgba(210, 123, 45, 1);
+}
+.block-color-yellow {
+	color: rgba(203, 148, 52, 1);
+	fill: rgba(203, 148, 52, 1);
+}
+.block-color-teal {
+	color: rgba(80, 148, 110, 1);
+	fill: rgba(80, 148, 110, 1);
+}
+.block-color-blue {
+	color: rgba(56, 125, 201, 1);
+	fill: rgba(56, 125, 201, 1);
+}
+.block-color-purple {
+	color: rgba(154, 107, 180, 1);
+	fill: rgba(154, 107, 180, 1);
+}
+.block-color-pink {
+	color: rgba(193, 76, 138, 1);
+	fill: rgba(193, 76, 138, 1);
+}
+.block-color-red {
+	color: rgba(207, 81, 72, 1);
+	fill: rgba(207, 81, 72, 1);
+}
+.block-color-default_background {
+	color: inherit;
+	fill: inherit;
+}
+.block-color-gray_background {
+	background: rgba(240, 239, 237, 1);
+}
+.block-color-brown_background {
+	background: rgba(245, 237, 233, 1);
+}
+.block-color-orange_background {
+	background: rgba(251, 235, 222, 1);
+}
+.block-color-yellow_background {
+	background: rgba(249, 243, 220, 1);
+}
+.block-color-teal_background {
+	background: rgba(232, 241, 236, 1);
+}
+.block-color-blue_background {
+	background: rgba(229, 242, 252, 1);
+}
+.block-color-purple_background {
+	background: rgba(243, 235, 249, 1);
+}
+.block-color-pink_background {
+	background: rgba(250, 233, 241, 1);
+}
+.block-color-red_background {
+	background: rgba(252, 233, 231, 1);
+}
+.select-value-color-default { background-color: rgba(42, 28, 0, 0.07); }
+.select-value-color-gray { background-color: rgba(28, 19, 1, 0.11); }
+.select-value-color-brown { background-color: rgba(127, 51, 0, 0.156); }
+.select-value-color-orange { background-color: rgba(196, 88, 0, 0.203); }
+.select-value-color-yellow { background-color: rgba(209, 156, 0, 0.282); }
+.select-value-color-green { background-color: rgba(0, 96, 38, 0.156); }
+.select-value-color-blue { background-color: rgba(0, 118, 217, 0.203); }
+.select-value-color-purple { background-color: rgba(92, 0, 163, 0.141); }
+.select-value-color-pink { background-color: rgba(183, 0, 78, 0.152); }
+.select-value-color-red { background-color: rgba(206, 24, 0, 0.164); }
+
+.checkbox {
+	display: inline-flex;
+	vertical-align: text-bottom;
+	width: 16;
+	height: 16;
+	background-size: 16px;
+	margin-left: 2px;
+	margin-right: 5px;
+}
+
+.checkbox-on {
+	background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2016%2016%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%0A%3Crect%20width%3D%2216%22%20height%3D%2216%22%20fill%3D%22%2358A9D7%22%2F%3E%0A%3Cpath%20d%3D%22M6.71429%2012.2852L14%204.9995L12.7143%203.71436L6.71429%209.71378L3.28571%206.2831L2%207.57092L6.71429%2012.2852Z%22%20fill%3D%22white%22%2F%3E%0A%3C%2Fsvg%3E");
+}
+
+.checkbox-off {
+	background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2016%2016%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%0A%3Crect%20x%3D%220.75%22%20y%3D%220.75%22%20width%3D%2214.5%22%20height%3D%2214.5%22%20fill%3D%22white%22%20stroke%3D%22%2336352F%22%20stroke-width%3D%221.5%22%2F%3E%0A%3C%2Fsvg%3E");
+}
+	
+</style></head><body><article id="31c12572-0030-80ea-aca1-e33de9c275b8" class="page sans"><header><h1 class="page-title" dir="auto">CẤU HÌNH VPS Ubuntu-22.04-LTS</h1><p class="page-description" dir="auto"></p></header><div class="page-body"><div style="display:contents" dir="auto"><h3 id="c05f0c32-4d21-4892-bc37-3e0545ed4697" class="">0) Chuẩn bị trước khi cài</h3></div><div style="display:contents" dir="auto"><ul id="b2ff3489-fb8f-4f9f-b235-eeba449befa2" class="bulleted-list"><li style="list-style-type:disc">Có 1 VPS mới cài CentOS 7 (fresh install)</li></ul></div><div style="display:contents" dir="auto"><ul id="43dd0490-6e9e-48f6-9074-3d536c76d437" class="bulleted-list"><li style="list-style-type:disc">Có <strong>IP tĩnh</strong> của VPS</li></ul></div><div style="display:contents" dir="auto"><ul id="7a8fa4ec-703e-400e-a088-a35c7a50207a" class="bulleted-list"><li style="list-style-type:disc">Có <strong>domain</strong> trỏ A record về IP VPS (nếu muốn SSL)</li></ul></div><div style="display:contents" dir="auto"><ul id="a4fa3ede-b2ed-4824-a9d1-eb2a0870e5cc" class="bulleted-list"><li style="list-style-type:disc">Mở port ở nhà cung cấp VPS (nếu họ có firewall riêng)</li></ul></div><div style="display:contents" dir="ltr"><table id="ca20dda8-e964-4d85-b2c2-5b8691c7de26" class="simple-table"><thead class="simple-table-header"><div style="display:contents" dir="ltr"><tr id="97cf8d43-6af4-449e-992b-cd59712557fc"><th id="nbtA" class="simple-table-header-color simple-table-header">Nhóm</th><th id="kgTH" class="simple-table-header-color simple-table-header">Cổng</th><th id="BD^D" class="simple-table-header-color simple-table-header">Ghi chú</th></tr></div></thead><tbody><div style="display:contents" dir="ltr"><tr id="7e2899dc-429a-4ac3-bf94-41da0d9c63d2"><td id="nbtA" class="">SSH</td><td id="kgTH" class="">24700</td><td id="BD^D" class="">Quản trị server</td></tr></div><div style="display:contents" dir="ltr"><tr id="72fc8b52-1f4b-47b8-86d5-782c686baaa0"><td id="nbtA" class="">Web</td><td id="kgTH" class="">80, 443</td><td id="BD^D" class="">Website + SSL</td></tr></div><div style="display:contents" dir="ltr"><tr id="6a2d87b8-09c4-4bcb-a8cb-16f2728b6eb6"><td id="nbtA" class="">Mail</td><td id="kgTH" class="">25, 465, 587, 110, 995, 143, 993</td><td id="BD^D" class="">Nếu dùng mail server</td></tr></div><div style="display:contents" dir="ltr"><tr id="91f52a14-9eec-4598-92b1-f066f1a36b71"><td id="nbtA" class="">DB</td><td id="kgTH" class="">3306</td><td id="BD^D" class="">Chỉ mở ra ngoài khi thật cần</td></tr></div></tbody></table></div><div style="display:contents" dir="auto"><hr id="5573b48d-72a2-4f40-b838-18d51d2edd30"/></div><div style="display:contents" dir="auto"><h3 id="10a267fc-cec5-4cbb-8561-c890c03810b4" class="">1) Cập nhật hệ thống + cài tool cơ bản</h3></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="c5872d15-42bc-4afd-ac58-a326a8dd004d" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">yum clean all
+yum -y update
+yum -y install epel-release
+yum -y install curl wget unzip zip nano vim git</code></pre></div><div style="display:contents" dir="auto"><p id="8c630f05-b028-4c70-98f3-b48ee9ee848c" class="">Kiểm tra hostname (nên dùng FQDN):</p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="82a79c9c-8b7c-4d3a-8682-47ded65d9544" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">hostnamectl set-hostname server1.yourdomain.com
+hostname -f</code></pre></div><div style="display:contents" dir="auto"><hr id="bcfbc544-b58e-4da0-8be6-e8b44c5445d3"/></div><div style="display:contents" dir="auto"><h3 id="5db841a6-47b9-40d8-b119-61068f641d8b" class="">2) Tạo user quản trị (khuyến nghị)</h3></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="67b30bf5-656b-4941-bba5-e4e7042d2932" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">adduser deploy
+passwd deploy
+usermod -aG wheel deploy</code></pre></div><div style="display:contents" dir="auto"><p id="c3dd00c9-ed20-4382-95a2-129da2c906a7" class="">Tắt đăng nhập root qua SSH (khuyến nghị, làm sau khi chắc chắn user mới SSH được).</p></div><div style="display:contents" dir="auto"><p id="48bfe73d-ff15-4761-86e8-b9140349eb96" class="">Mở file:</p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="0c73e91c-5f87-4508-9fe7-3b44014db6c9" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">nano /etc/ssh/sshd_config</code></pre></div><div style="display:contents" dir="auto"><p id="b9f2fbf4-8c21-4a11-9701-67175a1bccfa" class="">Sửa:</p></div><div style="display:contents" dir="auto"><ul id="05e76d36-9a18-4798-a498-e482027b89a5" class="bulleted-list"><li style="list-style-type:disc"><code>PermitRootLogin no</code></li></ul></div><div style="display:contents" dir="auto"><ul id="d8cd3bcc-24b7-4144-9d65-18e83374911a" class="bulleted-list"><li style="list-style-type:disc">(tuỳ chọn) <code>Port 22</code> → đổi cổng khác</li></ul></div><div style="display:contents" dir="auto"><p id="c0deded5-1eff-4b57-a45e-4c840b4870eb" class="">Restart SSH:</p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="803946b3-c0ce-4892-bf7d-f00e1393ea16" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">systemctl restart sshd</code></pre></div><div style="display:contents" dir="auto"><hr id="269bac15-efc2-45b5-9d9c-9563c92a004f"/></div><div style="display:contents" dir="auto"><h3 id="343b2121-3618-4e20-8745-919153dba25d" class="">3) Firewall (firewalld) mở các cổng cần thiết</h3></div><div style="display:contents" dir="auto"><p id="1b5bcb45-e8c1-4a0b-860f-716a6b40f8bb" class="">CentOS 7 thường dùng <code>firewalld</code>.</p></div><div style="display:contents" dir="auto"><p id="3bb90371-94f2-48f4-b226-d4fd5731f249" class="">Cài và bật:</p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="32012572-0030-8008-adbc-f0de1db79afa" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all"># Check firewall đã được tải và trạng thái của nó
+systemctl status firewalld
+
+# Ví dụ Kết quả
+Loaded: masked (/dev/null; bad)
+Active: inactive (dead)
+Cannot add dependency job for unit firewalld.service, ignoring: Unit is masked.
+
+# Lệnh mở
+systemctl unmask firewalld
+systemctl daemon-reload
+systemctl start firewalld
+systemctl enable firewalld</code></pre></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="2fc83d35-9bb5-4a0a-bfe4-0a7ea6204f87" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all"># Lệnh cài đặt nếu chưa tải firewall
+yum -y install firewalld
+systemctl enable --now firewalld
+firewall-cmd --state</code></pre></div><div style="display:contents" dir="auto"><p id="35dc6b45-df73-4fe1-990e-03f933947b33" class="">Mở cổng tối thiểu:</p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="0d9e7ce2-a431-4ef3-94ee-7bdb0e0054d5" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all"># SSH
+firewall-cmd --permanent --add-service=24700/tcp
+
+# Web
+firewall-cmd --permanent --add-service=http
+firewall-cmd --permanent --add-service=https
+
+# DirectAdmin
+firewall-cmd --permanent --add-port=2424/tcp
+
+firewall-cmd --reload
+firewall-cmd --list-all</code></pre></div><div style="display:contents" dir="ltr"><figure class="block-color-gray_background callout" style="white-space:pre-wrap;display:flex" id="34c84dc0-14a7-4987-96dc-b2f40520d72d"><div style="font-size:1.5em"><span class="icon">🧩</span></div><div style="width:100%"><div style="display:contents" dir="auto"><p id="0fd08540-bba8-460c-8eb0-8fc27d216bb2" class="">Nếu bạn đổi cổng SSH, nhớ mở cổng mới trước khi logout.</p></div></div></figure></div><div style="display:contents" dir="auto"><hr id="844035bb-2b92-4180-824e-1091c2b7c990"/></div><div style="display:contents" dir="auto"><h3 id="134ea60d-0de3-4003-80f9-766ebd37ec37" class="">4) DirectAdmin: cài đặt (VPS đã có sẵn)</h3></div><div style="display:contents" dir="auto"><h4 id="baa9cead-60ce-4e3e-bb52-0b6a28163b75" class="">4.1) Yêu cầu</h4></div><div style="display:contents" dir="auto"><ul id="e59eaf00-7d0f-4abc-9121-9f73351df5d5" class="bulleted-list"><li style="list-style-type:disc">Có license DirectAdmin (Client ID + License ID) hoặc key</li></ul></div><div style="display:contents" dir="auto"><ul id="1105093d-2ec1-424b-83a7-3f804a9b07e9" class="bulleted-list"><li style="list-style-type:disc">VPS sạch, không cài sẵn web stack lẫn lộn</li></ul></div><div style="display:contents" dir="auto"><h4 id="45b5f4e2-8b98-4411-9a40-d80f715dd0a7" class="">4.2) Cài đặt (cách phổ biến)</h4></div><div style="display:contents" dir="auto"><p id="1b9abc8f-ab09-41b7-86be-d7837929aa03" class="">Tải script cài đặt (theo hướng dẫn của DirectAdmin):</p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="0ded608a-ff89-4c86-912d-20e006d54123" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">cd /root
+wget -O setup.sh https://www.directadmin.com/setup.sh
+chmod 755 setup.sh
+./setup.sh</code></pre></div><div style="display:contents" dir="auto"><p id="2e702716-e320-4dcc-be8e-93d2b4f54644" class="">Trong quá trình cài:</p></div><div style="display:contents" dir="auto"><ul id="f9f79f4a-5673-49df-8951-58db85bd48fc" class="bulleted-list"><li style="list-style-type:disc">Chọn <strong>web server: OpenLiteSpeed</strong> (nếu menu cho chọn)</li></ul></div><div style="display:contents" dir="auto"><ul id="ed49c76c-04b5-476e-92ce-e309ae36abd7" class="bulleted-list"><li style="list-style-type:disc">Chọn DB (thường MariaDB)</li></ul></div><div style="display:contents" dir="auto"><ul id="0e4fa0f3-545e-4774-a3c1-e5e714b937f3" class="bulleted-list"><li style="list-style-type:disc">Chọn email stack nếu cần</li></ul></div><div style="display:contents" dir="auto"><p id="03c8acb5-963c-4d82-a8ab-7d05d84153d8" class="">Sau khi xong, truy cập:</p></div><div style="display:contents" dir="auto"><ul id="e683d908-2ed2-46f6-b612-daf1f352735c" class="bulleted-list"><li style="list-style-type:disc"><code>http://&lt;IP-VPS&gt;:2222</code></li></ul></div><div style="display:contents" dir="auto"><ul id="a77eaafb-c94d-4b59-bc99-8ba1064a6e7e" class="bulleted-list"><li style="list-style-type:disc">hoặc <code>https://&lt;IP-VPS&gt;:2222</code> (nếu đã có SSL cho panel)</li></ul></div><div style="display:contents" dir="auto"><hr id="06573d3f-673a-492b-8d6f-e7b8df1e2502"/></div><div style="display:contents" dir="auto"><h3 id="cbfd18a6-b8f5-4750-b85a-bde77f9cbd07" class="">5) Bật OpenLiteSpeed trong DirectAdmin (CustomBuild) (VPS hỗ trỡ sẵn)</h3></div><div style="display:contents" dir="auto"><p id="b0d2fd6e-6867-44c7-b0be-c31f08675376" class="">Trên DirectAdmin, web stack thường quản lý qua <strong>CustomBuild</strong>.</p></div><div style="display:contents" dir="auto"><p id="26fe3a01-408b-44b3-b0df-2e6ac476b36a" class="">Vào thư mục custombuild:</p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="59644b08-f589-470b-abb5-1c07db676f25" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">cd /usr/local/directadmin/custombuild
+./build update
+./build version</code></pre></div><div style="display:contents" dir="auto"><p id="379a0462-f75e-453d-8487-b5d5d7823152" class="">Thiết lập dùng OpenLiteSpeed (tuỳ bản DA, có thể là <code>openlitespeed</code> hoặc <code>ols</code>):</p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="7c1c879e-9fbf-4e5f-a860-4e503f64ef70" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">./build set webserver openlitespeed
+./build set php1_mode lsphp
+./build set php2_mode lsphp</code></pre></div><div style="display:contents" dir="auto"><p id="ad435cf9-0a02-4d6f-9703-8bdaedf5390c" class="">Build lại:</p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="ea581095-5742-49cb-a2f6-9e644a3d318b" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">./build webserver
+./build php n
+./build rewrite_confs</code></pre></div><div style="display:contents" dir="auto"><p id="79644e3b-5e25-43b8-8f91-24126d915dd1" class="">Kiểm tra service:</p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="726cc30a-7592-4d19-aeab-edee55dedbc0" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">systemctl status directadmin
+systemctl status lsws</code></pre></div><div style="display:contents" dir="auto"><hr id="0f879604-c596-4d21-b605-bec709781aa0"/></div><div style="display:contents" dir="auto"><h3 id="e75ed794-b50c-4d32-bb31-773656891d57" class="">6) SSL/TLS với Let’s Encrypt (khuyến nghị làm trong DirectAdmin)</h3></div><div style="display:contents" dir="auto"><p id="169e0cec-2c99-4303-87c9-327c568ce4c8" class="">Cách đơn giản và ít lỗi nhất là bật Let’s Encrypt trong DirectAdmin:</p></div><div style="display:contents" dir="auto"><ul id="7392ab72-48ca-42fc-aaa3-67ec2198fb14" class="bulleted-list"><li style="list-style-type:disc"><strong>Admin Level</strong> → <strong>Server Manager</strong> → <strong>Let’s Encrypt</strong></li></ul></div><div style="display:contents" dir="auto"><ul id="6175ed9c-317d-4853-8b56-42e056fc5054" class="bulleted-list"><li style="list-style-type:disc">Bật Let’s Encrypt cho user/domain</li></ul></div><div style="display:contents" dir="auto"><p id="5715691b-fad1-4575-8ed3-6fb37268310c" class="">Ghi chú quan trọng:</p></div><div style="display:contents" dir="auto"><ul id="e853196c-612b-4a79-b035-6e2811085f95" class="bulleted-list"><li style="list-style-type:disc">Domain phải trỏ đúng A record về VPS</li></ul></div><div style="display:contents" dir="auto"><ul id="bb49d6af-369c-4e82-b0a9-97e76aa584f9" class="bulleted-list"><li style="list-style-type:disc">Port 80 và 443 phải mở</li></ul></div><div style="display:contents" dir="auto"><p id="57744c03-cfec-4a8e-959e-40ac63600204" class="">Nếu muốn kiểm tra nhanh DNS:</p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="238ec14a-05f7-4e72-80e6-608ed08edc58" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all"># Trả về IP VPS là đúng
+nslookup yourdomain.com</code></pre></div><div style="display:contents" dir="auto"><hr id="8a3f1330-ad90-42ca-bfaa-994856c53c1b"/></div><div style="display:contents" dir="auto"><h3 id="1dcf7a15-ca9e-4220-96f0-71c530be29df" class="">7) Triển khai website / app trên OpenLiteSpeed</h3></div><div style="display:contents" dir="auto"><p id="7a3accb3-e51c-4555-bf47-5181cc0270bd" class="">Tuỳ nhu cầu, thường có 2 hướng:</p></div><div style="display:contents" dir="auto"><h4 id="c0e5d2f2-396e-41ed-9c3a-bd742b6b0577" class="">7.1) PHP website (WordPress/Laravel)</h4></div><div style="display:contents" dir="auto"><ul id="e620a4b5-5ebb-4b27-8389-585198c29c68" class="bulleted-list"><li style="list-style-type:disc">Tạo domain trong DirectAdmin</li></ul></div><div style="display:contents" dir="auto"><ul id="a27c9035-72b0-4a47-b99d-7616b5c5ec65" class="bulleted-list"><li style="list-style-type:disc">Chọn PHP version</li></ul></div><div style="display:contents" dir="auto"><ul id="d09454bf-1f33-4358-85d1-33076446bb7e" class="bulleted-list"><li style="list-style-type:disc">Upload code vào <code>domains/&lt;domain&gt;/public_html</code></li></ul></div><div style="display:contents" dir="auto"><ul id="312b2d56-e9c6-4777-be60-0ab06bafa7bf" class="bulleted-list"><li style="list-style-type:disc">Dùng Database Management để tạo DB/user</li></ul></div><div style="display:contents" dir="auto"><h4 id="04a70052-e89c-4adb-ae6a-736b254c9ac0" class="">7.2) Reverse proxy đến app chạy port nội bộ (Node/Java)</h4></div><div style="display:contents" dir="auto"><p id="2c0a0587-045f-4396-83dd-aef73e65e94f" class="">OpenLiteSpeed có thể làm reverse proxy thông qua cấu hình <strong>External App</strong> và <strong>Context</strong> (trong WebAdmin OLS), hoặc dùng tính năng tương ứng trong DirectAdmin nếu có.</p></div><div style="display:contents" dir="auto"><p id="eb5c1532-04f4-4060-9450-ccb1386552e7" class="">Nguyên tắc:</p></div><div style="display:contents" dir="auto"><ul id="95126410-8fe2-4390-8f57-8e3f6eb19f91" class="bulleted-list"><li style="list-style-type:disc">App chạy nội bộ: <code>127.0.0.1:3000</code> hoặc <code>127.0.0.1:8080</code></li></ul></div><div style="display:contents" dir="auto"><ul id="b697749e-d87e-42df-b2c8-38e301d148c9" class="bulleted-list"><li style="list-style-type:disc">Public chỉ expose 80/443</li></ul></div><div style="display:contents" dir="ltr"><figure class="block-color-blue_background callout" style="white-space:pre-wrap;display:flex" id="83dc5ca1-487f-4c40-9447-97e1f659a694"><div style="font-size:1.5em"><span class="icon">📝</span></div><div style="width:100%"><div style="display:contents" dir="auto"><p id="cab26cb1-a70a-447b-a1ee-8a56d3801457" class="">Nếu bạn nói rõ loại app (Node, Java Spring, React static, v.v.), mình sẽ viết đúng cấu hình OLS/DA theo từng case.</p></div></div></figure></div><div style="display:contents" dir="auto"><hr id="8fbacb64-6f2e-40a1-957f-728960f14c25"/></div><div style="display:contents" dir="auto"><h3 id="5f14c18c-71eb-42fb-8b80-60ce8d384bd7" class="">7.3) Deploy Java WAR (Java 17) với WildFly + reverse proxy qua OpenLiteSpeed</h3></div><div style="display:contents" dir="auto"><p id="5246e3d7-6a89-4ae0-81c6-4590fd2b0c76" class="">Mục tiêu:</p></div><div style="display:contents" dir="auto"><ul id="b7e503c8-40f3-43e0-9325-ae4ba82c93a2" class="bulleted-list"><li style="list-style-type:disc">Chạy app Java dạng <strong>WAR</strong> trên <strong>WildFly</strong> (port nội bộ)</li></ul></div><div style="display:contents" dir="auto"><ul id="bdae85a9-330d-4c60-ab3f-6158fa3ea1a5" class="bulleted-list"><li style="list-style-type:disc">Public truy cập qua <strong>domain + SSL</strong> trên OpenLiteSpeed</li></ul></div><div style="display:contents" dir="auto"><ul id="e76fbbe3-cc3f-40f4-a7a3-f68df0a897ee" class="bulleted-list"><li style="list-style-type:disc">Không expose trực tiếp port WildFly ra internet</li></ul></div><div style="display:contents" dir="auto"><h4 id="ba33b779-b6d3-4f37-ba84-35b1dccb02d8" class="">7.3.1) Cài Java 17 (khuyến nghị OpenJDK) không dùng yum, cài bằng tar.gz</h4></div><div style="display:contents" dir="auto"><p id="d7c82de6-be72-4435-af64-9052fecdef4f" class="">Trên CentOS 7, để <strong>không phụ thuộc yum/repo</strong> (dễ thiếu gói hoặc lệch repo), bạn có thể cài <strong>Eclipse Adoptium Temurin 17</strong> bằng file <strong>tar.gz</strong>.</p></div><div style="display:contents" dir="auto"><p id="b408aae8-753f-496d-8dfe-764b07a0f87c" class=""><strong>1) Tạo thư mục chứa Java</strong></p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="04315d19-63e7-48b4-8af2-764c5da84b7d" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">mkdir -p /usr/java
+cd /usr/java</code></pre></div><div style="display:contents" dir="auto"><p id="4f0092a9-ba73-4443-acb6-08dcf4c7602e" class=""><strong>2) Download JDK 17 (Temurin)</strong></p></div><div style="display:contents" dir="auto"><p id="c853f83f-0e83-423f-8941-d63ce3d27e69" class="">Có 2 cách:</p></div><div style="display:contents" dir="auto"><ul id="e1686172-0a12-485c-9808-e18650153ada" class="bulleted-list"><li style="list-style-type:disc"><strong>Cách A (khuyến nghị):</strong> lấy link release cụ thể (ổn định, ít lỗi 404)<div style="display:contents" dir="auto"><p id="c311d44b-d42c-4df7-928f-d987430340cd" class="">1) Mở trang release: <a href="https://github.com/adoptium/temurin17-binaries/releases">https://github.com/adoptium/temurin17-binaries/releases</a></p></div><div style="display:contents" dir="auto"><p id="8ce1070e-abfb-44de-8d98-631c2778b20c" class="">2) Chọn bản mới nhất, copy link file dạng <code>OpenJDK17U-jdk_x64_linux_hotspot_*.tar.gz</code></p></div><div style="display:contents" dir="auto"><p id="f9052cca-d007-4552-a69e-df19e9770ffe" class="">3) Download:</p></div></li></ul></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="83fc87ec-1e5c-4704-94bc-09d7c3c2ad0d" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">wget -O OpenJDK17U-jdk_x64_linux_hotspot.tar.gz &quot;&lt;PASTE_LINK_TAR_GZ_HERE&gt;&quot;
+
+Vi du: wget -O OpenJDK17U-jdk_x64_linux_hotspot.tar.gz https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.9%2B9/OpenJDK17U-jdk_x64_linux_hotspot_17.0.9_9.tar.gz</code></pre></div><div style="display:contents" dir="auto"><ul id="16d0c32e-6176-4cf4-88aa-7173c9699a0d" class="bulleted-list"><li style="list-style-type:disc"><strong>Cách B (nhanh):</strong> dùng “latest” (có thể thay đổi và đôi khi bị 404)</li></ul></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="cd6f7db8-ff59-43db-9716-315deac33bcc" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">wget -O OpenJDK17U-jdk_x64_linux_hotspot.tar.gz \
+  https://github.com/adoptium/temurin17-binaries/releases/latest/download/OpenJDK17U-jdk_x64_linux_hotspot.tar.gz</code></pre></div><div style="display:contents" dir="auto"><p id="990a048e-c4ce-4e36-b017-306f20fb6668" class=""><strong>3) Giải nén JDK</strong></p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="ceab2595-e2f3-4f58-9ae5-15485f02b91c" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">tar -xzf OpenJDK17U-jdk_x64_linux_hotspot.tar.gz
+ls -la /usr/java</code></pre></div><div style="display:contents" dir="auto"><p id="f3ab51c5-8ad0-40e0-b59a-8ce2c7446acc" class="">Sau khi giải nén, thường sẽ ra thư mục dạng <code>jdk-17.0.x+...</code>.</p></div><div style="display:contents" dir="auto"><p id="68559e0d-fcb7-45e6-acfa-9adb6d3f8a2a" class=""><strong>4) Tạo symlink (best practice)</strong></p></div><div style="display:contents" dir="auto"><p id="9c40045b-9345-40bc-82ee-b9d3dd357426" class="">Mục đích: sau này nâng cấp Java chỉ cần đổi symlink.</p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="68259017-8d93-446f-a202-16680f9166d8" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all"># tìm đúng tên thư mục vừa giải nén
+ls -d /usr/java/jdk-17* 2&gt;/dev/null || true
+
+# tạo/ghi đè symlink trỏ về JDK 17 hiện tại
+ln -sfn /usr/java/jdk-17.0.* /usr/java/jdk-17
+ls -l /usr/java</code></pre></div><div style="display:contents" dir="auto"><p id="de276650-0101-4593-b1e0-9c36c1f88dbf" class=""><strong>5) Khai báo JAVA_HOME (toàn hệ thống)</strong></p></div><div style="display:contents" dir="auto"><p id="de01e9aa-92a3-4354-9ad9-711a3fe83628" class="">Tạo file:</p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="4edd10f4-f324-482c-9d27-2236cfe6f553" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">vi /etc/profile.d/java.sh</code></pre></div><div style="display:contents" dir="auto"><p id="05c6ddf3-5ad5-4b86-b63f-620a828c0b4c" class="">Nội dung:</p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="fb18629b-de17-490f-804b-dd8e947ddab8" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">export JAVA_HOME=/usr/java/jdk-17
+export PATH=$JAVA_HOME/bin:$PATH</code></pre></div><div style="display:contents" dir="auto"><p id="c3eb1bc2-8ca8-4d87-b700-d318192c70b1" class="">Set quyền và load env:</p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="c01c4b95-c68a-4064-9b4b-09b6c66dcbd8" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">Nhấn ESC
+Nhấn :wq
+Rồi nhấn Enter
+
+chmod 644 /etc/profile.d/java.sh
+source /etc/profile</code></pre></div><div style="display:contents" dir="auto"><p id="ea569c38-2431-49d8-b548-5e353eca6394" class=""><strong>6) Kiểm tra Java/JAVA_HOME/javac</strong></p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="7e927f6a-ffaa-46f6-821c-39bf5022e6f7" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">java -version
+
+echo $JAVA_HOME
+
+javac -version</code></pre></div><div style="display:contents" dir="auto"><p id="8cffecd9-d320-468c-a023-a14beb6f04ff" class="">Kết quả mong muốn:</p></div><div style="display:contents" dir="auto"><ul id="9ec58291-dccd-4fde-ab48-409ef9ad7a59" class="bulleted-list"><li style="list-style-type:disc"><code>openjdk version &quot;17&quot; ...</code></li></ul></div><div style="display:contents" dir="auto"><ul id="4a9c5680-2b01-49a7-80ee-eba28c7961b5" class="bulleted-list"><li style="list-style-type:disc"><code>JAVA_HOME=/usr/java/jdk-17</code></li></ul></div><div style="display:contents" dir="auto"><p id="1fd9e56b-accf-4e7d-8471-8511f00a6929" class=""><strong>7) Nếu dùng cho WildFly chạy bằng systemd (khuyến nghị set riêng trong service 7.3.4.C)</strong></p></div><div style="display:contents" dir="auto"><p id="f00ede00-6957-4e86-b90d-1eb73397ed29" class="">Với WildFly chạy dưới systemd, nên khai báo <strong>JAVA_HOME</strong> trong file service (hoặc override) để không phụ thuộc việc user/session có load <code>/etc/profile</code> hay không.</p></div><div style="display:contents" dir="auto"><p id="912388b3-275c-4f2b-90fc-ab3c6a98ac48" class="">Ví dụ (service template/override):</p></div><div style="display:contents" dir="auto"><ul id="1a03d225-9a6b-476b-91ba-71af3e3a3093" class="bulleted-list"><li style="list-style-type:disc"><code>Environment=JAVA_HOME=/usr/java/jdk-17</code></li></ul></div><div style="display:contents" dir="auto"><ul id="8d1a59f5-304d-4111-8e8e-01508e0bb4d1" class="bulleted-list"><li style="list-style-type:disc">(tuỳ chọn) <code>Environment=PATH=/usr/java/jdk-17/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin</code></li></ul></div><div style="display:contents" dir="auto"><blockquote id="2198180f-ea8a-4c58-8e85-cbb55001aa3c" class="">Gợi ý: có thể xóa file tar.gz sau khi cài để tiết kiệm dung lượng: <code>rm -f /usr/java/OpenJDK17U-jdk_x64_linux_hotspot.tar.gz</code></blockquote></div><div style="display:contents" dir="auto"><h4 id="bfc8eb10-60b8-491e-8443-f9a5b7e3d285" class="">7.3.2) Tạo user chạy service WildFly</h4></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="a365de13-e36c-474a-b2ce-4853abce8a44" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">useradd --system --home-dir /opt/wildfly --shell /sbin/nologin wildfly</code></pre></div><div style="display:contents" dir="auto"><h4 id="f95540cc-8a54-403b-b490-4998c758be48" class="">7.3.3) Cài WildFly (khuyến nghị 26+ để tương thích Java 17)</h4></div><div style="display:contents" dir="auto"><p id="46566e09-906c-479b-b301-70b4dab2b51b" class="">Ví dụ cài WildFly 27.0.1.Final (bạn có thể thay bản mới hơn nếu muốn):</p></div><div style="display:contents" dir="auto"><h3 id="32312572-0030-80e4-8d9c-e2f1c27d7299" class="block-color-red"><strong>Lưu ý: Wildfly version &lt;  </strong><strong><a href="http://26.1.3.Final">26.1.3.Final</a></strong><strong> không chạy được với java 17</strong></h3></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="d61aa5d6-d3da-4326-8e7f-c4eefcdb1762" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">cd /opt
+wget https://github.com/wildfly/wildfly/releases/download/27.0.1.Final/wildfly-27.0.1.Final.tar.gz
+
+tar -xzf wildfly-27.0.1.Final.tar.gz
+ln -s wildfly-27.0.1.Final wildfly
+
+chown -R wildfly:wildfly /opt/wildfly-27.0.1.Final /opt/wildfly</code></pre></div><div style="display:contents" dir="auto"><p id="90d5e783-31be-4a11-be72-0d3b5a5dc419" class="">Kiểm tra chạy thử (chạy tạm để test):</p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="154ce8d6-88b3-44ad-8dac-bdb85af88ae6" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">sudo -u wildfly /opt/wildfly/bin/standalone.sh -b 127.0.0.1 -bmanagement 127.0.0.1</code></pre></div><div style="display:contents" dir="auto"><p id="07fafb9e-bbfe-4b62-9a18-a7e66b372aa1" class="">Dừng lại bằng <code>Ctrl+C</code>.</p></div><div style="display:contents" dir="auto"><h4 id="ec895c53-0c45-455e-bae1-d443488517a2" class="">7.3.4) Chạy nhiều instance WildFly (multi-instance) trên CentOS 7 + DirectAdmin + OpenLiteSpeed</h4></div><div style="display:contents" dir="auto"><p id="701f4321-f5e0-400e-aae4-3e69bf4efe68" class="">Mục tiêu:</p></div><div style="display:contents" dir="auto"><ul id="e5e3157d-5455-466f-89d6-3890f46e6c49" class="bulleted-list"><li style="list-style-type:disc">Mỗi app chạy một <strong>instance riêng</strong> (thư mục riêng dưới <code>/opt/wildfly/</code>).</li></ul></div><div style="display:contents" dir="auto"><ul id="db465fad-4e2c-48d8-9dd1-5338d2d58fbb" class="bulleted-list"><li style="list-style-type:disc">Mỗi instance có <strong>port offset riêng</strong> để không đụng port.</li></ul></div><div style="display:contents" dir="auto"><ul id="9918a554-1db4-4a97-bbed-dc7129d69788" class="bulleted-list"><li style="list-style-type:disc">Quản lý start/stop/restart bằng <strong>systemd</strong>.</li></ul></div><div style="display:contents" dir="auto"><ul id="e6c846c0-3a41-45e3-9ad3-3b7aa4ec3a53" class="bulleted-list"><li style="list-style-type:disc">WildFly chỉ bind nội bộ <code>127.0.0.1</code> để không public ra internet (OLS/DA sẽ reverse proxy ở mục <strong>7.3.6</strong>).</li></ul></div><div style="display:contents" dir="ltr"><figure class="block-color-teal_background callout" style="white-space:pre-wrap;display:flex" id="e6908fc1-4b03-40df-9b50-adcf4e49b8cc"><div style="font-size:1.5em"><span class="icon">✅</span></div><div style="width:100%"><div style="display:contents" dir="auto"><p id="8df8ef23-0ad3-4459-b39f-9e698f8b644c" class=""><strong>Quy ước biến (dùng xuyên suốt):</strong></p></div><div style="display:contents" dir="auto"><ul id="037e70d6-56cb-4119-9223-47d39c892878" class="bulleted-list"><li style="list-style-type:disc"><strong>INSTANCE_NAME</strong>: tên thư mục instance (vd: <code>masion-art</code>)</li></ul></div><div style="display:contents" dir="auto"><ul id="bb18ccc3-35d2-408a-aea3-926e167cb069" class="bulleted-list"><li style="list-style-type:disc"><strong>SERVICE_NAME</strong>: tên service systemd (theo cơ chế <em>mỗi instance 1 file .service</em>). Ví dụ: <code>wildfly@masion-art</code></li></ul></div><div style="display:contents" dir="auto"><ul id="6ecf09de-7335-44cf-be9c-ad806e831ff8" class="bulleted-list"><li style="list-style-type:disc"><strong>APP_NAME</strong>: tên file war (vd: <code>myapp.war</code> hoặc <code>ROOT.war</code>)</li></ul></div></div></figure></div><div style="display:contents" dir="auto"><hr id="e7658310-625e-447b-b747-d9318feb952c"/></div><div style="display:contents" dir="auto"><h4 id="3e1b8cae-7e94-4e7d-a5b7-3ca0dbef80a5" class="">1) Cấu trúc thư mục</h4></div><div style="display:contents" dir="auto"><p id="24122938-386b-4668-b7c0-0a772714ab09" class="">Sau khi cài WildFly (symlink <code>/opt/wildfly</code> đã có ở 7.3.3):</p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="6ccccc02-9b0a-4a64-a72e-feff4c6474aa" class="code code-wrap"><code class="language-Plain Text" style="white-space:pre-wrap;word-break:break-all">/opt/wildfly
+├── bin
+├── modules
+├── standalone
+├── &lt;INSTANCE_NAME_1&gt;
+├── &lt;INSTANCE_NAME_2&gt;
+└── ...</code></pre></div><div style="display:contents" dir="auto"><p id="893ce2d8-fb4c-4324-855c-ce0e27ca92cd" class="">Trong đó, mỗi instance (<code>&lt;INSTANCE_NAME_1&gt;</code>, <code>&lt;INSTANCE_NAME_2&gt;</code>...) là bản copy của thư mục <code>standalone</code>.</p></div><div style="display:contents" dir="auto"><p id="4f1dab44-f6c8-45b2-ac04-a432a1fbefe1" class=""><strong>Ví dụ</strong>:</p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="aa02862e-2b02-49cf-b83e-25cedcfd93cd" class="code code-wrap"><code class="language-Plain Text" style="white-space:pre-wrap;word-break:break-all">/opt/wildfly
+├── bin
+├── modules
+├── standalone
+├── masion-art
+└── site2</code></pre></div><div style="display:contents" dir="auto"><hr id="9534d24a-9d86-4873-baff-b10257a39778"/></div><div style="display:contents" dir="auto"><h4 id="dc76cc65-2a69-459a-8e58-52f4697528a7" class="">2) Tạo instance (copy từ standalone)</h4></div><div style="display:contents" dir="auto"><p id="fc5e154e-f219-492d-84d1-fe5f69e019db" class=""><strong>Câu lệnh tổng quát:</strong></p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="955785c2-af71-4659-b2f9-8f93684be5b9" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">cp -a /opt/wildfly/standalone /opt/wildfly/&lt;INSTANCE_NAME&gt;
+chown -R wildfly:wildfly /opt/wildfly/&lt;INSTANCE_NAME&gt;</code></pre></div><div style="display:contents" dir="auto"><p id="1cbb1eb3-ad0c-47ce-9c0c-007b86b8749a" class=""><strong>Ví dụ (INSTANCE_NAME=masion-art):</strong></p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="5c556746-69cc-48cc-b3bb-dba7c122401a" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">cp -a /opt/wildfly/standalone /opt/wildfly/masion-art
+chown -R wildfly:wildfly /opt/wildfly/masion-art</code></pre></div><div style="display:contents" dir="auto"><hr id="3df8cb6f-83d3-4c75-9c4f-a5019b58aa35"/></div><div style="display:contents" dir="auto"><h4 id="a9801c19-155e-4093-a80c-3a584430072c" class="">3) Tạo service systemd</h4></div><div style="display:contents" dir="auto"><p id="ada1b67c-63e4-430d-88f1-01b7e5b67e24" class="">Trên CentOS 7 (CentOS-7_DA-OpenLiteSpeed), có 2 cơ chế phổ biến để quản lý multi-instance WildFly bằng systemd.</p></div><div style="display:contents" dir="ltr"><figure class="block-color-gray_background callout" style="white-space:pre-wrap;display:flex" id="7af1c831-e343-4034-b92b-52fb4ccc2b18"><div style="font-size:1.5em"><span class="icon">📌</span></div><div style="width:100%"><div style="display:contents" dir="auto"><p id="1da8e7e7-b14a-4919-bbc5-7e4f892594e5" class=""><strong>THAM KHẢO: Tạo service systemd cho từng service riêng</strong></p></div><div style="display:contents" dir="auto"><ul id="3d6831d4-778a-4872-961a-a78943148b2f" class="bulleted-list"><li style="list-style-type:disc">Dễ đọc, dễ debug (mỗi instance là 1 file <code>.service</code> rõ ràng)</li></ul></div><div style="display:contents" dir="auto"><ul id="ba443f59-2ddd-4a5b-83cd-66d398e1aa1a" class="bulleted-list"><li style="list-style-type:disc">Phù hợp khi số lượng instance ít, hoặc muốn “copy rồi sửa” nhanh</li></ul></div></div></figure></div><div style="display:contents" dir="ltr"><figure class="block-color-teal_background callout" style="white-space:pre-wrap;display:flex" id="b179c7fd-8d60-4828-a23b-9a26622eec6f"><div style="font-size:1.5em"><span class="icon">✅</span></div><div style="width:100%"><div style="display:contents" dir="auto"><p id="493c3b18-a407-4904-8eca-bcf94c98570c" class=""><strong>ÁP DỤNG (khuyến nghị): Tạo service systemd dạng template</strong> (<code>wildfly@.service</code>)</p></div><div style="display:contents" dir="auto"><ul id="ab730595-06a8-411f-b830-c3877d6f0678" class="bulleted-list"><li style="list-style-type:disc">Gọn và dễ bảo trì khi có nhiều instance</li></ul></div><div style="display:contents" dir="auto"><ul id="1370f19e-fd93-415f-a7f8-edc009c3f36c" class="bulleted-list"><li style="list-style-type:disc">Chỉ cần 1 file template + file env cho từng instance</li></ul></div></div></figure></div><div style="display:contents" dir="auto"><hr id="f1798380-5cc6-4466-b59e-3ffaded28a7a"/></div><div style="display:contents" dir="auto"><h4 id="e6bd4630-c4ec-48e9-a928-99d0b2afa1c5" class="">3.A) THAM KHẢO Tạo service systemd cho từng service riêng (ví dụ: <code>masion-art</code>)</h4></div><div style="display:contents" dir="auto"><p id="ab38073f-eb35-42a3-b9d6-3765185e01e4" class=""><strong>Ý tưởng:</strong> mỗi instance có 1 service file riêng: <code>wildfly-masion-art.service</code>.</p></div><div style="display:contents" dir="auto"><p id="a103fd27-5948-4a8d-aa05-134e7b0b3563" class=""><strong>3.A.1) Tạo file service cho instance </strong><code><strong>masion-art</strong></code></p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="ad9b75e6-1307-4edf-b2a7-2328e8dead7e" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">cat &gt; /etc/systemd/system/wildfly-masion-art.service &lt;&lt; &#x27;EOF&#x27;
+[Unit]
+Description=WildFly Instance masion-art
+After=network.target
+
+[Service]
+Type=simple
+User=wildfly
+Group=wildfly
+WorkingDirectory=/opt/wildfly
+
+# Java cho WildFly (khuyến nghị set rõ trong systemd để không phụ thuộc /etc/profile)
+Environment=JAVA_HOME=/usr/java/jdk-17
+Environment=PATH=/usr/java/jdk-17/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
+
+# Port offset cho instance này
+Environment=PORT_OFFSET=0
+
+ExecStart=/opt/wildfly/bin/standalone.sh \
+	-b 127.0.0.1 \
+	-bmanagement 127.0.0.1 \
+	--server-config=standalone.xml \
+	-Djboss.server.base.dir=/opt/wildfly/masion-art \
+	-Djboss.socket.binding.port-offset=${PORT_OFFSET}
+
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload</code></pre></div><div style="display:contents" dir="auto"><p id="9920e168-31b6-43a8-b740-8192044b86a1" class=""><strong>3.A.2) Enable + start instance</strong></p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="440f4e4c-e5fd-41e3-abb9-a9d0f90b989f" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">systemctl enable wildfly-masion-art
+systemctl start wildfly-masion-art
+
+systemctl status wildfly-masion-art --no-pager</code></pre></div><div style="display:contents" dir="auto"><p id="d964e644-2711-4464-a917-75b0e1d56410" class=""><strong>3.A.3) Lệnh quản lý + xem log</strong></p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="072f91c9-c50d-44e2-8049-f1e2c751a006" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">systemctl restart wildfly-masion-art
+journalctl -u wildfly-masion-art -f</code></pre></div><div style="display:contents" dir="auto"><hr id="9ea924ef-b999-4444-b002-f504e3b3ed77"/></div><div style="display:contents" dir="auto"><h4 id="a95ccb17-c0b9-48e5-bc93-0702c5bd34e1" class="">3.B) ÁP DỤNG: Tạo service systemd dạng template (khuyến nghị khi nhiều instance)</h4></div><div style="display:contents" dir="auto"><p id="a3200b04-14b6-4dfa-8233-9c9bc4624179" class="">Cách chuẩn gọn nhất trên CentOS 7 là dùng <strong>template unit</strong>: <code>wildfly@.service</code>.</p></div><div style="display:contents" dir="auto"><ul id="ab32da6f-f72f-446c-904f-3cef8952f998" class="bulleted-list"><li style="list-style-type:disc">Khi chạy: <code>systemctl start wildfly@masion-art</code></li></ul></div><div style="display:contents" dir="auto"><ul id="6a7fa451-d468-4579-9807-f24e174d95a4" class="bulleted-list"><li style="list-style-type:disc"><code>%i</code> sẽ tự nhận là <code>masion-art</code>.</li></ul></div><div style="display:contents" dir="auto"><p id="9dfa64d5-64fd-4a25-ba0f-7224c72c8993" class=""><strong>3.B.1) Tạo file service template</strong></p></div><div style="display:contents" dir="auto"><p id="f0cfb938-7bc9-4aa1-b6ae-91d0c3a37f2c" class=""><strong>Câu lệnh tổng quát:</strong></p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="f93cc3e0-d3ba-4906-be8a-fb70b49eda67" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">cat &gt; /etc/systemd/system/wildfly@.service &lt;&lt; &#x27;EOF&#x27;
+[Unit]
+Description=WildFly Instance %i
+After=network.target
+
+[Service]
+Type=simple
+User=wildfly
+Group=wildfly
+WorkingDirectory=/opt/wildfly
+
+# Mỗi instance có 1 file env riêng để set PORT_OFFSET
+EnvironmentFile=-/etc/sysconfig/wildfly-%i
+
+# Java cho WildFly (khuyến nghị set rõ trong systemd để không phụ thuộc /etc/profile)
+Environment=JAVA_HOME=/usr/java/jdk-17
+Environment=PATH=/usr/java/jdk-17/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
+
+ExecStart=/opt/wildfly/bin/standalone.sh \
+	-b 0.0.0.0 \
+	-bmanagement 127.0.0.1 \
+	--server-config=standalone.xml \
+	-Djboss.server.base.dir=/opt/wildfly/%i \
+	-Djboss.socket.binding.port-offset=${PORT_OFFSET}
+
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload</code></pre></div><div style="display:contents" dir="auto"><p id="146b0ad7-9e0a-41e4-8f7b-2e1af80cb2d1" class=""><strong>3.B.2) Tạo file env cho từng instance (PORT_OFFSET)</strong></p></div><div style="display:contents" dir="auto"><p id="b1aa5bde-60d0-4496-bd3f-6d40c3309387" class=""><strong>Câu lệnh tổng quát:</strong></p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="66078b7b-74f1-4867-aa27-fae980085d5b" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">cat &gt; /etc/sysconfig/wildfly-&lt;INSTANCE_NAME&gt; &lt;&lt; &#x27;EOF&#x27;
+PORT_OFFSET=&lt;PORT_OFFSET&gt;
+EOF</code></pre></div><div style="display:contents" dir="auto"><p id="f6148404-e5be-41a4-8c5c-8bd358952b63" class=""><strong>Ví dụ:</strong></p></div><div style="display:contents" dir="auto"><ul id="b6c36c98-8aa0-4d3f-b682-5c0aea4747e9" class="bulleted-list"><li style="list-style-type:disc"><code>masion-art</code> offset = <code>0</code> (HTTP 8080, Management 9990)</li></ul></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="bc6206d3-5a93-4bb5-819b-e9c9b24e3f27" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">cat &gt; /etc/sysconfig/wildfly-masion-art &lt;&lt; &#x27;EOF&#x27;
+PORT_OFFSET=0
+EOF</code></pre></div><div style="display:contents" dir="auto"><ul id="3e86ff9d-53c0-4957-9ec9-93990dbeee41" class="bulleted-list"><li style="list-style-type:disc"><code>site2</code> offset = <code>100</code> (HTTP 8180, Management 10090)</li></ul></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="ead3440a-7269-4528-bf1e-f4590545e1db" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">cat &gt; /etc/sysconfig/wildfly-site2 &lt;&lt; &#x27;EOF&#x27;
+PORT_OFFSET=100
+EOF</code></pre></div><div style="display:contents" dir="auto"><hr id="a8a4d606-fc1a-4893-845e-caabc87eaca8"/></div><div style="display:contents" dir="auto"><h4 id="f1279201-bc5e-47ff-884b-5db010626837" class="">4) Enable + start instance bằng systemctl (theo cơ chế template <code>wildfly@.service</code>)</h4></div><div style="display:contents" dir="auto"><p id="9c2cd541-9b80-47c8-88c7-2c5714e3c54e" class="">Với cơ chế <strong>3.B</strong> (template unit), <strong>SERVICE_NAME</strong> sẽ là <code>wildfly@&lt;INSTANCE_NAME&gt;</code>.</p></div><div style="display:contents" dir="auto"><p id="457db701-59a8-4bff-b9c5-6fa64185df6d" class=""><strong>Câu lệnh tổng quát:</strong></p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="016ee076-1e27-42f6-9dd6-ed5e0d5f3d0d" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">systemctl enable wildfly@&lt;INSTANCE_NAME&gt;
+systemctl start wildfly@&lt;INSTANCE_NAME&gt;
+
+systemctl status wildfly@&lt;INSTANCE_NAME&gt; --no-pager</code></pre></div><div style="display:contents" dir="auto"><p id="473254ed-233f-45de-b4f6-e92f3fb7f0e9" class=""><strong>Ví dụ (INSTANCE_NAME=masion-art):</strong></p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="48f56c65-4e1c-45cd-82f3-1af49324eaf2" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">systemctl enable wildfly@masion-art
+systemctl start wildfly@masion-art
+
+systemctl status wildfly@masion-art --no-pager</code></pre></div><div style="display:contents" dir="auto"><hr id="2b0e1835-8b67-4306-a38a-ad9fb88d7e80"/></div><div style="display:contents" dir="auto"><h4 id="dd3f4303-cfb0-484b-9520-86099058c7a4" class="">5) Các lệnh quản lý instance</h4></div><div style="display:contents" dir="auto"><p id="950e2645-6d8b-4ddd-b946-0ff078a9d423" class=""><strong>Câu lệnh tổng quát:</strong></p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="af731e18-a7e8-4211-b724-bfc7febcd422" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">systemctl start wildfly@&lt;INSTANCE_NAME&gt;
+systemctl stop wildfly@&lt;INSTANCE_NAME&gt;
+systemctl restart wildfly@&lt;INSTANCE_NAME&gt;
+systemctl status wildfly@&lt;INSTANCE_NAME&gt; --no-pager
+
+journalctl -u wildfly@&lt;INSTANCE_NAME&gt; -f</code></pre></div><div style="display:contents" dir="auto"><p id="dd9c2667-38b8-4c20-9cce-aeaaa1442d5a" class=""><strong>Ví dụ (INSTANCE_NAME=masion-art):</strong></p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="eede7114-2047-4863-a665-dffb4242418a" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">systemctl restart wildfly@masion-art
+journalctl -u wildfly@masion-art -f</code></pre></div><div style="display:contents" dir="auto"><hr id="ffc5c4d7-93a9-43fc-8cae-78d33ffb3a7a"/></div><div style="display:contents" dir="auto"><h4 id="59e332d1-8a99-42d4-8801-b231bb3ada85" class="">6) Port sau khi offset (tham khảo nhanh)</h4></div><div style="display:contents" dir="auto"><p id="6c5e8b3c-f376-47ac-84b7-7ba15496c5b4" class="">WildFly mặc định (offset = 0):</p></div><div style="display:contents" dir="auto"><ul id="4cfe68de-a198-48e5-a985-7f8d8aa4d9e2" class="bulleted-list"><li style="list-style-type:disc">HTTP: <code>8080</code></li></ul></div><div style="display:contents" dir="auto"><ul id="0e56019a-5fce-44d4-b828-d56f0cd81025" class="bulleted-list"><li style="list-style-type:disc">Management: <code>9990</code></li></ul></div><div style="display:contents" dir="auto"><p id="2edd5a71-fa77-4839-a98e-85dcc026a564" class=""><strong>Ví dụ</strong>: <code>PORT_OFFSET=100</code> (site2)</p></div><div style="display:contents" dir="auto"><ul id="641f6d3c-2fa1-47e8-92c4-2c316021f2ee" class="bulleted-list"><li style="list-style-type:disc">HTTP: <code>8180</code></li></ul></div><div style="display:contents" dir="auto"><ul id="8f4eeae2-6bf4-435b-aff7-405aa0a57fb6" class="bulleted-list"><li style="list-style-type:disc">Management: <code>10090</code></li></ul></div><div style="display:contents" dir="auto"><hr id="ec0c648e-5393-45d0-b7e0-b7ef7cb33720"/></div><div style="display:contents" dir="auto"><h4 id="7f4c5dfe-fc32-46bc-ad4e-1d27bd5569a3" class="">7) Kiểm tra nhanh từ chính VPS (khuyến nghị)</h4></div><div style="display:contents" dir="auto"><p id="92136320-a73a-4c15-ab9f-ebaba69a99fe" class=""><strong>Câu lệnh tổng quát:</strong></p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="a8b6dcd5-c483-4a0d-8b6b-b25fcb759b26" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">curl -I http://127.0.0.1:&lt;HTTP_PORT&gt;/</code></pre></div><div style="display:contents" dir="auto"><p id="68aa635e-f280-42ec-9679-30743dd75d6b" class=""><strong>Ví dụ:</strong></p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="7af7c59a-e735-4479-9163-25a9b4f16785" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all"># instance offset=0
+curl -I http://127.0.0.1:8080/
+
+# instance offset=100
+curl -I http://127.0.0.1:8180/</code></pre></div><div style="display:contents" dir="auto"><hr id="b5693ffb-5e1e-423c-9c6b-802cc5fd9ee0"/></div><div style="display:contents" dir="auto"><h4 id="871e1c10-6dc0-44d0-808f-d2f92b611686" class="">Ghi chú quan trọng</h4></div><div style="display:contents" dir="auto"><ul id="66dddd27-5c7d-4bdd-b592-f1678827ed6d" class="bulleted-list"><li style="list-style-type:disc">Mục 7.3.4 này chỉ làm phần <strong>multi-instance + systemd</strong>.</li></ul></div><div style="display:contents" dir="auto"><ul id="2f2d6a44-f2af-4a05-9363-ec71679373a6" class="bulleted-list"><li style="list-style-type:disc">Reverse proxy qua OpenLiteSpeed nằm ở <strong>7.3.6</strong>.</li></ul></div><div style="display:contents" dir="auto"><ul id="ccf4da7a-a9d7-40d4-8c9f-80630562fe79" class="bulleted-list"><li style="list-style-type:disc">Nếu bạn muốn dùng kiểu service “mỗi instance 1 file .service” thì vẫn được, nhưng template <code>wildfly@.service</code> sẽ dễ bảo trì hơn (thêm instance mới không phải copy/paste cả file service).</li></ul></div><div style="display:contents" dir="auto"><h4 id="b4c489aa-f8b6-4730-a92b-8edfc52e3ba8" class="">7.3.5) Deploy file WAR lên WildFly (CentOS 7 + DirectAdmin + OpenLiteSpeed)</h4></div><div style="display:contents" dir="auto"><p id="c2691398-04c3-4fbb-80e6-75d8a1a79e3d" class="">Mục tiêu của mục này:</p></div><div style="display:contents" dir="auto"><ul id="3d1ff5e8-669a-459b-8a5d-784e640180b3" class="bulleted-list"><li style="list-style-type:disc">Deploy file <strong>WAR</strong> lên đúng instance WildFly (multi-instance theo 7.3.4)</li></ul></div><div style="display:contents" dir="auto"><ul id="07b0d65c-378c-43f2-96df-97f4f57453b9" class="bulleted-list"><li style="list-style-type:disc">WildFly chạy <strong>nội bộ (127.0.0.1)</strong>, không public port ra internet</li></ul></div><div style="display:contents" dir="auto"><ul id="04195dbf-dfb1-42ca-bc69-e8b93a0c4d05" class="bulleted-list"><li style="list-style-type:disc">OLS/DirectAdmin sẽ proxy ở mục <strong>7.3.6</strong></li></ul></div><div style="display:contents" dir="ltr"><figure class="block-color-teal_background callout" style="white-space:pre-wrap;display:flex" id="32012572-0030-8051-a529-d075ca567f52"><div style="font-size:1.5em"><span class="icon">✅</span></div><div style="width:100%"><div style="display:contents" dir="auto"><p id="32012572-0030-8045-9749-db0ee8eae7d7" class=""><strong>Quy ước biến (dùng xuyên suốt):</strong></p></div><div style="display:contents" dir="auto"><ul id="32012572-0030-80ca-a2a3-cbe3429f45e1" class="bulleted-list"><li style="list-style-type:disc"><strong>INSTANCE_NAME</strong>: tên thư mục instance (vd: <code>masion-art</code>)</li></ul></div><div style="display:contents" dir="auto"><ul id="32012572-0030-8000-b458-d9bdc06a5068" class="bulleted-list"><li style="list-style-type:disc"><strong>SERVICE_NAME</strong>: tên service systemd (theo mục 7.3.4 - cơ chế template). Ví dụ: <code>wildfly@masion-art</code></li></ul></div><div style="display:contents" dir="auto"><ul id="32012572-0030-802e-8e49-fd95d847fe7f" class="bulleted-list"><li style="list-style-type:disc"><strong>APP_NAME</strong>: tên file war (vd: <code>myapp.war</code> hoặc <code>ROOT.war</code>)</li></ul></div></div></figure></div><div style="display:contents" dir="auto"><p id="c7a33835-20f7-4a08-8b85-9f3def3ff636" class=""><strong>1) Copy file WAR vào thư mục deployments</strong></p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="3055bf23-ed60-47f5-9e5c-75add76f845d" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">cp /path/to/&lt;APP_NAME&gt; /opt/wildfly/&lt;INSTANCE_NAME&gt;/deployments/
+
+# Ví dụ (deploy root)
+cp /home/masion-art/app/260312/ROOT.war /opt/wildfly/masion-art/deployments/</code></pre></div><div style="display:contents" dir="auto"><p id="4bc5d172-4dbc-45f5-9938-9f202c8e40f1" class=""><strong>2) Phân quyền đúng cho user chạy WildFly</strong></p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="b06643ec-511c-4fe0-aeaf-38d262fe9d21" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">chown wildfly:wildfly /opt/wildfly/&lt;INSTANCE_NAME&gt;/deployments/&lt;APP_NAME&gt;
+
+# Ví dụ
+chown wildfly:wildfly /opt/wildfly/masion-art/deployments/ROOT.war</code></pre></div><div style="display:contents" dir="auto"><p id="8aec28b3-e734-42ac-b633-44a012d6ba03" class="">Gợi ý thêm (tùy chọn):</p></div><div style="display:contents" dir="auto"><ul id="97445ee7-aa22-48d1-a272-00c24adcef3f" class="bulleted-list"><li style="list-style-type:disc">Nếu bạn thường copy bằng <code>root</code>, có thể set quyền thư mục để khỏi quên:</li></ul></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="9b0dc252-338b-4f73-a77a-2df36611f579" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">chown -R wildfly:wildfly /opt/wildfly/&lt;INSTANCE_NAME&gt;/deployments</code></pre></div><div style="display:contents" dir="auto"><p id="f4d67460-e5a3-43ed-853b-b69f2ce18426" class=""><strong>3) Restart instance WildFly (khuyến nghị để chắc chắn)</strong></p></div><div style="display:contents" dir="auto"><p id="8f56abd6-ad63-4afd-9f81-11ecca07d545" class="">WildFly có <strong>auto-deploy</strong> khi thả WAR vào <code>deployments/</code>, nhưng trên môi trường production thường restart để:</p></div><div style="display:contents" dir="auto"><ul id="e3f055ec-3a4f-4a3d-a04d-033069f2a650" class="bulleted-list"><li style="list-style-type:disc">Đảm bảo instance load lại deployment mới</li></ul></div><div style="display:contents" dir="auto"><ul id="2ea8b042-6a2f-4e40-813d-58fa57da168d" class="bulleted-list"><li style="list-style-type:disc">Tránh tình trạng deploy &quot;lưng chừng&quot; nếu đang có file copy dở hoặc app đang giữ resource</li></ul></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="6cea50dd-c360-4ff0-b443-1152270f96ae" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">systemctl restart &lt;SERVICE_NAME&gt;
+
+# Ví dụ
+systemctl restart wildfly@masion-art</code></pre></div><div style="display:contents" dir="auto"><p id="fa9960ce-931a-4c4a-9e93-2937b3ff5ad5" class=""><strong>4) Theo dõi log deploy của instance (server.log)</strong></p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="4b327539-14b0-48d2-833e-6304da2672a8" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">tail -100f /opt/wildfly/&lt;INSTANCE_NAME&gt;/log/server.log
+
+# Ví dụ
+tail -100f /opt/wildfly/masion-art/log/server.log</code></pre></div><div style="display:contents" dir="auto"><p id="5d8bebc4-7c89-4d3b-9f9d-cc3fc262570b" class=""><strong>5) Theo dõi log của service systemd</strong></p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="016b462d-252e-49b9-856b-add1b6c49dc4" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">journalctl -u &lt;SERVICE_NAME&gt; -f
+
+# Ví dụ
+journalctl -u wildfly@masion-art -f</code></pre></div><div style="display:contents" dir="auto"><p id="141792bd-70f0-429d-bc6a-b159fa891e3d" class="">Tóm tắt ngắn:</p></div><div style="display:contents" dir="auto"><ul id="6b1bb839-61ab-4c7f-b1fc-16714ce4358f" class="bulleted-list"><li style="list-style-type:disc">Copy WAR vào: <code>/opt/wildfly/&lt;INSTANCE_NAME&gt;/deployments/</code></li></ul></div><div style="display:contents" dir="auto"><ul id="3112289f-4eff-4eff-bdad-8a65c0849a25" class="bulleted-list"><li style="list-style-type:disc">Set owner: <code>wildfly:wildfly</code></li></ul></div><div style="display:contents" dir="auto"><ul id="6d1bfeb2-aef9-4de9-8962-e762cf5e085c" class="bulleted-list"><li style="list-style-type:disc">Restart service: <code>wildfly@&lt;INSTANCE_NAME&gt;</code></li></ul></div><div style="display:contents" dir="auto"><p id="cb8952d8-7745-466c-9908-c5f8096c123a" class=""><strong>Câu lệnh tổng quát:</strong></p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="f8752bf0-eba7-40cf-b1b8-b81ec92c4874" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">cp /path/to/&lt;APP_NAME&gt; /opt/wildfly/&lt;INSTANCE_NAME&gt;/deployments/
+chown wildfly:wildfly /opt/wildfly/&lt;INSTANCE_NAME&gt;/deployments/&lt;APP_NAME&gt;
+systemctl restart wildfly@&lt;INSTANCE_NAME&gt;</code></pre></div><div style="display:contents" dir="auto"><p id="95706282-43ea-4664-ab6a-0ec72e0d3091" class=""><strong>Ví dụ (INSTANCE_NAME=masion-art, APP_NAME=ROOT.war):</strong></p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="3ee1684a-2a7e-43b0-ab18-240ea39526b9" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">cp /path/to/ROOT.war /opt/wildfly/masion-art/deployments/
+chown wildfly:wildfly /opt/wildfly/masion-art/deployments/ROOT.war
+systemctl restart wildfly@masion-art</code></pre></div><div style="display:contents" dir="ltr"><figure class="block-color-blue_background callout" style="white-space:pre-wrap;display:flex" id="2c9ccd20-e7ef-49e2-b10f-d25815cbb4b9"><div style="font-size:1.5em"><span class="icon">🌐</span></div><div style="width:100%"><div style="display:contents" dir="auto"><p id="6c2d6b36-52c5-463c-8239-3a249fee31b5" class=""><strong>Deploy chạy root (/) cho dễ proxy OLS:</strong></p></div><div style="display:contents" dir="auto"><ul id="818f38c5-26c9-4903-95f1-3f9016a9da1e" class="bulleted-list"><li style="list-style-type:disc">Nếu muốn app chạy ở <code><strong>/</strong></code> thì nên deploy dưới tên <code><strong>ROOT.war</strong></code>.</li></ul></div><div style="display:contents" dir="auto"><ul id="e7721b13-0683-426b-9adc-ff9bcf12c64b" class="bulleted-list"><li style="list-style-type:disc">Khi đó, WildFly (offset 0) thường chạy nội bộ tại: <code>http://127.0.0.1:8080/</code>.</li></ul></div></div></figure></div><div style="display:contents" dir="auto"><h4 id="b2eb7383-8d31-4817-b093-f87bfe7e003c" class="">7.3.6) Reverse proxy OpenLiteSpeed (OLS) trỏ về WildFly</h4></div><div style="display:contents" dir="auto"><p id="866033bf-a2e3-44d6-b23c-e6fb2c4cc131" class="">Mục tiêu:</p></div><div style="display:contents" dir="auto"><ul id="aa2b4944-66a6-4f5c-8b62-bc20125677e4" class="bulleted-list"><li style="list-style-type:disc">OLS nhận request public <code>https://yourdomain.com/</code> (hoặc <code>/api</code>, <code>/app</code>)</li></ul></div><div style="display:contents" dir="auto"><ul id="f48a3748-8960-477e-bba0-9b6a242a1601" class="bulleted-list"><li style="list-style-type:disc">Reverse proxy về WildFly chạy nội bộ (khuyến nghị bind <code>127.0.0.1</code>)</li></ul></div><div style="display:contents" dir="auto"><ul id="ae768ac5-ebb9-47a0-aa97-684d10985d1f" class="bulleted-list"><li style="list-style-type:disc">Forward đúng header để WildFly:<div style="display:contents" dir="auto"><ul id="c0ea715e-63c9-4dee-a858-7d4f6a8a70be" class="bulleted-list"><li style="list-style-type:circle">Log đúng IP client</li></ul></div><div style="display:contents" dir="auto"><ul id="23001d49-5863-4472-881b-b3e2ec26d137" class="bulleted-list"><li style="list-style-type:circle">Hiểu request gốc là HTTPS</li></ul></div><div style="display:contents" dir="auto"><ul id="ce4f53be-3c5b-4a57-8441-45e7db4bc25c" class="bulleted-list"><li style="list-style-type:circle">Tránh lỗi redirect sai protocol (http ↔ https)</li></ul></div></li></ul></div><div style="display:contents" dir="auto"><h4 id="909b985b-ed3e-4b32-ad13-346f517f365d" class="">A) Khai báo External App (OLS → WildFly)</h4></div><div style="display:contents" dir="auto"><p id="cce956c2-322e-4b2c-9895-b77216d5ed4a" class=""><strong>Trên OLS WebAdmin</strong> (thường là <code>https://&lt;IP&gt;:7080</code>):</p></div><div style="display:contents" dir="auto"><p id="261b5d5d-f6a3-4a35-bee4-c6667905f625" class="">1) Vào <strong>Virtual Hosts</strong> → chọn vhost của domain</p></div><div style="display:contents" dir="auto"><p id="e1d607ef-dd22-4553-8a03-7c5bd2aaf75e" class="">2) <strong>External App</strong> → <strong>Add</strong></p></div><div style="display:contents" dir="auto"><ul id="056311dc-79ba-4cf7-9653-af68e5f642b2" class="bulleted-list"><li style="list-style-type:disc">Type: <code>Web Server</code></li></ul></div><div style="display:contents" dir="auto"><ul id="5fa3a465-d8ea-486a-8b2e-5fd5c36f2b2d" class="bulleted-list"><li style="list-style-type:disc">Name: <code>wildfly_masion_art</code></li></ul></div><div style="display:contents" dir="auto"><ul id="81042dfb-d04a-45f5-a9a5-c51644327edc" class="bulleted-list"><li style="list-style-type:disc">Address: <code>127.0.0.1:8080</code><div style="display:contents" dir="auto"><ul id="4f57ea2c-7190-4ae3-9c97-5a3a85bcea5f" class="bulleted-list"><li style="list-style-type:circle">Nếu instance offset khác, đổi theo port nội bộ. Ví dụ <code>site2</code> offset=100 → <code>127.0.0.1:8180</code></li></ul></div></li></ul></div><div style="display:contents" dir="auto"><ul id="47c77602-09fb-494b-915a-8c7faa61feba" class="bulleted-list"><li style="list-style-type:disc"><strong>Max Connections:</strong> khuyến nghị <code>100–200</code> (tuỳ tải, RAM/CPU)</li></ul></div><div style="display:contents" dir="auto"><ul id="f9b4c1f1-c9b4-4e48-9623-1f086c490fb9" class="bulleted-list"><li style="list-style-type:disc"><strong>Keep Alive:</strong> <code>Yes</code></li></ul></div><div style="display:contents" dir="auto"><p id="43d48c14-a02c-45e4-8953-c8f1ead56d5d" class="">Ghi chú nghiệp vụ:</p></div><div style="display:contents" dir="auto"><ul id="dcb6da82-a871-49ee-b6c8-f63e052e8d3d" class="bulleted-list"><li style="list-style-type:disc"><code>Max Connections</code> quá thấp dễ nghẽn khi có nhiều request đồng thời.</li></ul></div><div style="display:contents" dir="auto"><ul id="2572afc5-4c17-40e6-8866-f8d73c1c5c87" class="bulleted-list"><li style="list-style-type:disc"><code>Keep Alive</code> giúp giảm latency (đặc biệt với API nhiều request nhỏ) và giảm overhead tạo kết nối mới.</li></ul></div><div style="display:contents" dir="auto"><h4 id="9235dbd1-dc0a-4d46-b16d-2534b4e26862" class="">B) Tạo Proxy Context và bật header forwarding</h4></div><div style="display:contents" dir="auto"><p id="6d92cb3d-295d-44da-88e8-63a0eaa93df1" class="">3) <strong>Context</strong> → <strong>Add</strong></p></div><div style="display:contents" dir="auto"><ul id="1480e05e-76bc-498c-a166-ce6a07a858f1" class="bulleted-list"><li style="list-style-type:disc">Type: <code>Proxy</code></li></ul></div><div style="display:contents" dir="auto"><ul id="796776e2-e6fe-4bab-8a1c-24640172e340" class="bulleted-list"><li style="list-style-type:disc">URI:<div style="display:contents" dir="auto"><ul id="1a32a4e9-8a0a-4e88-9c2f-17be8e0f0966" class="bulleted-list"><li style="list-style-type:circle">Proxy toàn site: <code>/</code></li></ul></div><div style="display:contents" dir="auto"><ul id="e4e82195-ea10-4363-a922-ee196d94449b" class="bulleted-list"><li style="list-style-type:circle">Hoặc proxy theo path: <code>/api/</code> (tuỳ nhu cầu)</li></ul></div></li></ul></div><div style="display:contents" dir="auto"><ul id="bf241245-2e25-4a55-8b43-a9d669694538" class="bulleted-list"><li style="list-style-type:disc">Location: <code>wildfly_masion_art</code></li></ul></div><div style="display:contents" dir="auto"><p id="83669355-6b5d-4f1c-b16b-1210b7a30755" class="">4) Trong Proxy Context, <strong>bổ sung header forwarding</strong> (khuyến nghị):</p></div><div style="display:contents" dir="auto"><ul id="26e7e74a-cc9b-496e-b498-c85b6ce62708" class="bulleted-list"><li style="list-style-type:disc"><code>X-Forwarded-For</code>: để WildFly biết IP client (thay vì chỉ thấy <code>127.0.0.1</code>)</li></ul></div><div style="display:contents" dir="auto"><ul id="7a9327ef-b5e1-4c3e-9e03-ebf566cbe658" class="bulleted-list"><li style="list-style-type:disc"><code>X-Forwarded-Proto</code>: để WildFly biết request gốc là <code>https</code></li></ul></div><div style="display:contents" dir="auto"><ul id="6046cce8-9cc2-4375-aa7f-b3623893132c" class="bulleted-list"><li style="list-style-type:disc"><code>X-Forwarded-Host</code>: để WildFly biết đúng host/domain gốc</li></ul></div><div style="display:contents" dir="auto"><blockquote id="b941a11c-fea1-424d-8dd6-af394929e26d" class="">Tuỳ giao diện OLS/LSWS, phần này có thể nằm ở mục “Request Header” hoặc “Add/Set Header”. Nếu OLS cho phép “pass through” header sẵn có thì chỉ cần đảm bảo 3 header trên được set/forward.</blockquote></div><div style="display:contents" dir="auto"><h4 id="e09ec3ed-07c4-4b4b-81ce-36114558992c" class="">C) Bật proxy-address-forwarding trong WildFly (BẮT BUỘC nếu dùng reverse proxy)</h4></div><div style="display:contents" dir="auto"><p id="f29ca4a8-2460-49d3-9247-b6e218feb4cf" class="">Trên instance WildFly, sửa file:</p></div><div style="display:contents" dir="auto"><ul id="aa817c3c-a200-4bec-8c7b-14aa4172df7b" class="bulleted-list"><li style="list-style-type:disc"><code>/opt/wildfly/&lt;INSTANCE_NAME&gt;/configuration/standalone.xml</code></li></ul></div><div style="display:contents" dir="auto"><p id="f4cc6841-18a1-4df0-a030-f9ff0f67ae7d" class="">Tìm <code>http-listener</code> (Undertow) và bật:</p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="067f65e4-e03e-4051-8c91-6ca1fed43155" class="code code-wrap"><code class="language-XML" style="white-space:pre-wrap;word-break:break-all">&lt;http-listener name=&quot;default&quot; socket-binding=&quot;http&quot; proxy-address-forwarding=&quot;true&quot;/&gt;</code></pre></div><div style="display:contents" dir="auto"><p id="dfd161e1-07c1-432a-92cb-7cdf7e89b2e2" class="">Mục đích:</p></div><div style="display:contents" dir="auto"><ul id="74a78a7c-9b54-41f6-a9a1-783497680a17" class="bulleted-list"><li style="list-style-type:disc">WildFly/Undertow tin và sử dụng các header <code>X-Forwarded-*</code> từ reverse proxy</li></ul></div><div style="display:contents" dir="auto"><ul id="cba0cd17-f95a-45df-8900-57183a64600f" class="bulleted-list"><li style="list-style-type:disc">Tránh lỗi redirect sai scheme (http/https)</li></ul></div><div style="display:contents" dir="auto"><ul id="4a911d2e-8628-48e7-aebe-590d5585a694" class="bulleted-list"><li style="list-style-type:disc">Log đúng IP client khi app/framework đọc remote address</li></ul></div><div style="display:contents" dir="auto"><p id="714b23a3-b321-4d83-81ee-2d9f8b58755b" class="">Sau khi sửa, restart instance:</p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="ef95982e-687b-41f3-955b-661459777510" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">systemctl restart wildfly@&lt;INSTANCE_NAME&gt;</code></pre></div><div style="display:contents" dir="auto"><h4 id="6d16db28-b844-4491-9a0e-de1bff92cbdb" class="">D) Lưu ý quan trọng (case chạy root / và context)</h4></div><div style="display:contents" dir="auto"><ul id="080d8494-84d9-4c68-b79c-bd4e5c27b272" class="bulleted-list"><li style="list-style-type:disc">Nếu muốn app chạy ở <code>/</code> để proxy đơn giản nhất, deploy dưới tên <code><strong>ROOT.war</strong></code>.</li></ul></div><div style="display:contents" dir="auto"><ul id="5f1491b5-861b-4a36-b2b3-6149be7cbd9d" class="bulleted-list"><li style="list-style-type:disc">Khi đó, WildFly (offset 0) thường phục vụ tại <code>http://127.0.0.1:8080/</code> và OLS context <code>/</code> sẽ hoạt động ổn định.</li></ul></div><div style="display:contents" dir="auto"><ul id="1dee0dbf-306e-4efd-b8a8-958878883fa9" class="bulleted-list"><li style="list-style-type:disc">Nếu app chạy ở context <code>/ten-app</code> (ví dụ <code>myapp.war</code>), bạn có thể:<div style="display:contents" dir="auto"><ul id="b264b489-d514-4cf8-afaf-e04fa025b8c9" class="bulleted-list"><li style="list-style-type:circle">Proxy URI <code>/</code> và để app tự handle route, hoặc</li></ul></div><div style="display:contents" dir="auto"><ul id="0136a112-713a-46ed-b501-19d08ecb06ea" class="bulleted-list"><li style="list-style-type:circle">Proxy URI <code>/ten-app/</code> tuỳ cách bạn muốn expose.</li></ul></div></li></ul></div><div style="display:contents" dir="auto"><h4 id="ab7beace-ba16-4051-935d-774bdb09811a" class="">E) Kiểm tra nhanh sau khi cấu hình</h4></div><div style="display:contents" dir="auto"><ul id="e96a2484-64e9-4663-87b3-bac55547d1bf" class="bulleted-list"><li style="list-style-type:disc">Test từ server (bỏ qua OLS):</li></ul></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="7be7f97d-6d73-4054-a05c-c2c2fc8d66af" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">curl -I http://127.0.0.1:8080/</code></pre></div><div style="display:contents" dir="auto"><ul id="4ee933e4-7ee4-4e8f-87b5-bd7ca8035afa" class="bulleted-list"><li style="list-style-type:disc">Test qua domain:</li></ul></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="9bf2ba1f-7b76-43b1-a9b5-8461650ab019" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">curl -I https://yourdomain.com/</code></pre></div><div style="display:contents" dir="auto"><ul id="f4f63055-adc9-4a2e-aebb-bb23e5cef950" class="bulleted-list"><li style="list-style-type:disc">Nếu gặp redirect loop hoặc bị đá về http:<div style="display:contents" dir="auto"><ul id="bc99a388-0985-4aee-a095-70a069d3e9ea" class="bulleted-list"><li style="list-style-type:circle">Kiểm tra <code>proxy-address-forwarding=&quot;true&quot;</code></li></ul></div><div style="display:contents" dir="auto"><ul id="53da0629-06ef-4796-8790-9994f1d12969" class="bulleted-list"><li style="list-style-type:circle">Kiểm tra <code>X-Forwarded-Proto=https</code> có được forward/set đúng</li></ul></div></li></ul></div><div style="display:contents" dir="auto"><h4 id="4fbaa5d2-0a57-491d-9efe-a68c95ca061f" class="">7.3.7) Firewall cho WildFly</h4></div><div style="display:contents" dir="auto"><p id="5f23c99d-56f0-46a8-b7ca-5587ad6904fd" class="">Không nên mở 8080 ra ngoài. Vì WildFly bind <code>127.0.0.1</code> nên mặc định cũng không bị public.</p></div><div style="display:contents" dir="auto"><p id="287a35d1-1b34-43e8-b790-061b7bb8e7bc" class="">Nếu bạn đổi bind ra <code>0.0.0.0</code> thì <strong>phải</strong> chặn firewall hoặc chỉ allow IP nội bộ.</p></div><div style="display:contents" dir="auto"><h4 id="b2631d21-036c-4390-abde-7314f7766a09" class="">7.3.8) Log và debug nhanh</h4></div><div style="display:contents" dir="auto"><ul id="68a89679-d7b9-4d6a-bfc4-5b896787dac5" class="bulleted-list"><li style="list-style-type:disc">Xem log WildFly (đúng theo service instance):</li></ul></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="0940c029-a27e-4cfb-8a6d-a83285cc1172" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">journalctl -u wildfly@masion-art -n 200 --no-pager</code></pre></div><div style="display:contents" dir="auto"><ul id="8dbd354d-b957-4b50-811d-70944f684d52" class="bulleted-list"><li style="list-style-type:disc">Kiểm tra app từ server:</li></ul></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="a63e7df8-1313-4e90-87ed-6724a004a8ca" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">curl -I http://127.0.0.1:8080/
+curl -I http://127.0.0.1:8080/myapp/</code></pre></div><div style="display:contents" dir="auto"><ul id="33654323-19ea-4cfd-b919-43760b7bb2f5" class="bulleted-list"><li style="list-style-type:disc">Log OLS:<div style="display:contents" dir="auto"><ul id="3e281582-042a-43b4-89b7-c151b38d5ef1" class="bulleted-list"><li style="list-style-type:circle"><code>tail -f /usr/local/lsws/logs/error.log</code></li></ul></div><div style="display:contents" dir="auto"><ul id="c6e91141-9d5d-484b-9bec-ae7852b61f34" class="bulleted-list"><li style="list-style-type:circle">Access log theo vhost.</li></ul></div></li></ul></div><div style="display:contents" dir="ltr"><figure class="block-color-gray_background callout" style="white-space:pre-wrap;display:flex" id="25a514f7-13fd-4b47-a075-3d658ade072d"><div style="font-size:1.5em"><span class="icon">🧠</span></div><div style="width:100%"><div style="display:contents" dir="auto"><p id="e0b148d3-4aa1-4443-82cd-e3c2cbd166da" class="">Nếu bạn cho mình biết app là <strong>Spring Boot WAR</strong> hay <strong>Java EE/Jakarta EE</strong> (Servlet/JSP, JAX-RS, v.v.) và muốn chạy ở context <code>/</code> hay <code>/ten-app</code>, mình sẽ chỉnh phần proxy cho đúng case.</p></div></div></figure></div><div style="display:contents" dir="auto"><hr id="51ececc2-fc42-4f85-a517-a1b7e3422984"/></div><div style="display:contents" dir="auto"><h3 id="a855379c-8757-4e5c-b110-01dd35cb986a" class="">8) Cài database (MySQL) và hardening cơ bản</h3></div><div style="display:contents" dir="auto"><p id="d28b688c-c791-4aaa-8687-3d57122d6397" class="">Mục tiêu của phần này:</p></div><div style="display:contents" dir="auto"><ul id="173c5b5b-adce-47b6-b52d-a108fb701203" class="bulleted-list"><li style="list-style-type:disc">Cài/kiểm tra <strong>MySQL</strong> hoạt động ổn định (service, port, version)</li></ul></div><div style="display:contents" dir="auto"><ul id="8ae539a6-5d42-4eaa-bfe5-794973d32e5e" class="bulleted-list"><li style="list-style-type:disc">Hardening nhanh bằng <code>mysql_secure_installation</code> theo chuẩn production</li></ul></div><div style="display:contents" dir="auto"><ul id="781161a6-738c-4850-ad2b-5873dd60bed9" class="bulleted-list"><li style="list-style-type:disc">Tạo database + user cho application theo nguyên tắc <strong>least privilege</strong></li></ul></div><div style="display:contents" dir="auto"><h4 id="bedc8027-43ba-43fa-8fac-b7bc7ba8c6ae" class="">8.1) Kiểm tra MySQL đã có chưa</h4></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="93bcfb1a-eccc-424c-8b04-d9ec46b00b71" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">systemctl status mysqld || systemctl status mysql
+mysql --version
+ss -tulnp | grep 3306 || true
+
+# Kiểm tra password root DirectAdmin
+# DirectAdmin thường lưu password tại: DirectAdmin thường lưu password tại:
+Lệnh: 
+	cat /usr/local/directadmin/conf/mysql.conf
+	hoặc: cat /root/.my.cnf</code></pre></div><div style="display:contents" dir="auto"><p id="3bfbb2da-cbe6-40b0-8785-a5cc1e2e833d" class="">Gợi ý đọc nhanh:</p></div><div style="display:contents" dir="auto"><ul id="7b19069e-6677-4801-986d-0de71939b06e" class="bulleted-list"><li style="list-style-type:disc">Nếu <code>ss</code> không ra gì: service chưa chạy, hoặc MySQL chưa cài.</li></ul></div><div style="display:contents" dir="auto"><ul id="cfb13620-d682-4c6c-bd81-9dfcf483bb41" class="bulleted-list"><li style="list-style-type:disc">Nếu MySQL chỉ dùng nội bộ cho web/app, <strong>không cần</strong> expose 3306 ra internet.</li></ul></div><div style="display:contents" dir="auto"><h4 id="5afbed01-1d51-4553-a008-b2d2438c0808" class="block-color-red_background">8.2) Hardening database với mysql_secure_installation (khuyến nghị) </h4></div><div style="display:contents" dir="auto"><p id="32112572-0030-8061-b25c-e3d266c859ff" class="block-color-red"><strong>[Bỏ qua vì không có tài khoản root]</strong></p></div><div style="display:contents" dir="auto"><p id="3982fefa-bf6d-4ef4-85f5-8f8349ab9994" class="">Chạy lệnh:</p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="d8f35cee-1052-459f-894a-9401a2a43bab" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">mysql_secure_installation</code></pre></div><div style="display:contents" dir="auto"><p id="a1e1b82a-d7b0-49d9-a7a3-aa786c17f5a8" class="">Script sẽ hỏi các câu sau, nên trả lời theo cấu hình chuẩn production:</p></div><div style="display:contents" dir="auto"><ul id="8a7177b3-6d08-4e20-b913-a82d46f3a87f" class="bulleted-list"><li style="list-style-type:disc"><code>Set root password?</code> → <strong>Y (Phải check hiện tại user root đã có pass chưa?)</strong></li></ul></div><div style="display:contents" dir="auto"><ul id="b48cb7ba-d5fa-4b61-b845-2683346d7824" class="bulleted-list"><li style="list-style-type:disc"><code>Remove anonymous users?</code> → <strong>Y</strong></li></ul></div><div style="display:contents" dir="auto"><ul id="78a822a9-38f1-4311-8d17-ecced622bd76" class="bulleted-list"><li style="list-style-type:disc"><code>Disallow root login remotely?</code> → <strong>Y</strong></li></ul></div><div style="display:contents" dir="auto"><ul id="60223c32-22e4-43e9-a9cb-2ff647124fb6" class="bulleted-list"><li style="list-style-type:disc"><code>Remove test database and access to it?</code> → <strong>Y</strong></li></ul></div><div style="display:contents" dir="auto"><ul id="c88485e5-4735-4871-ae7c-6789af4edebc" class="bulleted-list"><li style="list-style-type:disc"><code>Reload privilege tables now?</code> → <strong>Y</strong></li></ul></div><div style="display:contents" dir="auto"><p id="bb179be3-2d81-4e8c-97d5-610b99c21668" class=""><strong>Mục đích của từng tuỳ chọn (vì sao nên chọn Y):</strong></p></div><div style="display:contents" dir="auto"><ul id="43c1d2b4-4ccd-4a4f-a962-6201964cca0e" class="bulleted-list"><li style="list-style-type:disc"><strong>Remove anonymous users:</strong> tránh login DB không có password.</li></ul></div><div style="display:contents" dir="auto"><ul id="2564cd4f-7c0f-4fba-b5b5-601834d12e5a" class="bulleted-list"><li style="list-style-type:disc"><strong>Disallow root login remotely:</strong> giảm rủi ro bị dò password/chiếm quyền <code>root</code> từ xa.</li></ul></div><div style="display:contents" dir="auto"><ul id="c731250b-0e24-4190-8158-4c465d453afa" class="bulleted-list"><li style="list-style-type:disc"><strong>Remove test database:</strong> DB test thường là mục tiêu bị exploit.</li></ul></div><div style="display:contents" dir="auto"><ul id="25fd72f6-df60-4d97-9624-45a5909f0231" class="bulleted-list"><li style="list-style-type:disc"><strong>Reload privileges:</strong> áp dụng ngay thay đổi quyền sau khi hardening.</li></ul></div><div style="display:contents" dir="ltr"><figure class="block-color-yellow_background callout" style="white-space:pre-wrap;display:flex" id="2baab2ca-fe20-4126-96d3-b96136807c1d"><div style="font-size:1.5em"><span class="icon">⚠️</span></div><div style="width:100%"><div style="display:contents" dir="auto"><p id="1732c870-25c4-4cc9-93cb-8a4b6228ef6a" class="">Nếu bạn đang dùng panel/tool có cấu hình sẵn kết nối DB, hãy cẩn thận khi đổi root password để tránh panel bị lỗi kết nối. Cách an toàn là thực hiện hardening ngay sau khi cài xong DB.</p></div></div></figure></div><div style="display:contents" dir="auto"><h4 id="d83beaaa-903d-4b2b-8b4a-b90add605002" class="">8.3) Tạo database + user cho app (ví dụ chuẩn)</h4></div><div style="display:contents" dir="auto"><p id="97c319c7-9b73-45ea-aba8-898676a6d6ae" class="">Login MySQL:</p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="369ceada-f3af-4a1f-9392-d08f9ca79ced" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">mysql -u da_admin -p
+
+jER0mmx3i084s</code></pre></div><div style="display:contents" dir="auto"><p id="53236b2f-db02-487b-b1e6-c823576211f6" class="">Tạo database và user chỉ được truy cập từ <a href="http://localhost">localhost</a>:</p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="8e0e5eea-ca19-4dee-9580-d9bb12d54700" class="code code-wrap"><code class="language-SQL" style="white-space:pre-wrap;word-break:break-all">DROP DATABASE IF EXISTS `ART_AND_DECOR`;
+
+CREATE DATABASE IF NOT EXISTS `ART_AND_DECOR`
+CHARACTER SET utf8mb4
+COLLATE utf8mb4_unicode_ci;
+
+CREATE USER &#x27;masion-art&#x27;@&#x27;localhost&#x27;
+IDENTIFIED BY &#x27;masion-art@123&#x27;;
+
+GRANT ALL PRIVILEGES
+ON ART_AND_DECOR.*
+TO &#x27;masion-art&#x27;@&#x27;localhost&#x27;;
+
+FLUSH PRIVILEGES;</code></pre></div><div style="display:contents" dir="auto"><p id="7f3138b3-fc3e-46d0-8f85-b0fe1116b060" class="">Kiểm tra nhanh user/host và quyền:</p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="dbb628e7-368e-472d-a2a9-1d3e923a3b10" class="code code-wrap"><code class="language-SQL" style="white-space:pre-wrap;word-break:break-all">SELECT user,host FROM mysql.user;
+SHOW GRANTS FOR &#x27;masion-art&#x27;@&#x27;localhost&#x27;;</code></pre></div><div style="display:contents" dir="ltr"><figure id="32112572-0030-804a-bf84-debba624e1e9" class="image"><a href="image.png"><img style="width:703.9750366210938px" src="image.png"/></a></figure></div><div style="display:contents" dir="auto"><h4 id="f6ebedb7-0640-4e3f-b455-32357c5635fa" class="">8.4) MySQL / MariaDB CLI cheat sheet (Linux VPS)</h4></div><div style="display:contents" dir="auto"><h4 id="d1fda9cc-5e9b-460c-b1dd-b36ef86bf98d" class="">1) Login database</h4></div><div style="display:contents" dir="auto"><ul id="0afc3968-16c2-41fc-9dce-2d7b7254d05e" class="bulleted-list"><li style="list-style-type:disc">Login root:</li></ul></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="34409d9a-c25b-4b0b-835f-7bcd9cadf9bb" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">mysql -u root -p</code></pre></div><div style="display:contents" dir="auto"><ul id="549fe037-1f06-45f5-982c-1dfb20ab4852" class="bulleted-list"><li style="list-style-type:disc">Logout:</li></ul></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="1b2f2264-b2d6-400c-919a-0f2a9e5310bb" class="code code-wrap"><code class="language-SQL" style="white-space:pre-wrap;word-break:break-all">exit;</code></pre></div><div style="display:contents" dir="auto"><ul id="4fc960db-09d0-446e-8ad3-2abb46e6a0c3" class="bulleted-list"><li style="list-style-type:disc">Login user vào database cụ thể:</li></ul></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="efc5be27-23fc-461a-85d9-f453545f99e0" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">mysql -u &lt;USERNAME&gt; -p &lt;DATABASE_NAME&gt;
+
+# Ví dụ
+mysql -u masion-art -p ART_AND_DECOR</code></pre></div><div style="display:contents" dir="auto"><ul id="9d62da27-48f2-4aba-b895-11e1c2ca1506" class="bulleted-list"><li style="list-style-type:disc">Login qua host:</li></ul></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="2352a15a-cf55-46e2-baa2-9fac32cd56dd" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">mysql -u &lt;USERNAME&gt; -p -h localhost</code></pre></div><div style="display:contents" dir="auto"><ul id="e8740731-5418-419c-9726-8180644efbdd" class="bulleted-list"><li style="list-style-type:disc">Login qua IP:</li></ul></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="fa2ae74e-557c-476e-b81f-24eb0b87233c" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">mysql -u &lt;USERNAME&gt; -p -h 103.166.182.45</code></pre></div><div style="display:contents" dir="auto"><h4 id="d23b2bca-3688-4cd7-be68-42f2ee774c6a" class="">2) Các lệnh cơ bản trong MySQL</h4></div><div style="display:contents" dir="auto"><ul id="4d3133c3-8eca-45f3-8050-76edca9585db" class="bulleted-list"><li style="list-style-type:disc">Xem danh sách database:</li></ul></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="de2a955d-72ef-463e-9c30-563889aecc16" class="code code-wrap"><code class="language-SQL" style="white-space:pre-wrap;word-break:break-all">SHOW DATABASES;</code></pre></div><div style="display:contents" dir="auto"><ul id="11b8e10f-2fb8-4ef7-b463-87b34156c7cd" class="bulleted-list"><li style="list-style-type:disc">Chọn database:</li></ul></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="f1aebf49-cf91-41dc-bf69-0fe7b7f5976d" class="code code-wrap"><code class="language-SQL" style="white-space:pre-wrap;word-break:break-all">USE &lt;DATABASE_NAME&gt;;
+
+# Ví dụ
+USE ART_AND_DECOR;</code></pre></div><div style="display:contents" dir="auto"><ul id="024bdf00-76eb-4a51-90f5-79a6f23448d4" class="bulleted-list"><li style="list-style-type:disc">Xem danh sách tables:</li></ul></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="21c2c2a1-d7a6-45ad-bfe9-b319d2256cb4" class="code code-wrap"><code class="language-SQL" style="white-space:pre-wrap;word-break:break-all">SHOW TABLES;</code></pre></div><div style="display:contents" dir="auto"><ul id="99617b77-cfb1-4864-af21-9b6395708b5c" class="bulleted-list"><li style="list-style-type:disc">Xem cấu trúc table:</li></ul></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="eb9a8a56-e9e7-44a6-aada-4df316e26529" class="code code-wrap"><code class="language-SQL" style="white-space:pre-wrap;word-break:break-all">DESCRIBE users;</code></pre></div><div style="display:contents" dir="auto"><p id="0477163b-bb43-4949-8ab3-ab20c564e696" class="">hoặc</p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="d9498421-7a4c-47cc-a951-3b3940b6fc95" class="code code-wrap"><code class="language-SQL" style="white-space:pre-wrap;word-break:break-all">SHOW CREATE TABLE users;</code></pre></div><div style="display:contents" dir="auto"><ul id="09ada2bb-2012-4ec1-b8f5-ff8c5ef02af5" class="bulleted-list"><li style="list-style-type:disc">Xem dữ liệu:</li></ul></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="d51a0a67-58da-464a-9541-43d9bd2dd6cb" class="code code-wrap"><code class="language-SQL" style="white-space:pre-wrap;word-break:break-all">SELECT * FROM users;</code></pre></div><div style="display:contents" dir="auto"><ul id="86af8b87-64fe-4a01-baff-b21d1546f178" class="bulleted-list"><li style="list-style-type:disc">Giới hạn dữ liệu:</li></ul></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="4ea7ecb9-88ea-4d5b-9ad3-f7d9a0196871" class="code code-wrap"><code class="language-SQL" style="white-space:pre-wrap;word-break:break-all">SELECT * FROM users LIMIT 10;</code></pre></div><div style="display:contents" dir="auto"><h4 id="fce136d5-0eef-4783-99e9-1036a4c7ccc5" class="">3) Chạy file SQL</h4></div><div style="display:contents" dir="auto"><p id="873997ee-5502-4a97-8299-f1383c5a1e96" class=""><strong>Cách 1: chạy từ terminal</strong></p></div><div style="display:contents" dir="auto"><ul id="05da5bab-6a2e-44c4-bb18-12a0c2fb3607" class="bulleted-list"><li style="list-style-type:disc">Import 1 database:</li></ul></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="a080c604-60be-4bb9-9e06-798b68130a26" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">mysql -u &lt;USERNAME&gt; -p &lt;DATABASE_NAME&gt; &lt; &lt;FILE_NAME.sql&gt;
+
+# Ví dụ
+mysql -u masion-art -p ART_AND_DECOR &lt; RUN_ALL_DATABASE_SCRIPTS.sql;
+masion-art@123</code></pre></div><div style="display:contents" dir="auto"><p id="1b7e6e46-5905-43ee-9e6c-fc5fcdfb9270" class=""><strong>Cách 2: chạy từ bên trong MySQL CLI</strong></p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="8e4870cc-bfa4-4d35-b57b-672cb2b627e6" class="code code-wrap"><code class="language-SQL" style="white-space:pre-wrap;word-break:break-all">SOURCE &lt;FILE_NAME.sql&gt;;</code></pre></div><div style="display:contents" dir="auto"><p id="8f58d06e-186e-4901-9c80-838c94595bf5" class="">hoặc</p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="0498b8dc-ab4a-42b4-b797-e4f3f95a6320" class="code code-wrap"><code class="language-SQL" style="white-space:pre-wrap;word-break:break-all">SOURCE /full/path/to/file.sql;</code></pre></div><div style="display:contents" dir="auto"><p id="2c9601e3-7339-4887-9486-3288706486bd" class="">Ví dụ:</p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="cdd32949-6f31-451a-a04e-19f9817afc30" class="code code-wrap"><code class="language-SQL" style="white-space:pre-wrap;word-break:break-all">SOURCE /home/admin/backup.sql;</code></pre></div><div style="display:contents" dir="auto"><h4 id="c42afd37-d273-4bec-9665-8151e9beb2a5" class="">4) Backup database</h4></div><div style="display:contents" dir="auto"><ul id="53848ed9-549b-4bba-b902-c16e3f993941" class="bulleted-list"><li style="list-style-type:disc">Backup 1 database:</li></ul></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="e50d5f73-ce49-4a2e-a1a0-e3d3163313a4" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">mysqldump -u root -p app_db &gt; backup.sql</code></pre></div><div style="display:contents" dir="auto"><ul id="05576607-6bd9-4972-9fa9-bda1ccf12fd0" class="bulleted-list"><li style="list-style-type:disc">Backup tất cả database:</li></ul></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="37ed451b-8b79-4795-baf8-5b79f73ed4bf" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">mysqldump -u &lt;USERNAME&gt; -p --all-databases &gt; alldb.sql</code></pre></div><div style="display:contents" dir="auto"><ul id="5a166b83-f069-4c72-95f5-2ccda5f67a76" class="bulleted-list"><li style="list-style-type:disc">Backup chỉ schema (structure):</li></ul></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="707f6719-c8eb-4042-a60d-b28067904f99" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">mysqldump -u root -p --no-data app_db &gt; schema.sql</code></pre></div><div style="display:contents" dir="auto"><ul id="f655407c-52a5-44a8-9be1-205c0a3954ce" class="bulleted-list"><li style="list-style-type:disc">Backup chỉ dữ liệu:</li></ul></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="f7fd7ccc-1231-45d7-963f-8051bd8a8a69" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">mysqldump -u root -p --no-create-info app_db &gt; data.sql</code></pre></div><div style="display:contents" dir="auto"><h4 id="553d80dc-7a52-4345-a915-fd73b55566ef" class="">5) Tạo database</h4></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="9858b742-722b-45b1-8493-289649d65993" class="code code-wrap"><code class="language-SQL" style="white-space:pre-wrap;word-break:break-all">CREATE DATABASE app_db
+CHARACTER SET utf8mb4
+COLLATE utf8mb4_unicode_ci;</code></pre></div><div style="display:contents" dir="auto"><h4 id="feb2f8cb-9aa8-4a54-acbb-9f9b70e5944f" class="">6) Tạo user database</h4></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="af509c31-e8f9-4afc-81a9-2c54673fea20" class="code code-wrap"><code class="language-SQL" style="white-space:pre-wrap;word-break:break-all">CREATE USER &#x27;app_user&#x27;@&#x27;localhost&#x27;
+IDENTIFIED BY &#x27;strong_password&#x27;;</code></pre></div><div style="display:contents" dir="auto"><h4 id="576a17c7-f530-47a8-840a-d467527f5055" class="">7) Cấp quyền user</h4></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="7e356e03-f4fb-48b1-9260-c765e9937e9b" class="code code-wrap"><code class="language-SQL" style="white-space:pre-wrap;word-break:break-all">GRANT ALL PRIVILEGES
+ON app_db.*
+TO &#x27;app_user&#x27;@&#x27;localhost&#x27;;</code></pre></div><div style="display:contents" dir="auto"><h4 id="44db6448-282e-418e-8ce1-b2931f43fbb2" class="">8) Reload quyền</h4></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="5e9fe970-ac82-4388-a0c7-e6af392d676e" class="code code-wrap"><code class="language-SQL" style="white-space:pre-wrap;word-break:break-all">FLUSH PRIVILEGES;</code></pre></div><div style="display:contents" dir="auto"><h4 id="bc9dfc4f-f749-464e-8a5c-abad555a826c" class="">9) Xoá database</h4></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="25314462-1fa6-47a9-8f02-0e6364073102" class="code code-wrap"><code class="language-SQL" style="white-space:pre-wrap;word-break:break-all">DROP DATABASE app_db;</code></pre></div><div style="display:contents" dir="auto"><h4 id="f3127972-8138-4cb9-9c42-91d5b3bd3540" class="">10) Xoá user</h4></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="06149e0a-ecdd-4535-b914-a8e76f90b600" class="code code-wrap"><code class="language-SQL" style="white-space:pre-wrap;word-break:break-all">DROP USER &#x27;app_user&#x27;@&#x27;localhost&#x27;;</code></pre></div><div style="display:contents" dir="auto"><h4 id="3adc2aed-ca89-4b2d-a5ad-12cb35772884" class="">11) Kiểm tra user database</h4></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="f76acd05-4e76-4051-8d14-8c55e065724f" class="code code-wrap"><code class="language-SQL" style="white-space:pre-wrap;word-break:break-all">SELECT user,host FROM mysql.user;</code></pre></div><div style="display:contents" dir="auto"><h4 id="7a4e99d8-7fd0-4964-b337-5e458f6b7752" class="">12) Kiểm tra quyền user</h4></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="c7fed658-b999-41f6-8cde-685e75dbcb58" class="code code-wrap"><code class="language-SQL" style="white-space:pre-wrap;word-break:break-all">SHOW GRANTS FOR &#x27;app_user&#x27;@&#x27;localhost&#x27;;</code></pre></div><div style="display:contents" dir="auto"><h4 id="7fdef57e-b097-455c-9d02-c246a9a688d7" class="">13) Kiểm tra database đang sử dụng</h4></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="55c78622-fd5e-4bb8-9b14-b7d73e85f3c0" class="code code-wrap"><code class="language-SQL" style="white-space:pre-wrap;word-break:break-all">SELECT DATABASE();</code></pre></div><div style="display:contents" dir="auto"><h4 id="b6e8ac8e-0de5-4fe9-9dbe-8a6285643b77" class="">14) Kiểm tra version database</h4></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="42d4db55-27cf-4eda-a545-fc105330357b" class="code code-wrap"><code class="language-SQL" style="white-space:pre-wrap;word-break:break-all">SELECT VERSION();</code></pre></div><div style="display:contents" dir="auto"><p id="227933a0-86f5-4a27-8938-2956d70e0db2" class="">Hoặc ngoài terminal:</p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="ce70dd79-cd6f-4aa0-85f6-31b5946d45dc" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">mysql --version</code></pre></div><div style="display:contents" dir="auto"><h4 id="4973034a-0323-464f-a7eb-e551ea7722c6" class="">15) Kiểm tra port database</h4></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="e87e2df2-eb0a-47e7-b92b-3c49bc8c02d4" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">ss -tulnp | grep 3306</code></pre></div><div style="display:contents" dir="auto"><h4 id="7ce15cc5-85fb-4f75-88c9-b9abba1f7c51" class="">16) Kiểm tra service database</h4></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="59a4ca40-20e9-476e-af2c-700d9fc3b25c" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">systemctl status mariadb</code></pre></div><div style="display:contents" dir="auto"><p id="3cb7d9ac-8302-485a-9e34-57e5cde1fd5e" class="">hoặc</p></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="08b2c54f-ad40-4dfb-9996-773445d7b7e4" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">systemctl status mysql</code></pre></div><div style="display:contents" dir="auto"><h4 id="4d4e340c-f6de-40dd-b444-0d8093e9c7d1" class="">17) Restart database</h4></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="fc76b550-b087-411c-8ba3-92f60d626247" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">systemctl restart mariadb</code></pre></div><div style="display:contents" dir="auto"><h4 id="a388a537-8b40-43a4-b208-b13dace97d6f" class="">18) Kiểm tra connection database</h4></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="8e65e11a-d9e4-479c-aba3-ae163c5ae25a" class="code code-wrap"><code class="language-SQL" style="white-space:pre-wrap;word-break:break-all">SHOW PROCESSLIST;</code></pre></div><div style="display:contents" dir="auto"><h4 id="074e2a73-73b0-4698-a9e2-303fba597317" class="">19) Kill connection</h4></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="d24a484c-c4b8-40cf-bcee-2d61985b09b6" class="code code-wrap"><code class="language-SQL" style="white-space:pre-wrap;word-break:break-all">KILL 123;</code></pre></div><div style="display:contents" dir="auto"><h4 id="be2a3c42-d1e2-4f77-be02-313b567b3926" class="">20) Kiểm tra dung lượng database</h4></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="0709c414-3d88-4356-b44e-98613d462a5a" class="code code-wrap"><code class="language-SQL" style="white-space:pre-wrap;word-break:break-all">SELECT
+	table_schema AS &quot;Database&quot;,
+	ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) AS &quot;Size (MB)&quot;
+FROM information_schema.tables
+GROUP BY table_schema;</code></pre></div><div style="display:contents" dir="auto"><h4 id="e35c472e-04db-456a-adc2-bfc0c853f034" class="">8.5) Workflow phổ biến khi deploy website</h4></div><div style="display:contents" dir="auto"><ol type="1" id="5a60f556-18bb-4261-a483-b200a8225745" class="numbered-list" start="1"><li>Login mysql</li></ol></div><div style="display:contents" dir="auto"><ol type="1" id="a90ecc0d-43f0-4833-9691-2f13305460b4" class="numbered-list" start="2"><li>Create database</li></ol></div><div style="display:contents" dir="auto"><ol type="1" id="a53ec930-7892-4d03-9745-15840c452296" class="numbered-list" start="3"><li>Create user</li></ol></div><div style="display:contents" dir="auto"><ol type="1" id="e56ac420-029a-468c-87ae-e1b1c49be87f" class="numbered-list" start="4"><li>Grant privileges</li></ol></div><div style="display:contents" dir="auto"><ol type="1" id="5bc77650-0a99-4517-a5ce-c852057bf54b" class="numbered-list" start="5"><li>Import database.sql</li></ol></div><div style="display:contents" dir="auto"><ol type="1" id="a6db1c8a-5464-47e0-8f53-a26f47ad15a5" class="numbered-list" start="6"><li>Config database trong application</li></ol></div><div style="display:contents" dir="ltr"><figure class="block-color-red_background callout" style="white-space:pre-wrap;display:flex" id="253f5ec9-492a-4d07-8595-e2e08500768c"><div style="font-size:1.5em"><span class="icon">🔒</span></div><div style="width:100%"><div style="display:contents" dir="auto"><p id="0d033820-acb6-4196-997e-f0c1ed39f028" class="">Không mở 3306 ra internet nếu không thật cần.</p></div><div style="display:contents" dir="auto"><ul id="267398a8-f830-444e-8310-370896f84e83" class="bulleted-list"><li style="list-style-type:disc">Nếu bắt buộc phải truy cập từ xa, hãy giới hạn IP truy cập (firewalld), và tuyệt đối không cho root login remote.</li></ul></div></div></figure></div><div style="display:contents" dir="auto"><hr id="75e761cc-4006-477c-9585-6ac18a0d6f38"/></div><div style="display:contents" dir="auto"><h3 id="ca65cff1-7d53-443c-a63b-e90fdaf9d0a8" class="">9) Kiểm tra, log, và các lệnh hay dùng</h3></div><div style="display:contents" dir="auto"><h4 id="26253190-5996-4ce4-bc2e-d7ccffe11b37" class="">Trạng thái dịch vụ</h4></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="d303b7c5-04ca-456a-81e7-37dcd1b508bc" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">systemctl status directadmin
+systemctl status lsws
+systemctl status firewalld</code></pre></div><div style="display:contents" dir="auto"><h4 id="d7d83531-fe74-44ff-836f-15e2a8832149" class="">Reload cấu hình</h4></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="b5a8d3d8-4c55-4957-a9d8-2881e48a3c31" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">systemctl reload lsws || systemctl restart lsws
+systemctl restart directadmin</code></pre></div><div style="display:contents" dir="auto"><h4 id="c600cd10-3b95-43d8-9bea-2aadc88c9568" class="">Xem port đang lắng nghe</h4></div><div style="display:contents" dir="auto"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" integrity="sha512-7Z9J3l1+EYfeaPKcGXu3MS/7T+w19WtKQY/n+xzmw4hZhJ9tyYmcUS+4QqAlzhicE5LAfMQSF3iFTK9bQdTxXg==" crossorigin="anonymous" referrerPolicy="no-referrer"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerPolicy="no-referrer"/><pre id="6dfe8388-087c-4499-bf97-c583e92ddb31" class="code code-wrap"><code class="language-Bash" style="white-space:pre-wrap;word-break:break-all">ss -lntp</code></pre></div><div style="display:contents" dir="auto"><hr id="41abaddf-bc7a-4331-ae70-962b9e4d07bb"/></div><div style="display:contents" dir="auto"><h3 id="a4cf284c-ed90-4e73-ba2d-a582854e998c" class="">10) Đánh giá nhanh tài liệu nguồn và điều chỉnh cho CentOS 7 + DA + OLS</h3></div><div style="display:contents" dir="auto"><p id="8f145b7f-5a3f-41d2-ace0-3249ac0e22b4" class="">Từ tài liệu “deploy server VPS Linux” trước đó:</p></div><div style="display:contents" dir="auto"><ul id="d9da6b40-56fb-4cb6-a65c-49f1fa4b03ba" class="bulleted-list"><li style="list-style-type:disc">Phần giải thích <strong>aaPanel/DirectAdmin</strong> vẫn đúng, nhưng triển khai mới sẽ chuẩn hoá theo <strong>DirectAdmin + OpenLiteSpeed</strong>.</li></ul></div><div style="display:contents" dir="auto"><ul id="8310d592-efa4-4774-ace2-15f7f6895cc1" class="bulleted-list"><li style="list-style-type:disc">Các phần về <strong>Nginx reverse proxy</strong> và mẫu config Nginx sẽ <strong>không áp dụng trực tiếp</strong> khi dùng OLS (OLS có cơ chế reverse proxy riêng).</li></ul></div><div style="display:contents" dir="auto"><ul id="bdcd69c7-336d-4fc4-9db9-a72c61b29b76" class="bulleted-list"><li style="list-style-type:disc">Phần <strong>Certbot + Nginx plugin</strong> không phù hợp. Với DA + OLS, nên dùng <strong>Let’s Encrypt tích hợp trong DirectAdmin</strong> để tránh lệch cấu hình.</li></ul></div><div style="display:contents" dir="auto"><ul id="b447d134-a02f-4e8b-acc7-2e36dc83bc6f" class="bulleted-list"><li style="list-style-type:disc">Các ví dụ dùng <code>dnf</code> (Rocky/Alma/CentOS 8+) cần đổi sang <code>yum</code> trên CentOS 7.</li></ul></div><div style="display:contents" dir="auto"><hr id="7cb6ae44-e5e7-45f5-b997-796b12337a2a"/></div><div style="display:contents" dir="auto"><h3 id="31c12572-0030-8063-96b6-d456d03608eb" class="">Checklist triển khai nhanh (tóm tắt)</h3></div><div style="display:contents" dir="auto"><ul id="31c12572-0030-80f6-b239-c136c29e2571" class="to-do-list"><li><div class="checkbox checkbox-off"></div> <span class="to-do-children-unchecked">Update server + cài tool cơ bản</span><div class="indented"></div></li></ul></div><div style="display:contents" dir="auto"><ul id="31c12572-0030-801d-829a-f048db414a7e" class="to-do-list"><li><div class="checkbox checkbox-off"></div> <span class="to-do-children-unchecked">Thiết lập hostname + DNS</span><div class="indented"></div></li></ul></div><div style="display:contents" dir="auto"><ul id="31c12572-0030-8048-8441-f4e2f0ad1dce" class="to-do-list"><li><div class="checkbox checkbox-off"></div> <span class="to-do-children-unchecked">Bật firewalld và mở port 22/80/443/2222</span><div class="indented"></div></li></ul></div><div style="display:contents" dir="auto"><ul id="31c12572-0030-801c-a9c5-ce26565a9df9" class="to-do-list"><li><div class="checkbox checkbox-off"></div> <span class="to-do-children-unchecked">Cài DirectAdmin</span><div class="indented"></div></li></ul></div><div style="display:contents" dir="auto"><ul id="31c12572-0030-8020-bb00-dde980ba0fce" class="to-do-list"><li><div class="checkbox checkbox-off"></div> <span class="to-do-children-unchecked">Chọn/đổi sang OpenLiteSpeed trong CustomBuild</span><div class="indented"></div></li></ul></div><div style="display:contents" dir="auto"><ul id="31c12572-0030-8025-b086-ca1b5a0af101" class="to-do-list"><li><div class="checkbox checkbox-off"></div> <span class="to-do-children-unchecked">Tạo domain + bật Let’s Encrypt</span><div class="indented"></div></li></ul></div><div style="display:contents" dir="auto"><ul id="31c12572-0030-804f-af0a-db9a7187148a" class="to-do-list"><li><div class="checkbox checkbox-off"></div> <span class="to-do-children-unchecked">Deploy website/app + kiểm tra log</span><div class="indented"></div></li></ul></div><div style="display:contents" dir="ltr"><figure id="32112572-0030-8012-a906-da54a3c3e5a5" class="image"><a href="image%201.png"><img style="width:703.9750366210938px" src="image%201.png"/></a></figure></div></div></article><span class="sans" style="font-size:14px;padding-top:2em"></span></body></html>

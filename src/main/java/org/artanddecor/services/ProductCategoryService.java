@@ -27,11 +27,19 @@ public interface ProductCategoryService {
      * @param textSearch Text search in name, slug, displayName, remark (partial match, case-insensitive)
      * @param enabled Filter by enabled status
      * @param visible Filter by visible status
+     * Get product categories by multiple criteria with pagination (all parameters optional)
+     * @param textSearch Text search in name, slug, displayName, remark (partial match, case-insensitive)
+     * @param enabled Filter by enabled status
+     * @param visible Filter by visible status
      * @param productTypeId Filter by product type ID
+     * @param parentCategoryId Filter by parent category ID (null for all)
+     * @param rootOnly Filter only root categories (cannot be used with parentCategoryId)
      * @param pageable Pagination and sorting information
      * @return Page of ProductCategoryDto matching criteria
      */
-    Page<ProductCategoryDto> getProductCategoriesByCriteria(String textSearch, Boolean enabled, Boolean visible, Long productTypeId, Pageable pageable);
+    Page<ProductCategoryDto> getProductCategoriesByCriteria(String textSearch, Boolean enabled, Boolean visible, 
+                                                           Long productTypeId, Long parentCategoryId, Boolean rootOnly, 
+                                                           Pageable pageable);
 
     // =============================================
     // ADMIN-FOCUSED OPERATIONS (ID > name > slug priority)

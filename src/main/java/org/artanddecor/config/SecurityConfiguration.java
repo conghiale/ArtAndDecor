@@ -62,19 +62,48 @@ public class SecurityConfiguration {
                         // Home endpoint - public access
                         .requestMatchers(HttpMethod.GET, "/").permitAll()
 
-                        // Product endpoints - public read, authenticated write
+                        // Product endpoints - structured by functionality and access control
+                        // Public product read access (customer-facing)
+                        .requestMatchers(HttpMethod.GET, "/products/slug/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/products/search", "/products/in-stock").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/products/top-selling", "/products/featured").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/products/highlighted", "/products/latest").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/products/*/images").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/products/types/**", "/products/categories/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/products/states", "/products/attrs").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/products/attributes/*").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/products/*").permitAll()
+                        
+                        // Admin-only product read access (management operations)
                         .requestMatchers(HttpMethod.GET, "/products/stats/**").hasAnyRole("ADMIN", "MANAGER")
-                        .requestMatchers(HttpMethod.GET, "/products/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/products/attributes").hasAnyRole("ADMIN", "MANAGER")
+                        
+                        // Product management operations (Admin/Manager only)
                         .requestMatchers(HttpMethod.POST, "/products").hasAnyRole("ADMIN", "MANAGER")
+                        .requestMatchers(HttpMethod.POST, "/products/*/images/*").hasAnyRole("ADMIN", "MANAGER")
+                        .requestMatchers(HttpMethod.POST, "/products/attributes").hasAnyRole("ADMIN", "MANAGER")
+                        .requestMatchers(HttpMethod.POST, "/products/types").hasAnyRole("ADMIN", "MANAGER")
+                        .requestMatchers(HttpMethod.POST, "/products/categories").hasAnyRole("ADMIN", "MANAGER")
+                        .requestMatchers(HttpMethod.POST, "/products/attrs").hasAnyRole("ADMIN", "MANAGER")
+                        
                         .requestMatchers(HttpMethod.PUT, "/products/**").hasAnyRole("ADMIN", "MANAGER")
                         .requestMatchers(HttpMethod.PATCH, "/products/**").hasAnyRole("ADMIN", "MANAGER")
                         .requestMatchers(HttpMethod.DELETE, "/products/**").hasAnyRole("ADMIN", "MANAGER")
 
-                        // Cart endpoints - role-based access
+                        // Cart endpoints - structured by functionality
+                        // Public cart access (support both logged-in and guest users)
+                        .requestMatchers(HttpMethod.GET, "/carts/current").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/carts/items").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/carts/items/count").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/carts/items/*/remove").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/carts/items/*").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/carts/items").permitAll()
                         .requestMatchers(HttpMethod.GET, "/carts/states", "/carts/item-states").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/carts", "/carts/items").hasRole("ADMIN")
+                        
+                        // Admin-only cart operations
+                        .requestMatchers(HttpMethod.GET, "/carts").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/carts/admin/guest/items").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/carts/states/{cartStateId}", "/carts/item-states/{cartItemStateId}").hasRole("ADMIN")
-                        .requestMatchers("/carts/**").authenticated()
 
                         // Contact endpoints - public read by slug/search, admin for management
                         .requestMatchers(HttpMethod.GET, "/contacts/slug/**", "/contacts").permitAll()
@@ -84,7 +113,8 @@ public class SecurityConfiguration {
                         // Image endpoints - public read and upload, file serving endpoints
                         .requestMatchers(HttpMethod.GET, "/images/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/images/file/**", "/images/download/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/images/upload", "/images/*/upload").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/images/upload").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/images/*/upload").permitAll()
                         .requestMatchers(HttpMethod.GET, "/images/stats/**").hasAnyRole("ADMIN", "MANAGER")
                         .requestMatchers("/images/**").hasAnyRole("ADMIN", "MANAGER")
 
@@ -162,7 +192,7 @@ public class SecurityConfiguration {
                 "http://localhost:3000",
                 "http://localhost:5173",
                 "http://localhost:8180",
-                "https://art-and-decor.com"
+                "https://maisonart.vn"
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));

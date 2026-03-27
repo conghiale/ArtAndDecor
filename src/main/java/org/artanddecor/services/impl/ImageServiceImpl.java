@@ -5,6 +5,7 @@ import org.artanddecor.dto.ImageDto;
 import org.artanddecor.dto.ImageUploadDto;
 import org.artanddecor.dto.ImageUploadResponseDto;
 import org.artanddecor.dto.ImageUploadErrorDto;
+import org.artanddecor.exception.UnsupportedImageFormatException;
 import org.artanddecor.model.Image;
 import org.artanddecor.repository.ImageRepository;
 import org.artanddecor.services.ImageService;
@@ -29,6 +30,7 @@ import java.util.Optional;
 /**
  * Image Service Implementation
  * Handles business logic for image management
+ * Supports JPG, JPEG, PNG, WEBP, HEIC formats with enhanced dimension detection
  * Note: ImageFormat table has been removed; imageSize field now stores format information
  */
 @Service
@@ -121,6 +123,18 @@ public class ImageServiceImpl implements ImageService {
                 }
                 
                 uploadedImages.add(resultImageDto);
+                
+            } catch (UnsupportedImageFormatException e) {
+                logger.error("Unsupported format for image at index {}: {}", i, e.getMessage(), e);
+                
+                ImageUploadErrorDto errorDto = ImageUploadErrorDto.builder()
+                        .fileIndex(i)
+                        .displayName((displayNames != null && displayNames.length > i) ? displayNames[i] : "Unknown")
+                        .originalFilename(imageFiles[i] != null ? imageFiles[i].getOriginalFilename() : "Unknown")
+                        .errorMessage("Unsupported image format. Only JPG, JPEG, PNG, WEBP, HEIC are allowed")
+                        .errorCode("UNSUPPORTED_FORMAT")
+                        .build();
+                failedImages.add(errorDto);
                 
             } catch (Exception e) {
                 logger.error("Failed to process image at index {}: {}", i, e.getMessage(), e);
@@ -256,6 +270,9 @@ public class ImageServiceImpl implements ImageService {
                        updatedImage.getImageId(), imageSize, uploadResult.getPathFile());
             return convertToDto(updatedImage);
             
+        } catch (UnsupportedImageFormatException e) {
+            logger.error("Unsupported format for image update - ID: {}: {}", imageId, e.getMessage(), e);
+            throw new IOException("Unsupported image format. Only JPG, JPEG, PNG, WEBP, HEIC are allowed: " + e.getMessage(), e);
         } catch (IOException e) {
             logger.error("Failed to update image with file - ID: {}: {}", imageId, e.getMessage(), e);
             throw e;

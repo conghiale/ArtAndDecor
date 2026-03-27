@@ -25,6 +25,13 @@ public class ProductAttributeDto {
     @Size(max = 256, message = "Product attribute value must not exceed 256 characters")
     private String productAttributeValue;
     
+    @NotNull(message = "Product attribute quantity is required")
+    @Min(value = 0, message = "Product attribute quantity must not be negative")
+    private Integer productAttributeQuantity;
+    
+    @Builder.Default
+    private Boolean productAttributeEnabled = true;
+    
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdDt;
     

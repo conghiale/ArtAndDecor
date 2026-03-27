@@ -295,33 +295,93 @@ INSERT INTO `PRODUCT_IMAGE` (`PRODUCT_ID`, `IMAGE_ID`, `PRODUCT_IMAGE_PRIMARY`) 
 (11, 3, TRUE),
 (12, 4, TRUE);
 
--- INSERT SAMPLE PRODUCT ATTRIBUTES
-INSERT INTO `PRODUCT_ATTRIBUTE` (`PRODUCT_ID`, `PRODUCT_ATTR_ID`, `PRODUCT_ATTRIBUTE_VALUE`) VALUES
-(1, 1, '40x60cm'),
-(1, 2, 'Multi-color'),
-(1, 3, 'Canvas'),
-(2, 1, '50x70cm'),
-(2, 3, 'Canvas'),
-(3, 1, '60x80cm'),
-(3, 2, 'Abstract colors'),
-(4, 1, '24 pieces'),
-(4, 3, 'Natural & Synthetic bristles'),
-(5, 1, '30x40cm'),
-(5, 3, 'Natural wood'),
-(6, 2, 'Warm white'),
-(6, 3, 'LED + Metal'),
-(7, 1, '25cm height'),
-(7, 3, 'Ceramic'),
-(8, 1, 'Size: 40x60cm'),
-(8, 3, 'Material: Oak wood'),
-(9, 1, 'Size: 50x70cm'),
-(9, 3, 'Material: Aluminum'),
-(10, 1, 'Size: 30x40cm'),
-(10, 2, 'Color: Classical tones'),
-(11, 1, 'Size: 12 tubes x 20ml'),
-(11, 2, 'Color: 12 basic colors'),
-(12, 1, 'Size: A3 297x420mm'),
-(12, 3, 'Material: 100% Cotton');
+-- INSERT SAMPLE PRODUCT ATTRIBUTES WITH QUANTITIES
+INSERT INTO `PRODUCT_ATTRIBUTE` (`PRODUCT_ID`, `PRODUCT_ATTR_ID`, `PRODUCT_ATTRIBUTE_VALUE`, `PRODUCT_ATTRIBUTE_QUANTITY`) VALUES
+
+-- Product 1: Tranh phong cảnh hoàng hôn trên biển (Total: 50)
+(1, 1, '40x60cm', 25),        -- Size 40x60cm: 25 pieces
+(1, 1, '30x40cm', 25),        -- Size 30x40cm: 25 pieces  
+(1, 2, 'Warm colors', 30),    -- Warm color variant: 30 pieces
+(1, 2, 'Cool colors', 20),    -- Cool color variant: 20 pieces
+(1, 3, 'Canvas', 50),         -- Material Canvas: 50 pieces
+
+-- Product 2: Tranh núi non hùng vĩ (Total: 35)
+(2, 1, '50x70cm', 20),        -- Size 50x70cm: 20 pieces
+(2, 1, '40x60cm', 15),        -- Size 40x60cm: 15 pieces
+(2, 3, 'Canvas', 35),         -- Material Canvas: 35 pieces
+
+-- Product 3: Tranh nghệ thuật trừu tượng hiện đại (Total: 40)
+(3, 1, '60x80cm', 25),        -- Size 60x80cm: 25 pieces
+(3, 1, '50x70cm', 15),        -- Size 50x70cm: 15 pieces
+(3, 2, 'Colorful', 22),       -- Colorful variant: 22 pieces
+(3, 2, 'Monochrome', 18),     -- Monochrome variant: 18 pieces
+
+-- Product 4: Tranh nghệ thuật hiện đại (Total: 20)
+(4, 1, '50x60cm', 12),        -- Size 50x60cm: 12 pieces
+(4, 1, '40x50cm', 8),         -- Size 40x50cm: 8 pieces
+(4, 2, 'Bright colors', 20),  -- Bright colors: 20 pieces
+
+-- Product 5: Trang trí nội thất cao cấp (Total: 15)
+(5, 1, 'Large', 8),           -- Large size: 8 pieces
+(5, 1, 'Medium', 7),          -- Medium size: 7 pieces
+(5, 3, 'Premium material', 15), -- Premium material: 15 pieces
+
+-- Product 6: Tranh trang trí treo tường (Total: 60)
+(6, 1, '40x50cm', 35),        -- Size 40x50cm: 35 pieces
+(6, 1, '30x40cm', 25),        -- Size 30x40cm: 25 pieces
+(6, 2, 'Classic style', 30),  -- Classic style: 30 pieces
+(6, 2, 'Modern style', 30),   -- Modern style: 30 pieces
+
+-- Product 7: Chân dung người phụ nữ cổ điển (Total: 12)
+(7, 1, '30x40cm', 8),         -- Size 30x40cm: 8 pieces
+(7, 1, '25x35cm', 4),         -- Size 25x35cm: 4 pieces
+(7, 2, 'Classical tones', 12), -- Classical tones: 12 pieces
+
+-- Product 8: Chân dung người đàn ông nghệ thuật (Total: 8)
+(8, 1, '30x40cm', 5),         -- Size 30x40cm: 5 pieces
+(8, 1, '25x35cm', 3),         -- Size 25x35cm: 3 pieces
+(8, 2, 'Modern style', 8),    -- Modern style: 8 pieces
+
+-- Product 9: Tượng Phật trang nghiêm (Total: 25)
+(9, 1, 'Large (40x60cm)', 15), -- Large size: 15 pieces
+(9, 1, 'Medium (30x45cm)', 10), -- Medium size: 10 pieces
+(9, 3, 'High-grade resin', 25), -- High-grade resin: 25 pieces
+
+-- Product 10: Tranh Chúa Giê-su tâm linh (Total: 18)
+(10, 1, '35x50cm', 12),       -- Size 35x50cm: 12 pieces
+(10, 1, '25x35cm', 6),        -- Size 25x35cm: 6 pieces
+(10, 2, 'Sacred colors', 18), -- Sacred colors: 18 pieces
+
+-- Product 11: Bút vẽ chuyên nghiệp Faber-Castell (Total: 100)
+(11, 1, '24-piece set', 60),  -- 24-piece set: 60 sets
+(11, 1, '12-piece set', 40),  -- 12-piece set: 40 sets
+(11, 2, 'Multi-color', 100),  -- Multi-color: 100 sets
+(11, 4, 'Faber-Castell', 100), -- Brand Faber-Castell: 100 sets
+
+-- Product 12: Giấy vẽ canvas cao cấp (Total: 80)
+(12, 1, 'A3 (297x420mm)', 60), -- A3 size: 60 packs
+(12, 1, 'A4 (210x297mm)', 20), -- A4 size: 20 packs
+(12, 3, '100% Cotton', 40),     -- 100% Cotton: 40 packs
+(12, 3, 'Cotton blend', 40),    -- Cotton blend: 40 packs
+
+-- Product 13: Khung tranh gỗ tự nhiên (Total: 50)
+(13, 1, '40x60cm', 30),       -- Size 40x60cm: 30 pieces
+(13, 1, '30x40cm', 20),       -- Size 30x40cm: 20 pieces
+(13, 3, 'Natural oak', 25),   -- Natural oak: 25 pieces
+(13, 3, 'Pine wood', 25),     -- Pine wood: 25 pieces
+
+-- Product 14: Khung tranh kim loại hiện đại (Total: 35)
+(14, 1, '50x70cm', 20),       -- Size 50x70cm: 20 pieces
+(14, 1, '40x60cm', 15),       -- Size 40x60cm: 15 pieces
+(14, 2, 'Silver', 18),        -- Silver color: 18 pieces
+(14, 2, 'Black', 17),         -- Black color: 17 pieces
+(14, 3, 'Aluminum', 35),      -- Aluminum material: 35 pieces
+
+-- Product 15: Đèn trang trí nghệ thuật LED (Total: 30)
+(15, 1, 'Standard size', 30),  -- Standard size: 30 pieces
+(15, 2, 'Warm white', 20),     -- Warm white: 20 pieces
+(15, 2, 'Cool white', 10),     -- Cool white: 10 pieces
+(15, 3, 'LED + Metal', 30);    -- LED + Metal: 30 pieces
 
 -- INSERT SAMPLE REVIEWS
 INSERT INTO `REVIEW` (`USER_ID`, `PRODUCT_ID`, `PARENT_REVIEW_ID`, `ROOT_REVIEW_ID`, `REVIEW_LEVEL`, `RATING`, `REVIEW_CONTENT`, `COUNT_LIKE`, `IS_VISIBLE`, `IS_DELETED`) VALUES

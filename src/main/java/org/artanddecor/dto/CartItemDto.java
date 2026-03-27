@@ -24,6 +24,7 @@ public class CartItemDto {
     
     @NotNull(message = "Quantity is required")
     @Min(value = 1, message = "Quantity must be at least 1")
+    @Builder.Default
     private Integer quantity = 1;
     
     @NotNull(message = "Unit price is required")

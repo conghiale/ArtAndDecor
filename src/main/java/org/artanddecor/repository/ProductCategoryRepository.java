@@ -46,7 +46,7 @@ public interface ProductCategoryRepository extends JpaRepository<ProductCategory
     // =============================================
 
     /**
-     * Search product categories by multiple criteria with pagination
+     * Search product categories by multiple criteria with pagination (Enhanced with parent filters)
      */
     @Query("SELECT pc FROM ProductCategory pc " +
            "WHERE (:textSearch IS NULL OR (" +
@@ -58,12 +58,14 @@ public interface ProductCategoryRepository extends JpaRepository<ProductCategory
            "AND (:enabled IS NULL OR pc.productCategoryEnabled = :enabled) " +
            "AND (:visible IS NULL OR pc.productCategoryVisible = :visible) " +
            "AND (:productTypeId IS NULL OR pc.productType.productTypeId = :productTypeId) " +
+           "AND (:parentCategoryId IS NULL OR (:parentCategoryId = -1 AND pc.parentCategory IS NULL) OR pc.parentCategory.productCategoryId = :parentCategoryId) " +
            "ORDER BY pc.createdDt DESC")
     Page<ProductCategory> findProductCategoriesByCriteriaPaginated(
         @Param("textSearch") String textSearch,
         @Param("enabled") Boolean enabled,
         @Param("visible") Boolean visible,
         @Param("productTypeId") Long productTypeId,
+        @Param("parentCategoryId") Long parentCategoryId, // Use -1 for root categories, specific ID for children
         Pageable pageable
     );
 

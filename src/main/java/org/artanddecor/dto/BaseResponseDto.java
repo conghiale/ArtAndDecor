@@ -99,6 +99,26 @@ public class BaseResponseDto<T> {
     }
 
     /**
+     * Create unauthorized response
+     * @param message Error message
+     * @param <T> Data type
+     * @return Unauthorized response
+     */
+    public static <T> BaseResponseDto<T> unauthorized(String message) {
+        return new BaseResponseDto<>(401, message, null);
+    }
+
+    /**
+     * Create forbidden response
+     * @param message Error message
+     * @param <T> Data type
+     * @return Forbidden response
+     */
+    public static <T> BaseResponseDto<T> forbidden(String message) {
+        return new BaseResponseDto<>(403, message, null);
+    }
+
+    /**
      * Create not found response
      * @param message Error message
      * @param <T> Data type

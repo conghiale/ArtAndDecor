@@ -1,0 +1,27 @@
+package org.artanddecor.dto.request;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import jakarta.validation.constraints.*;
+
+/**
+ * Request DTO for adding product to cart
+ */
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class AddToCartRequest {
+    
+    @NotNull(message = "Product ID is required")
+    private Long productId;
+    
+    @NotNull(message = "Quantity is required")
+    @Min(value = 1, message = "Quantity must be at least 1")
+    private Integer quantity = 1;
+    
+    private String sessionId; // For guest users
+}

@@ -43,12 +43,20 @@ public class ProductCategoryServiceImpl implements ProductCategoryService {
     }
 
     @Override
-    public Page<ProductCategoryDto> getProductCategoriesByCriteria(String textSearch, Boolean enabled, Boolean visible, Long productTypeId, Pageable pageable) {
-        logger.debug("Getting product categories with criteria - textSearch: {}, enabled: {}, visible: {}, productTypeId: {}", 
-                    textSearch, enabled, visible, productTypeId);
+    public Page<ProductCategoryDto> getProductCategoriesByCriteria(String textSearch, Boolean enabled, Boolean visible, 
+                                                                 Long productTypeId, Long parentCategoryId, Boolean rootOnly, 
+                                                                 Pageable pageable) {
+        logger.debug("Getting product categories with enhanced criteria - textSearch: {}, enabled: {}, visible: {}, productTypeId: {}, parentCategoryId: {}, rootOnly: {}", 
+                    textSearch, enabled, visible, productTypeId, parentCategoryId, rootOnly);
+        
+        // Handle rootOnly logic by converting to parentCategoryId = -1
+        Long effectiveParentCategoryId = parentCategoryId;
+        if (Boolean.TRUE.equals(rootOnly)) {
+            effectiveParentCategoryId = -1L; // Special value to indicate root categories
+        }
         
         Page<ProductCategory> productCategoryPage = productCategoryRepository.findProductCategoriesByCriteriaPaginated(
-            textSearch, enabled, visible, productTypeId, pageable);
+            textSearch, enabled, visible, productTypeId, effectiveParentCategoryId, pageable);
         
         return productCategoryPage.map(this::convertToDto);
     }

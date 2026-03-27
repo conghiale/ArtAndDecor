@@ -1,7 +1,7 @@
 package org.artanddecor.services;
 
 import org.artanddecor.dto.ProductDto;
-import org.artanddecor.dto.ProductCreateDto;
+import org.artanddecor.dto.ProductRequestDto;
 import org.artanddecor.dto.ProductImageDto;
 import org.artanddecor.dto.ProductAttributeDto;
 import org.springframework.data.domain.Page;
@@ -75,12 +75,25 @@ public interface ProductService {
     ProductDto createProduct(ProductDto productDto);
     
     /**
-     * Create new product using simplified DTO with IDs
+     * Create new product using simplified DTO with IDs and image support
+     * @param productRequestDto Product request data with image IDs
+     * @return Created ProductDto with associated images
      */
-    ProductDto createProduct(ProductCreateDto productCreateDto);
+    ProductDto createProduct(ProductRequestDto productRequestDto);
 
     /**
-     * Update existing product
+     * Update existing product using simplified DTO with IDs and image support
+     * @param productId Product ID to update
+     * @param productRequestDto Product request data with image IDs
+     * @return Updated ProductDto with associated images
+     */
+    ProductDto updateProduct(Long productId, ProductRequestDto productRequestDto);
+
+    /**
+     * Update existing product (legacy method - kept for backward compatibility)
+     * @param productId Product ID to update
+     * @param productDto Product data to update
+     * @return Updated ProductDto
      */
     ProductDto updateProduct(Long productId, ProductDto productDto);
 
@@ -107,25 +120,6 @@ public interface ProductService {
      * Set primary image for product
      */
     ProductImageDto setPrimaryImage(Long productId, Long imageId);
-
-    // =============================================
-    // PRODUCT ATTRIBUTE OPERATIONS
-    // =============================================
-
-    /**
-     * Add attribute to product
-     */
-    ProductAttributeDto addAttributeToProduct(Long productId, Long attrId, String attrValue);
-
-    /**
-     * Remove attribute from product
-     */
-    void removeAttributeFromProduct(Long productId, Long attrId);
-
-    /**
-     * Get product attributes
-     */
-    List<ProductAttributeDto> getProductAttributes(Long productId);
 
     // =============================================
     // UTILITY OPERATIONS
