@@ -39,10 +39,8 @@ public class CartDto {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime modifiedDt;
 
-    // ID fields for simple reference (also exposed as nested objects below)
+    // ID field for simple reference (also exposed as nested object below)
     private Long userId;
-    private Long cartStateId;
-    private String cartStateName;
     
     // Computed fields
     private Integer totalAmount;

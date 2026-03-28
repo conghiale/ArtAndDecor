@@ -352,7 +352,8 @@ public class CartServiceImpl implements CartService {
             return getCurrentCart(null, sessionId);
         }
 
-        throw new IllegalArgumentException("At least one parameter (cartId, userId, or sessionId) is required");
+        // No identifiers provided - return new guest cart
+        return getCurrentCart(null, null);
     }
 
     /**

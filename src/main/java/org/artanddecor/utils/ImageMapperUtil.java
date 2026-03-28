@@ -1,9 +1,7 @@
 package org.artanddecor.utils;
 
 import org.artanddecor.dto.ImageDto;
-import org.artanddecor.dto.SeoMetaDto;
 import org.artanddecor.model.Image;
-import org.artanddecor.model.SeoMeta;
 import org.springframework.stereotype.Component;
 
 /**
@@ -56,35 +54,6 @@ public class ImageMapperUtil {
         
         return dto;
     }
-
-    // =============================================
-    // SEO META MAPPING METHODS
-    // =============================================
-
-    /**
-     * Convert SeoMeta entity to SeoMetaDto (main class - includes nested objects)
-     */
-    public static SeoMetaDto toSeoMetaDto(SeoMeta seoMeta) {
-        if (seoMeta == null) return null;
-        
-        return SeoMetaDto.builder()
-                .seoMetaId(seoMeta.getSeoMetaId())
-                .seoMetaTitle(seoMeta.getSeoMetaTitle())
-                .seoMetaDescription(seoMeta.getSeoMetaDescription())
-                .seoMetaKeywords(seoMeta.getSeoMetaKeywords())
-                .seoMetaIndex(seoMeta.getSeoMetaIndex())
-                .seoMetaFollow(seoMeta.getSeoMetaFollow())
-                .seoMetaCanonicalUrl(seoMeta.getSeoMetaCanonicalUrl())
-                .seoMetaImageName(seoMeta.getSeoMetaImageName())
-                .seoMetaSchemaType(seoMeta.getSeoMetaSchemaType())
-                .seoMetaCustomJson(seoMeta.getSeoMetaCustomJson())
-                .seoMetaEnabled(seoMeta.getSeoMetaEnabled())
-                .createdDt(seoMeta.getCreatedDt())
-                .modifiedDt(seoMeta.getModifiedDt())
-                .build();
-    }
-
-
 
     // =============================================
     // VALIDATION HELPER METHODS

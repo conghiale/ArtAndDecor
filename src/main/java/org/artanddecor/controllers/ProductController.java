@@ -190,13 +190,13 @@ public class ProductController {
     @PostMapping
     @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     @Operation(
-        summary = "Create new product with images", 
-        description = "Create a new product in the system using simplified input with IDs. Supports uploading multiple images by providing imageIds array. Client should upload images first and include the received image IDs. This operation is restricted to users with ADMIN or MANAGER roles."
+        summary = "Create new product with images, attributes, and SEO metadata", 
+        description = "Create a new product in the system using simplified input with IDs. Supports uploading multiple images by providing imageIds array, product attributes by providing productAttributes array, and SEO optimization by providing seoMeta object. Client should upload images first and include the received image IDs. Product attributes define variations like Size, Color, Material with their values and quantities. SEO metadata will be automatically created if provided. This operation is restricted to users with ADMIN or MANAGER roles."
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "201", description = "Product created successfully with images",
+        @ApiResponse(responseCode = "201", description = "Product created successfully with images, attributes, and SEO metadata",
                     content = @Content(schema = @Schema(implementation = ProductDto.class))),
-        @ApiResponse(responseCode = "400", description = "Invalid product data, image IDs, or validation errors"),
+        @ApiResponse(responseCode = "400", description = "Invalid product data, image IDs, attribute data, SEO metadata, or validation errors"),
         @ApiResponse(responseCode = "401", description = "Authentication required"),
         @ApiResponse(responseCode = "403", description = "Access denied - ADMIN or MANAGER role required"),
         @ApiResponse(responseCode = "409", description = "Product with same name, slug, or code already exists"),
@@ -204,7 +204,7 @@ public class ProductController {
     })
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<BaseResponseDto<ProductDto>> createProduct(
-            @Parameter(description = "Product data to create with IDs for foreign keys and optional imageIds array for associating images") 
+            @Parameter(description = "Product data to create with IDs for foreign keys, optional imageIds array for associating images, optional productAttributes array for product variations, and optional seoMeta object for SEO optimization") 
             @Valid @RequestBody ProductRequestDto productRequestDto) {
         logger.info("Creating new product: {} with {} images", productRequestDto.getProductName(), 
                    productRequestDto.getImageIds() != null ? productRequestDto.getImageIds().size() : 0);
@@ -229,13 +229,13 @@ public class ProductController {
     @PutMapping("/{productId}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     @Operation(
-        summary = "Update existing product with images", 
-        description = "Update product information using simplified DTO with IDs. Supports updating associated images by providing imageIds array. Client should upload new images first if needed. Admin/Manager access required."
+        summary = "Update existing product with images, attributes, and SEO metadata", 
+        description = "Update product information using simplified DTO with IDs. Supports updating associated images by providing imageIds array, product attributes by providing productAttributes array, and SEO metadata by providing seoMeta object. Client should upload new images first if needed. When imageIds or productAttributes are provided, they completely replace existing associations (not merged). If seoMeta is provided, existing SEO metadata will be updated or new SEO metadata will be created. Admin/Manager access required."
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Product updated successfully with images",
+        @ApiResponse(responseCode = "200", description = "Product updated successfully with images, attributes, and SEO metadata",
                     content = @Content(schema = @Schema(implementation = ProductDto.class))),
-        @ApiResponse(responseCode = "400", description = "Invalid product data, image IDs, or validation errors"),
+        @ApiResponse(responseCode = "400", description = "Invalid product data, image IDs, attribute data, SEO metadata, or validation errors"),
         @ApiResponse(responseCode = "401", description = "Authentication required"),
         @ApiResponse(responseCode = "403", description = "Access denied - ADMIN or MANAGER role required"),
         @ApiResponse(responseCode = "404", description = "Product not found with specified ID"),
@@ -246,7 +246,7 @@ public class ProductController {
     public ResponseEntity<BaseResponseDto<ProductDto>> updateProduct(
             @Parameter(description = "Product database ID", example = "1") 
             @PathVariable Long productId, 
-            @Parameter(description = "Product data to update with IDs for foreign keys and optional imageIds array for updating associated images") 
+            @Parameter(description = "Product data to update with IDs for foreign keys, optional imageIds array for updating associated images, optional productAttributes array for updating product variations, and optional seoMeta object for SEO optimization") 
             @Valid @RequestBody ProductRequestDto productRequestDto) {
         logger.info("Updating product ID: {} with {} images", productId, 
                    productRequestDto.getImageIds() != null ? productRequestDto.getImageIds().size() : 0);

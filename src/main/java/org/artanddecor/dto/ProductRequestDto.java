@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import jakarta.validation.constraints.*;
+import jakarta.validation.Valid;
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -58,7 +59,13 @@ public class ProductRequestDto {
     
     private Boolean productHighlighted = false;
     
-    private Long seoMetaId;
+    /**
+     * SEO metadata for this product (optional)
+     * When provided, SEO meta entry will be created/updated in SEO_META table
+     * This enables comprehensive search engine optimization for the product
+     */
+    @Valid
+    private SeoMetaRequestDto seoMeta;
     
     /**
      * List of image IDs to associate with this product
@@ -72,4 +79,13 @@ public class ProductRequestDto {
      * If not specified, the first image in imageIds will be set as primary
      */
     private Long primaryImageId;
+    
+    /**
+     * List of product attributes to associate with this product
+     * Each attribute contains productAttrId (SIZE, COLOR, etc), value, and quantity
+     * These will be saved to PRODUCT_ATTRIBUTE table
+     * Optional - product can be created without attributes
+     */
+    @Valid
+    private List<ProductAttributeRequestDto> productAttributes;
 }

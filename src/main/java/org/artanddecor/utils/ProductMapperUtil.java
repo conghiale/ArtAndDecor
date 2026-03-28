@@ -20,23 +20,11 @@ public class ProductMapperUtil {
     // PRODUCT TYPE MAPPING METHODS
     // =============================================
 
-    public static ProductTypeDto toProductTypeDto(ProductType productType) {
-        if (productType == null) return null;
-        
-        return ProductTypeDto.builder()
-                .productTypeId(productType.getProductTypeId())
-                .productTypeName(productType.getProductTypeName())
-                .productTypeSlug(productType.getProductTypeSlug())
-                .productTypeDisplayName(productType.getProductTypeDisplayName())
-                .productTypeRemark(productType.getProductTypeRemark())
-                .productTypeEnabled(productType.getProductTypeEnabled())
-                .seoMetaId(productType.getSeoMetaId())
-                .image(toImageDto(productType.getImage()))
-                .createdDt(productType.getCreatedDt())
-                .modifiedDt(productType.getModifiedDt())
-                .build();
-    }
-
+    /**
+     * Convert ProductTypeDto to ProductType entity
+     * @param productTypeDto Product type DTO
+     * @return ProductType entity
+     */
     public static ProductType toProductTypeEntity(ProductTypeDto productTypeDto) {
         if (productTypeDto == null) return null;
         
@@ -48,19 +36,37 @@ public class ProductMapperUtil {
         productType.setProductTypeRemark(productTypeDto.getProductTypeRemark());
         productType.setProductTypeEnabled(productTypeDto.getProductTypeEnabled());
         productType.setSeoMetaId(productTypeDto.getSeoMetaId());
-        
-        if (productTypeDto.getCreatedDt() == null) {
-            productType.setCreatedDt(LocalDateTime.now());
-        } else {
-            productType.setCreatedDt(productTypeDto.getCreatedDt());
-        }
-        productType.setModifiedDt(LocalDateTime.now());
+        productType.setCreatedDt(productTypeDto.getCreatedDt());
+        productType.setModifiedDt(productTypeDto.getModifiedDt());
         
         return productType;
     }
 
+    /**
+     * Convert ProductType entity to ProductTypeDto
+     * @param productType Product type entity
+     * @return ProductTypeDto
+     */
+
+    public static ProductTypeDto toProductTypeDto(ProductType productType) {
+        if (productType == null) return null;
+        
+        return ProductTypeDto.builder()
+                .productTypeId(productType.getProductTypeId())
+                .productTypeName(productType.getProductTypeName())
+                .productTypeSlug(productType.getProductTypeSlug())
+                .productTypeDisplayName(productType.getProductTypeDisplayName())
+                .productTypeRemark(productType.getProductTypeRemark())
+                .productTypeEnabled(productType.getProductTypeEnabled())
+                .seoMetaId(productType.getSeoMetaId())
+                .image(ImageMapperUtil.toBasicDto(productType.getImage()))
+                .createdDt(productType.getCreatedDt())
+                .modifiedDt(productType.getModifiedDt())
+                .build();
+    }
+
     // =============================================
-    // PRODUCT CATEGORY MAPPING METHODS
+    // PRODUCT CATEGORY MAPPING - DTO only (Entity mapping removed) 
     // =============================================
 
     public static ProductCategoryDto toProductCategoryDto(ProductCategory productCategory) {
@@ -78,52 +84,41 @@ public class ProductMapperUtil {
                 .productTypeId(productCategory.getProductType() != null ? productCategory.getProductType().getProductTypeId() : null)
                 .parentCategoryId(productCategory.getParentCategory() != null ? productCategory.getParentCategory().getProductCategoryId() : null)
                 .productType(toProductTypeDto(productCategory.getProductType()))
-                .image(toImageDto(productCategory.getImage()))
+                .image(ImageMapperUtil.toBasicDto(productCategory.getImage()))
                 .createdDt(productCategory.getCreatedDt())
                 .modifiedDt(productCategory.getModifiedDt())
                 .build();
     }
 
-    public static ProductCategory toProductCategoryEntity(ProductCategoryDto productCategoryDto) {
-        if (productCategoryDto == null) return null;
-        
-        ProductCategory productCategory = new ProductCategory();
-        productCategory.setProductCategoryId(productCategoryDto.getProductCategoryId());
-        productCategory.setProductCategoryName(productCategoryDto.getProductCategoryName());
-        productCategory.setProductCategorySlug(productCategoryDto.getProductCategorySlug());
-        productCategory.setProductCategoryDisplayName(productCategoryDto.getProductCategoryDisplayName());
-        productCategory.setProductCategoryRemark(productCategoryDto.getProductCategoryRemark());
-        productCategory.setProductCategoryEnabled(productCategoryDto.getProductCategoryEnabled());
-        productCategory.setProductCategoryVisible(productCategoryDto.getProductCategoryVisible());
-        productCategory.setSeoMetaId(productCategoryDto.getSeoMetaId());
-        
-        // Set ProductType reference if productTypeId is provided
-        if (productCategoryDto.getProductTypeId() != null) {
-            ProductType productType = new ProductType();
-            productType.setProductTypeId(productCategoryDto.getProductTypeId());
-            productCategory.setProductType(productType);
-        }
-        
-        // Set Parent Category reference if parentCategoryId is provided
-        if (productCategoryDto.getParentCategoryId() != null) {
-            ProductCategory parentCategory = new ProductCategory();
-            parentCategory.setProductCategoryId(productCategoryDto.getParentCategoryId());
-            productCategory.setParentCategory(parentCategory);
-        }
-        
-        if (productCategoryDto.getCreatedDt() == null) {
-            productCategory.setCreatedDt(LocalDateTime.now());
-        } else {
-            productCategory.setCreatedDt(productCategoryDto.getCreatedDt());
-        }
-        productCategory.setModifiedDt(LocalDateTime.now());
-        
-        return productCategory;
-    }
-
     // =============================================
     // PRODUCT STATE MAPPING METHODS
     // =============================================
+
+    /**
+     * Convert ProductStateDto to ProductState entity
+     * @param productStateDto Product state DTO
+     * @return ProductState entity
+     */
+    public static ProductState toProductStateEntity(ProductStateDto productStateDto) {
+        if (productStateDto == null) return null;
+        
+        ProductState productState = new ProductState();
+        productState.setProductStateId(productStateDto.getProductStateId());
+        productState.setProductStateName(productStateDto.getProductStateName());
+        productState.setProductStateEnabled(productStateDto.getProductStateEnabled());
+        productState.setProductStateDisplayName(productStateDto.getProductStateDisplayName());
+        productState.setProductStateRemark(productStateDto.getProductStateRemark());
+        productState.setCreatedDt(productStateDto.getCreatedDt());
+        productState.setModifiedDt(productStateDto.getModifiedDt());
+        
+        return productState;
+    }
+
+    /**
+     * Convert ProductState entity to ProductStateDto
+     * @param productState Product state entity
+     * @return ProductStateDto
+     */
 
     public static ProductStateDto toProductStateDto(ProductState productState) {
         if (productState == null) return null;
@@ -139,29 +134,35 @@ public class ProductMapperUtil {
                 .build();
     }
 
-    public static ProductState toProductStateEntity(ProductStateDto productStateDto) {
-        if (productStateDto == null) return null;
-        
-        ProductState productState = new ProductState();
-        productState.setProductStateId(productStateDto.getProductStateId());
-        productState.setProductStateName(productStateDto.getProductStateName());
-        productState.setProductStateEnabled(productStateDto.getProductStateEnabled());
-        productState.setProductStateDisplayName(productStateDto.getProductStateDisplayName());
-        productState.setProductStateRemark(productStateDto.getProductStateRemark());
-        
-        if (productStateDto.getCreatedDt() == null) {
-            productState.setCreatedDt(LocalDateTime.now());
-        } else {
-            productState.setCreatedDt(productStateDto.getCreatedDt());
-        }
-        productState.setModifiedDt(LocalDateTime.now());
-        
-        return productState;
-    }
-
     // =============================================
     // PRODUCT ATTR MAPPING METHODS
     // =============================================
+
+    /**
+     * Convert ProductAttrDto to ProductAttr entity
+     * @param productAttrDto Product attribute DTO
+     * @return ProductAttr entity
+     */
+    public static ProductAttr toProductAttrEntity(ProductAttrDto productAttrDto) {
+        if (productAttrDto == null) return null;
+        
+        ProductAttr productAttr = new ProductAttr();
+        productAttr.setProductAttrId(productAttrDto.getProductAttrId());
+        productAttr.setProductAttrName(productAttrDto.getProductAttrName());
+        productAttr.setProductAttrEnabled(productAttrDto.getProductAttrEnabled());
+        productAttr.setProductAttrDisplayName(productAttrDto.getProductAttrDisplayName());
+        productAttr.setProductAttrRemark(productAttrDto.getProductAttrRemark());
+        productAttr.setCreatedDt(productAttrDto.getCreatedDt());
+        productAttr.setModifiedDt(productAttrDto.getModifiedDt());
+        
+        return productAttr;
+    }
+
+    /**
+     * Convert ProductAttr entity to ProductAttrDto
+     * @param productAttr Product attribute entity
+     * @return ProductAttrDto
+     */
 
     public static ProductAttrDto toProductAttrDto(ProductAttr productAttr) {
         if (productAttr == null) return null;
@@ -177,30 +178,15 @@ public class ProductMapperUtil {
                 .build();
     }
 
-    public static ProductAttr toProductAttrEntity(ProductAttrDto productAttrDto) {
-        if (productAttrDto == null) return null;
-        
-        ProductAttr productAttr = new ProductAttr();
-        productAttr.setProductAttrId(productAttrDto.getProductAttrId());
-        productAttr.setProductAttrName(productAttrDto.getProductAttrName());
-        productAttr.setProductAttrEnabled(productAttrDto.getProductAttrEnabled());
-        productAttr.setProductAttrDisplayName(productAttrDto.getProductAttrDisplayName());
-        productAttr.setProductAttrRemark(productAttrDto.getProductAttrRemark());
-        
-        if (productAttrDto.getCreatedDt() == null) {
-            productAttr.setCreatedDt(LocalDateTime.now());
-        } else {
-            productAttr.setCreatedDt(productAttrDto.getCreatedDt());
-        }
-        productAttr.setModifiedDt(LocalDateTime.now());
-        
-        return productAttr;
-    }
-
     // =============================================
-    // PRODUCT MAPPING METHODS
+    // PRODUCT MAPPING METHODS - Core functionality only
     // =============================================
 
+    /**
+     * Convert Product entity to ProductDto with full relationship mapping
+     * @param product Product entity
+     * @return ProductDto with computed fields and relationships
+     */
     public static ProductDto toProductDto(Product product) {
         if (product == null) return null;
         
@@ -240,7 +226,7 @@ public class ProductMapperUtil {
                 .productHighlighted(product.getProductHighlighted())
                 .productCategory(toProductCategoryDto(product.getProductCategory()))
                 .productState(toProductStateDto(product.getProductState()))
-                .seoMeta(toSeoMetaDto(product.getSeoMeta()))
+                .seoMeta(SeoMetaMapperUtil.toSeoMetaDto(product.getSeoMeta()))
                 .productImages(productImagesDto)
                 .productAttributeGroups(productAttributeGroupsDto)
                 .reviews(reviewsDto)
@@ -273,53 +259,14 @@ public class ProductMapperUtil {
         return productDto;
     }
 
-    public static Product toProductEntity(ProductDto productDto) {
-        if (productDto == null) return null;
-        
-        Product product = new Product();
-        product.setProductId(productDto.getProductId());
-        product.setProductName(productDto.getProductName());
-        product.setProductSlug(productDto.getProductSlug());
-        product.setProductCode(productDto.getProductCode());
-        product.setSoldQuantity(productDto.getSoldQuantity());
-        product.setStockQuantity(productDto.getStockQuantity());
-        product.setProductDescription(productDto.getProductDescription());
-        product.setProductPrice(productDto.getProductPrice());
-        product.setProductEnabled(productDto.getProductEnabled());
-        product.setProductFeatured(productDto.getProductFeatured());
-        product.setProductHighlighted(productDto.getProductHighlighted());
-        product.setSeoMetaId(productDto.getSeoMeta() != null ? productDto.getSeoMeta().getSeoMetaId() : null);
-        
-        // Set ProductCategory reference if available
-        if (productDto.getProductCategory() != null && productDto.getProductCategory().getProductCategoryId() != null) {
-            ProductCategory productCategory = new ProductCategory();
-            productCategory.setProductCategoryId(productDto.getProductCategory().getProductCategoryId());
-            product.setProductCategory(productCategory);
-        }
-        
-        // Set ProductState reference if available
-        if (productDto.getProductState() != null && productDto.getProductState().getProductStateId() != null) {
-            ProductState productState = new ProductState();
-            productState.setProductStateId(productDto.getProductState().getProductStateId());
-            product.setProductState(productState);
-        }
-        
-        if (productDto.getCreatedDt() == null) {
-            product.setCreatedDt(LocalDateTime.now());
-        } else {
-            product.setCreatedDt(productDto.getCreatedDt());
-        }
-        product.setModifiedDt(LocalDateTime.now());
-        
-        return product;
-    }
-
     /**
-     * Convert ProductRequestDto to Product entity for create operations
+     * Main method: Create Product entity from ProductRequestDto with optional SEO Meta handling
+     * Unified method that handles both create and update scenarios
      * @param productRequestDto Product request DTO
+     * @param seoMetaId Optional SEO Meta ID from SEO service (null for new products without SEO)
      * @return Product entity
      */
-    public static Product toProductEntityFromRequestDto(ProductRequestDto productRequestDto) {
+    public static Product toProductEntityFromRequestDto(ProductRequestDto productRequestDto, Long seoMetaId) {
         if (productRequestDto == null) return null;
         
         Product product = new Product();
@@ -333,7 +280,7 @@ public class ProductMapperUtil {
         product.setProductEnabled(productRequestDto.getProductEnabled());
         product.setProductFeatured(productRequestDto.getProductFeatured());
         product.setProductHighlighted(productRequestDto.getProductHighlighted());
-        product.setSeoMetaId(productRequestDto.getSeoMetaId());
+        product.setSeoMetaId(seoMetaId); // Handled via parameter
         
         // Set ProductCategory reference
         if (productRequestDto.getProductCategoryId() != null) {
@@ -355,12 +302,16 @@ public class ProductMapperUtil {
         return product;
     }
 
+
+
     /**
-     * Update Product entity from ProductRequestDto for update operations
+     * Main method: Update Product entity from ProductRequestDto with optional SEO Meta handling  
+     * Unified method that handles field updates without changing timestamps/references unnecessarily
      * @param product Existing Product entity to update
      * @param productRequestDto Product request DTO with updated data
+     * @param seoMetaId Optional SEO Meta ID (null to keep existing)
      */
-    public static void updateProductEntityFromRequestDto(Product product, ProductRequestDto productRequestDto) {
+    public static void updateProductEntityFromRequestDto(Product product, ProductRequestDto productRequestDto, Long seoMetaId) {
         if (product == null || productRequestDto == null) return;
         
         product.setProductName(productRequestDto.getProductName());
@@ -373,7 +324,11 @@ public class ProductMapperUtil {
         product.setProductEnabled(productRequestDto.getProductEnabled());
         product.setProductFeatured(productRequestDto.getProductFeatured());
         product.setProductHighlighted(productRequestDto.getProductHighlighted());
-        product.setSeoMetaId(productRequestDto.getSeoMetaId());
+        
+        // Update SEO Meta ID if provided
+        if (seoMetaId != null) {
+            product.setSeoMetaId(seoMetaId);
+        }
         
         // Update ProductCategory reference
         if (productRequestDto.getProductCategoryId() != null) {
@@ -391,6 +346,10 @@ public class ProductMapperUtil {
         
         product.setModifiedDt(LocalDateTime.now());
     }
+    
+
+
+
 
     // =============================================
     // PRODUCT IMAGE MAPPING METHODS
@@ -406,10 +365,37 @@ public class ProductMapperUtil {
                 .productImageId(productImage.getProductImageId())
                 .productImagePrimary(productImage.getProductImagePrimary())
                 .product(null) // Avoid circular reference
-                .image(toImageDto(productImage.getImage()))
+                .image(ImageMapperUtil.toBasicDto(productImage.getImage()))
                 .createdDt(productImage.getCreatedDt())
                 .modifiedDt(productImage.getModifiedDt())
                 .build();
+    }
+
+    // =============================================
+    // PRODUCT CATEGORY MAPPING METHODS
+    // =============================================
+
+    /**
+     * Convert ProductCategoryDto to ProductCategory entity
+     * @param productCategoryDto Product category DTO
+     * @return ProductCategory entity
+     */
+    public static ProductCategory toProductCategoryEntity(ProductCategoryDto productCategoryDto) {
+        if (productCategoryDto == null) return null;
+        
+        ProductCategory productCategory = new ProductCategory();
+        productCategory.setProductCategoryId(productCategoryDto.getProductCategoryId());
+        productCategory.setProductCategoryName(productCategoryDto.getProductCategoryName());
+        productCategory.setProductCategorySlug(productCategoryDto.getProductCategorySlug());
+        productCategory.setProductCategoryDisplayName(productCategoryDto.getProductCategoryDisplayName());
+        productCategory.setProductCategoryRemark(productCategoryDto.getProductCategoryRemark());
+        productCategory.setProductCategoryEnabled(productCategoryDto.getProductCategoryEnabled());
+        productCategory.setProductCategoryVisible(productCategoryDto.getProductCategoryVisible());
+        productCategory.setSeoMetaId(productCategoryDto.getSeoMetaId());
+        productCategory.setCreatedDt(productCategoryDto.getCreatedDt());
+        productCategory.setModifiedDt(productCategoryDto.getModifiedDt());
+        
+        return productCategory;
     }
 
     // =============================================
@@ -503,43 +489,5 @@ public class ProductMapperUtil {
                 .build();
     }
     
-    /**
-     * Map SeoMeta to DTO
-     */
-    public static SeoMetaDto toSeoMetaDto(SeoMeta seoMeta) {
-        if (seoMeta == null) return null;
-        
-        return SeoMetaDto.builder()
-                .seoMetaId(seoMeta.getSeoMetaId())
-                .seoMetaTitle(seoMeta.getSeoMetaTitle())
-                .seoMetaDescription(seoMeta.getSeoMetaDescription())
-                .seoMetaKeywords(seoMeta.getSeoMetaKeywords())
-                .seoMetaIndex(seoMeta.getSeoMetaIndex())
-                .seoMetaFollow(seoMeta.getSeoMetaFollow())
-                .seoMetaCanonicalUrl(seoMeta.getSeoMetaCanonicalUrl())
-                .seoMetaImageName(seoMeta.getSeoMetaImageName())
-                .seoMetaSchemaType(seoMeta.getSeoMetaSchemaType())
-                .seoMetaCustomJson(seoMeta.getSeoMetaCustomJson())
-                .seoMetaEnabled(seoMeta.getSeoMetaEnabled())
-                .createdDt(seoMeta.getCreatedDt())
-                .modifiedDt(seoMeta.getModifiedDt())
-                .build();
-    }
 
-    private static ImageDto toImageDto(Image image) {
-        if (image == null) return null;
-        // Use existing ImageMapperUtil if available, or create basic mapping
-        return ImageDto.builder()
-                .imageId(image.getImageId())
-                .imageName(image.getImageName())
-                .imageDisplayName(image.getImageDisplayName())
-                .imageSlug(image.getImageSlug())
-                .imageSize(image.getImageSize())
-                .imageFormat(image.getImageFormat())
-                .imageRemark(image.getImageRemark())
-                .pathFile(image.getPathFile())
-                .createdDt(image.getCreatedDt())
-                .modifiedDt(image.getModifiedDt())
-                .build();
-    }
 }

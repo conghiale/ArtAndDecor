@@ -4,12 +4,18 @@ import org.artanddecor.dto.*;
 import org.artanddecor.model.*;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
 /**
  * Mapper utility class for converting between Cart-related entities and DTOs
  * Provides centralized mapping logic for Cart, CartItem, CartState, and CartItemState
+ * Features:
+ * - Complete Product and User mapping in CartItem
+ * - Circular reference prevention with lightweight Cart mapping
+ * - Computed fields calculation (price changes, availability)
+ * - Consistent null-safety checks
  */
 @Component
 public class CartMapper {
@@ -36,13 +42,11 @@ public class CartMapper {
         // Set user info
         if (cart.getUser() != null) {
             dto.setUserId(cart.getUser().getUserId());
-            // Set nested UserDto if needed (implement UserMapper)
+            dto.setUser(org.artanddecor.utils.UserMapperUtil.toBasicDto(cart.getUser()));
         }
 
         // Set cart state info
         if (cart.getCartState() != null) {
-            dto.setCartStateId(cart.getCartState().getCartStateId());
-            dto.setCartStateName(cart.getCartState().getCartStateName());
             dto.setCartState(toDto(cart.getCartState()));
         }
 
@@ -77,16 +81,91 @@ public class CartMapper {
         dto.setCreatedDt(cartItem.getCreatedDt());
         dto.setModifiedDt(cartItem.getModifiedDt());
 
-        // Set unit price from product
+        // Set product info (complete ProductDto)
         if (cartItem.getProduct() != null) {
             dto.setUnitPrice(cartItem.getProduct().getProductPrice());
-            // Set nested ProductDto if needed (implement ProductMapper)
+            dto.setProduct(org.artanddecor.utils.ProductMapperUtil.toProductDto(cartItem.getProduct()));
+        }
+        
+        // Set cart info (lightweight CartDto to avoid circular reference)
+        if (cartItem.getCart() != null) {
+            dto.setCart(toLightweightCartDto(cartItem.getCart()));
         }
 
         // Set cart item state info
         if (cartItem.getCartItemState() != null) {
             dto.setCartItemState(toDto(cartItem.getCartItemState()));
         }
+        
+        // Set computed fields
+        setComputedFields(dto, cartItem);
+
+        return dto;
+    }
+    
+    /**
+     * Set computed fields for CartItemDto
+     * @param dto CartItemDto to update
+     * @param cartItem Source CartItem entity
+     */
+    private void setComputedFields(CartItemDto dto, CartItem cartItem) {
+        if (cartItem.getProduct() != null) {
+            // Check if product is available (in stock and enabled)
+            dto.setIsAvailable(cartItem.getProduct().getStockQuantity() > 0 && 
+                              Boolean.TRUE.equals(cartItem.getProduct().getProductEnabled()));
+            
+            // Check price difference between stored price and current product price
+            BigDecimal currentPrice = cartItem.getProduct().getProductPrice();
+            BigDecimal storedPrice = dto.getUnitPrice();
+            
+            if (currentPrice != null && storedPrice != null) {
+                dto.setIsPriceChanged(!currentPrice.equals(storedPrice));
+                dto.setPriceDifference(currentPrice.subtract(storedPrice));
+            } else {
+                dto.setIsPriceChanged(false);
+                dto.setPriceDifference(BigDecimal.ZERO);
+            }
+        } else {
+            // Product not found - likely deleted
+            dto.setIsAvailable(false);
+            dto.setIsPriceChanged(false);
+            dto.setPriceDifference(BigDecimal.ZERO);
+        }
+    }
+
+    /**
+     * Convert Cart entity to lightweight DTO (without cartItems to avoid circular reference)
+     * Used when mapping CartItem -> CartDto to prevent infinite recursion
+     * @param cart Cart entity
+     * @return Lightweight CartDto without cartItems
+     */
+    public CartDto toLightweightCartDto(Cart cart) {
+        if (cart == null) {
+            return null;
+        }
+
+        CartDto dto = new CartDto();
+        dto.setCartId(cart.getCartId());
+        dto.setSessionId(cart.getSessionId());
+        dto.setCartSlug(cart.getCartSlug());
+        dto.setTotalQuantity(cart.getTotalQuantity());
+        dto.setCartEnabled(cart.getCartEnabled());
+        dto.setCreatedDt(cart.getCreatedDt());
+        dto.setModifiedDt(cart.getModifiedDt());
+
+        // Set user info
+        if (cart.getUser() != null) {
+            dto.setUserId(cart.getUser().getUserId());
+            dto.setUser(org.artanddecor.utils.UserMapperUtil.toBasicDto(cart.getUser()));
+        }
+
+        // Set cart state info
+        if (cart.getCartState() != null) {
+            dto.setCartState(toDto(cart.getCartState()));
+        }
+
+        // Explicitly NOT setting cartItems to avoid circular reference
+        // dto.setCartItems(null); // This is the key difference from full toDto()
 
         return dto;
     }

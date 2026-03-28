@@ -70,32 +70,19 @@ public interface ProductService {
     // =============================================
 
     /**
-     * Create new product
-     */
-    ProductDto createProduct(ProductDto productDto);
-    
-    /**
-     * Create new product using simplified DTO with IDs and image support
-     * @param productRequestDto Product request data with image IDs
-     * @return Created ProductDto with associated images
+     * Create new product using simplified DTO with IDs and image/attribute support  
+     * @param productRequestDto Product request data with image IDs and product attributes
+     * @return Created ProductDto with associated images and attributes
      */
     ProductDto createProduct(ProductRequestDto productRequestDto);
 
     /**
-     * Update existing product using simplified DTO with IDs and image support
+     * Update existing product using simplified DTO with IDs and image/attribute support
      * @param productId Product ID to update
-     * @param productRequestDto Product request data with image IDs
-     * @return Updated ProductDto with associated images
+     * @param productRequestDto Product request data with image IDs and product attributes
+     * @return Updated ProductDto with associated images and attributes
      */
     ProductDto updateProduct(Long productId, ProductRequestDto productRequestDto);
-
-    /**
-     * Update existing product (legacy method - kept for backward compatibility)
-     * @param productId Product ID to update
-     * @param productDto Product data to update
-     * @return Updated ProductDto
-     */
-    ProductDto updateProduct(Long productId, ProductDto productDto);
 
     // =============================================
     // PRODUCT IMAGE OPERATIONS

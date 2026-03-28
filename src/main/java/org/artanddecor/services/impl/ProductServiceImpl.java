@@ -3,16 +3,22 @@ package org.artanddecor.services.impl;
 import lombok.RequiredArgsConstructor;
 import org.artanddecor.dto.ProductDto;
 import org.artanddecor.dto.ProductRequestDto;
+import org.artanddecor.dto.ProductAttributeRequestDto;
 import org.artanddecor.dto.ProductImageDto;
-import org.artanddecor.dto.ProductAttributeDto;
+import org.artanddecor.dto.SeoMetaRequestDto;
+import org.artanddecor.dto.SeoMetaDto;
 import org.artanddecor.model.Product;
 import org.artanddecor.model.ProductImage;
+import org.artanddecor.model.ProductAttribute;
+import org.artanddecor.model.ProductAttr;
 import org.artanddecor.model.Image;
 import org.artanddecor.repository.ProductRepository;
 import org.artanddecor.repository.ProductImageRepository;
+import org.artanddecor.repository.ProductAttributeRepository;
+import org.artanddecor.repository.ProductAttrRepository;
 import org.artanddecor.repository.ImageRepository;
 import org.artanddecor.services.ProductService;
-import org.artanddecor.services.ProductAttributeService;
+import org.artanddecor.services.SeoMetaService;
 import org.artanddecor.utils.ProductMapperUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,13 +28,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.function.Function;
 
 /**
  * Product Service Implementation
@@ -43,8 +49,10 @@ public class ProductServiceImpl implements ProductService {
     
     private final ProductRepository productRepository;
     private final ProductImageRepository productImageRepository;
+    private final ProductAttributeRepository productAttributeRepository;
+    private final ProductAttrRepository productAttrRepository;
     private final ImageRepository imageRepository;
-    private final ProductAttributeService productAttributeService;
+    private final SeoMetaService seoMetaService;
 
     // =============================================
     // CUSTOMER-FOCUSED OPERATIONS
@@ -97,35 +105,16 @@ public class ProductServiceImpl implements ProductService {
     }
 
     // =============================================
-    // CRUD OPERATIONS
+    // CRUD OPERATIONS - Unified ProductRequestDto approach
     // =============================================
+
 
     @Override
     @Transactional
-    public ProductDto createProduct(ProductDto productDto) {
-        logger.info("Creating new product: {}", productDto.getProductName());
-        
-        // Validation
-        if (existsBySlug(productDto.getProductSlug())) {
-            throw new IllegalArgumentException("Product slug already exists: " + productDto.getProductSlug());
-        }
-        if (existsByName(productDto.getProductName())) {
-            throw new IllegalArgumentException("Product name already exists: " + productDto.getProductName());
-        }
-        if (existsByCode(productDto.getProductCode())) {
-            throw new IllegalArgumentException("Product code already exists: " + productDto.getProductCode());
-        }
-        
-        Product product = convertToEntity(productDto);
-        Product savedProduct = productRepository.save(product);
-        
-        return convertToDto(savedProduct);
-    }
-    @Override
-    @Transactional
     public ProductDto updateProduct(Long productId, ProductRequestDto productRequestDto) {
-        logger.info("Updating product ID: {} with request DTO and {} images", productId, 
-                   productRequestDto.getImageIds() != null ? productRequestDto.getImageIds().size() : 0);
+        logger.info("Updating product ID: {} with request DTO and {} images and {} attributes", productId, 
+                   productRequestDto.getImageIds() != null ? productRequestDto.getImageIds().size() : 0,
+                   productRequestDto.getProductAttributes() != null ? productRequestDto.getProductAttributes().size() : 0);
         
         Product existingProduct = productRepository.findById(productId)
                 .orElseThrow(() -> new IllegalArgumentException("Product not found with ID: " + productId));
@@ -152,29 +141,40 @@ public class ProductServiceImpl implements ProductService {
             }
         }
         
-        // Update product fields
-        ProductMapperUtil.updateProductEntityFromRequestDto(existingProduct, productRequestDto);
+        // Validate product attributes if provided
+        validateProductAttributes(productRequestDto.getProductAttributes());
+        
+        // Handle SEO meta update if provided
+        Long seoMetaId = null;
+        if (productRequestDto.getSeoMeta() != null) {
+            seoMetaId = handleSeoMeta(productRequestDto.getSeoMeta(), existingProduct.getSeoMetaId());
+        }
+        
+        // Update product fields with unified method
+        ProductMapperUtil.updateProductEntityFromRequestDto(existingProduct, productRequestDto, seoMetaId);
         Product updatedProduct = productRepository.save(existingProduct);
         
         // Update images if provided
         if (productRequestDto.getImageIds() != null) {
-            // Remove existing images
-            productImageRepository.deleteByProductProductId(productId);
-            
-            // Associate new images if list is not empty
-            if (!productRequestDto.getImageIds().isEmpty()) {
-                associateImagesToProduct(updatedProduct, productRequestDto.getImageIds(), productRequestDto.getPrimaryImageId());
-            }
+            updateProductImages(updatedProduct, productRequestDto.getImageIds(), productRequestDto.getPrimaryImageId());
+        }
+        
+        // Update attributes if provided
+        if (productRequestDto.getProductAttributes() != null) {
+            updateProductAttributes(updatedProduct, productRequestDto.getProductAttributes());
         }
         
         return convertToDto(updatedProduct);
-    }    
+    }
+
+    // =============================================
     @Override
     @Transactional
     public ProductDto createProduct(ProductRequestDto productRequestDto) {
-        logger.info("Creating new product from request DTO: {} with {} images", 
+        logger.info("Creating new product from request DTO: {} with {} images and {} attributes", 
                    productRequestDto.getProductName(), 
-                   productRequestDto.getImageIds() != null ? productRequestDto.getImageIds().size() : 0);
+                   productRequestDto.getImageIds() != null ? productRequestDto.getImageIds().size() : 0,
+                   productRequestDto.getProductAttributes() != null ? productRequestDto.getProductAttributes().size() : 0);
         
         // Validation
         if (existsBySlug(productRequestDto.getProductSlug())) {
@@ -195,7 +195,16 @@ public class ProductServiceImpl implements ProductService {
             }
         }
         
-        Product product = ProductMapperUtil.toProductEntityFromRequestDto(productRequestDto);
+        // Validate product attributes if provided
+        validateProductAttributes(productRequestDto.getProductAttributes());
+        
+        // Create SEO meta if provided
+        Long seoMetaId = null;
+        if (productRequestDto.getSeoMeta() != null) {
+            seoMetaId = handleSeoMeta(productRequestDto.getSeoMeta(), null);
+        }
+        
+        Product product = ProductMapperUtil.toProductEntityFromRequestDto(productRequestDto, seoMetaId);
         Product savedProduct = productRepository.save(product);
         
         // Associate images if provided
@@ -203,43 +212,11 @@ public class ProductServiceImpl implements ProductService {
             associateImagesToProduct(savedProduct, productRequestDto.getImageIds(), productRequestDto.getPrimaryImageId());
         }
         
-        return convertToDto(savedProduct);
-    }
-
-    @Override
-    @Transactional
-    public ProductDto updateProduct(Long productId, ProductDto productDto) {
-        logger.info("Updating product ID: {}", productId);
-        
-        Product existingProduct = productRepository.findById(productId)
-                .orElseThrow(() -> new IllegalArgumentException("Product not found with ID: " + productId));
-        
-        // Validation - check if slug/name/code exists for other records
-        if (!existingProduct.getProductSlug().equals(productDto.getProductSlug()) && 
-            existsBySlug(productDto.getProductSlug())) {
-            throw new IllegalArgumentException("Product slug already exists: " + productDto.getProductSlug());
-        }
-        if (!existingProduct.getProductName().equals(productDto.getProductName()) && 
-            existsByName(productDto.getProductName())) {
-            throw new IllegalArgumentException("Product name already exists: " + productDto.getProductName());
-        }
-        if (!existingProduct.getProductCode().equals(productDto.getProductCode()) && 
-            existsByCode(productDto.getProductCode())) {
-            throw new IllegalArgumentException("Product code already exists: " + productDto.getProductCode());
+        // Associate attributes if provided - use direct association for new products
+        if (productRequestDto.getProductAttributes() != null && !productRequestDto.getProductAttributes().isEmpty()) {
+            associateAttributesToProduct(savedProduct, productRequestDto.getProductAttributes());
         }
         
-        // Update fields
-        existingProduct.setProductName(productDto.getProductName());
-        existingProduct.setProductSlug(productDto.getProductSlug());
-        existingProduct.setProductCode(productDto.getProductCode());
-        existingProduct.setProductDescription(productDto.getProductDescription());
-        existingProduct.setProductPrice(productDto.getProductPrice());
-        existingProduct.setStockQuantity(productDto.getStockQuantity());
-        existingProduct.setSoldQuantity(productDto.getSoldQuantity());
-        existingProduct.setProductEnabled(productDto.getProductEnabled());
-        existingProduct.setModifiedDt(LocalDateTime.now());
-        
-        Product savedProduct = productRepository.save(existingProduct);
         return convertToDto(savedProduct);
     }
 
@@ -465,10 +442,6 @@ public class ProductServiceImpl implements ProductService {
     private ProductDto convertToDto(Product product) {
         return ProductMapperUtil.toProductDto(product);
     }
-
-    private Product convertToEntity(ProductDto productDto) {
-        return ProductMapperUtil.toProductEntity(productDto);
-    }
     
     /**
      * Validate that all provided image IDs exist in the database
@@ -508,5 +481,271 @@ public class ProductServiceImpl implements ProductService {
         }
         
         logger.info("Successfully associated {} images to product {} (primary: {})", imageIds.size(), product.getProductId(), actualPrimaryImageId);
+    }
+    
+    /**
+     * Validate that all provided product attribute IDs exist in the database
+     * @param productAttributes List of product attributes to validate  
+     * @throws IllegalArgumentException if any productAttrId doesn't exist
+     */
+    private void validateProductAttributes(List<ProductAttributeRequestDto> productAttributes) {
+        if (productAttributes == null || productAttributes.isEmpty()) {
+            return;
+        }
+        
+        for (ProductAttributeRequestDto attrRequest : productAttributes) {
+            if (!productAttrRepository.existsById(attrRequest.getProductAttrId())) {
+                throw new IllegalArgumentException("Product attribute definition not found with ID: " + attrRequest.getProductAttrId());
+            }
+        }
+    }
+    
+    /**
+     * Associate product attributes to a product
+     * @param product Product entity
+     * @param productAttributes List of product attributes to associate
+     */
+    private void associateAttributesToProduct(Product product, List<ProductAttributeRequestDto> productAttributes) {
+        if (productAttributes == null || productAttributes.isEmpty()) {
+            logger.debug("No attributes to associate with product {}", product.getProductId());
+            return;
+        }
+        
+        logger.debug("Associating {} attributes to product {}", productAttributes.size(), product.getProductId());
+        
+        for (ProductAttributeRequestDto attrRequest : productAttributes) {
+            ProductAttr productAttr = productAttrRepository.findById(attrRequest.getProductAttrId())
+                .orElseThrow(() -> new IllegalArgumentException("Product attribute definition not found with ID: " + attrRequest.getProductAttrId()));
+            
+            ProductAttribute productAttribute = new ProductAttribute();
+            productAttribute.setProduct(product);
+            productAttribute.setProductAttr(productAttr);
+            productAttribute.setProductAttributeValue(attrRequest.getProductAttributeValue());
+            productAttribute.setProductAttributeQuantity(attrRequest.getProductAttributeQuantity());
+            productAttribute.setProductAttributeEnabled(attrRequest.getProductAttributeEnabled());
+            
+            productAttributeRepository.save(productAttribute);
+        }
+        
+        logger.info("Successfully associated {} attributes to product {}", productAttributes.size(), product.getProductId());
+    }
+    
+    /**
+     * Update product images using differential approach to avoid duplicate key errors
+     * Compares existing images with requested images and performs selective operations
+     * @param product Product entity
+     * @param imageIds New list of image IDs
+     * @param primaryImageId Primary image ID (can be null)
+     */
+    private void updateProductImages(Product product, List<Long> imageIds, Long primaryImageId) {
+        // Handle null input gracefully
+        if (imageIds == null) {
+            imageIds = List.of(); // Convert null to empty list
+        }
+        
+        Long productId = product.getProductId();
+        logger.debug("Updating product images for product {} - {} images requested", 
+                    productId, imageIds.size());
+        
+        // 1. Get existing product images - handle possible null result
+        List<ProductImage> existingImages = productImageRepository.findByProductId(productId);
+        if (existingImages == null) {
+            existingImages = List.of(); // Convert null to empty list
+        }
+        
+        // 2. Create sets for comparison
+        Set<Long> existingImageIds = existingImages.stream()
+            .map(pi -> pi.getImage().getImageId())
+            .collect(Collectors.toSet());
+            
+        Set<Long> newImageIds = new HashSet<>(imageIds);
+        
+        // 3. REMOVE: Delete images that are not in the new list
+        for (ProductImage existingImage : existingImages) {
+            Long existingImageId = existingImage.getImage().getImageId();
+            if (!newImageIds.contains(existingImageId)) {
+                productImageRepository.delete(existingImage);
+                logger.debug("Removed image {} from product {}", existingImageId, productId);
+            }
+        }
+        
+        // 4. ADD: Insert new images that don't exist
+        Long actualPrimaryImageId = (primaryImageId != null) ? primaryImageId : 
+                                   (!imageIds.isEmpty() ? imageIds.get(0) : null);
+        
+        for (Long imageId : newImageIds) {
+            if (!existingImageIds.contains(imageId)) {
+                Image image = imageRepository.findById(imageId)
+                    .orElseThrow(() -> new IllegalArgumentException("Image not found with ID: " + imageId));
+                    
+                ProductImage productImage = new ProductImage();
+                productImage.setProduct(product);
+                productImage.setImage(image);
+                productImage.setProductImagePrimary(imageId.equals(actualPrimaryImageId));
+                
+                productImageRepository.save(productImage);
+                logger.debug("Added image {} to product {} (primary: {})", imageId, productId, imageId.equals(actualPrimaryImageId));
+            }
+        }
+        
+        // 5. UPDATE: Update primary flags for existing images if needed
+        if (actualPrimaryImageId != null) {
+            List<ProductImage> currentImages = productImageRepository.findByProductId(productId);
+            for (ProductImage img : currentImages) {
+                boolean shouldBePrimary = img.getImage().getImageId().equals(actualPrimaryImageId);
+                if (img.getProductImagePrimary() != shouldBePrimary) {
+                    img.setProductImagePrimary(shouldBePrimary);
+                    productImageRepository.save(img);
+                    logger.debug("Updated primary flag for image {} in product {}: {}", 
+                               img.getImage().getImageId(), productId, shouldBePrimary);
+                }
+            }
+        }
+        
+        logger.info("Successfully updated images for product {} - {} total images", productId, newImageIds.size());
+    }
+    
+    /**
+     * Update product attributes using differential approach to avoid duplicate key errors  
+     * Compares existing attributes with requested attributes and performs selective operations
+     * @param product Product entity
+     * @param requestAttributes List of requested product attributes
+     */
+    private void updateProductAttributes(Product product, List<ProductAttributeRequestDto> requestAttributes) {
+        if (requestAttributes == null) {
+            requestAttributes = List.of(); // Convert null to empty list for consistent processing
+        }
+        
+        Long productId = product.getProductId();
+        logger.debug("Updating product attributes for product {} - {} attributes requested", 
+                    productId, requestAttributes.size());
+        
+        // 1. Get existing attributes from DB - handle possible null result
+        List<ProductAttribute> existing = productAttributeRepository.findByProductId(productId);
+        if (existing == null) {
+            existing = List.of(); // Convert null to empty list
+        }
+        
+        // 2. Map existing by productAttrId for efficient lookup
+        Map<Long, ProductAttribute> existingMap = existing.stream()
+            .collect(Collectors.toMap(
+                pa -> pa.getProductAttr().getProductAttrId(),
+                Function.identity()
+            ));
+        
+        // 3. Map request by productAttrId and validate for duplicates
+        Map<Long, ProductAttributeRequestDto> requestMap = requestAttributes.stream()
+            .collect(Collectors.toMap(
+                ProductAttributeRequestDto::getProductAttrId,
+                Function.identity(),
+                (a, b) -> {
+                    throw new IllegalArgumentException(
+                        "Duplicate productAttrId in request: " + a.getProductAttrId());
+                }
+            ));
+        
+        // 4. REMOVE: Delete attributes that exist in DB but not in request
+        for (ProductAttribute existingAttr : existing) {
+            Long attrId = existingAttr.getProductAttr().getProductAttrId();
+            if (!requestMap.containsKey(attrId)) {
+                productAttributeRepository.delete(existingAttr);
+                logger.debug("Removed attribute {} from product {}", attrId, productId);
+            }
+        }
+        
+        // 5. ADD or UPDATE: Process each requested attribute
+        for (Map.Entry<Long, ProductAttributeRequestDto> entry : requestMap.entrySet()) {
+            Long attrId = entry.getKey();
+            ProductAttributeRequestDto req = entry.getValue();
+            
+            ProductAttribute existingAttr = existingMap.get(attrId);
+            
+            if (existingAttr != null) {
+                // UPDATE existing attribute
+                existingAttr.setProductAttributeValue(req.getProductAttributeValue());
+                existingAttr.setProductAttributeQuantity(req.getProductAttributeQuantity());
+                existingAttr.setProductAttributeEnabled(req.getProductAttributeEnabled());
+                
+                productAttributeRepository.save(existingAttr);
+                logger.debug("Updated attribute {} for product {}: {} (qty: {})", 
+                           attrId, productId, req.getProductAttributeValue(), req.getProductAttributeQuantity());
+            } else {
+                // INSERT new attribute
+                ProductAttr productAttr = productAttrRepository.findById(attrId)
+                    .orElseThrow(() -> new IllegalArgumentException(
+                        "Product attribute definition not found with ID: " + attrId));
+                
+                ProductAttribute newAttr = new ProductAttribute();
+                newAttr.setProduct(product);
+                newAttr.setProductAttr(productAttr);
+                newAttr.setProductAttributeValue(req.getProductAttributeValue());
+                newAttr.setProductAttributeQuantity(req.getProductAttributeQuantity());
+                newAttr.setProductAttributeEnabled(req.getProductAttributeEnabled());
+                
+                productAttributeRepository.save(newAttr);
+                logger.debug("Added new attribute {} to product {}: {} (qty: {})", 
+                           attrId, productId, req.getProductAttributeValue(), req.getProductAttributeQuantity());
+            }
+        }
+        
+        logger.info("Successfully updated attributes for product {} - {} total attributes", 
+                   productId, requestMap.size());
+    }
+    
+    // =============================================
+    // SEO META HELPER METHODS
+    // =============================================
+    
+    /**
+     * Handle SEO meta creation or update based on existing seoMetaId
+     * @param seoMetaRequest SEO meta request data
+     * @param existingSeoMetaId Existing SEO meta ID (null for creation)
+     * @return SEO meta ID (existing or newly created)
+     */
+    private Long handleSeoMeta(SeoMetaRequestDto seoMetaRequest, Long existingSeoMetaId) {
+        if (existingSeoMetaId != null) {
+            // Update existing SEO meta
+            logger.debug("Updating existing SEO meta with ID: {}", existingSeoMetaId);
+            try {
+                SeoMetaDto seoMetaDto = convertSeoMetaRequestToDto(seoMetaRequest);
+                seoMetaService.updateSeoMeta(existingSeoMetaId, seoMetaDto);
+                logger.info("Successfully updated SEO meta ID: {}", existingSeoMetaId);
+                return existingSeoMetaId;
+            } catch (Exception e) {
+                logger.error("Failed to update SEO meta: {}", e.getMessage(), e);
+                throw new IllegalArgumentException("Failed to update SEO meta: " + e.getMessage(), e);
+            }
+        } else {
+            // Create new SEO meta
+            logger.debug("Creating new SEO meta with title: {}", seoMetaRequest.getSeoMetaTitle());
+            try {
+                SeoMetaDto seoMetaDto = convertSeoMetaRequestToDto(seoMetaRequest);
+                SeoMetaDto createdSeoMeta = seoMetaService.createSeoMeta(seoMetaDto);
+                logger.info("Successfully created SEO meta with ID: {}", createdSeoMeta.getSeoMetaId());
+                return createdSeoMeta.getSeoMetaId();
+            } catch (Exception e) {
+                logger.error("Failed to create SEO meta: {}", e.getMessage(), e);
+                throw new IllegalArgumentException("Failed to create SEO meta: " + e.getMessage(), e);
+            }
+        }
+    }
+    
+    /**
+     * Convert SeoMetaRequestDto to SeoMetaDto with consistent field mapping
+     * @param seoMetaRequest Request DTO
+     * @return SeoMetaDto for service operations
+     */
+    private SeoMetaDto convertSeoMetaRequestToDto(SeoMetaRequestDto seoMetaRequest) {
+        return SeoMetaDto.builder()
+                .seoMetaTitle(seoMetaRequest.getSeoMetaTitle())
+                .seoMetaDescription(seoMetaRequest.getSeoMetaDescription())
+                .seoMetaKeywords(seoMetaRequest.getSeoMetaKeywords())
+                .seoMetaCanonicalUrl(seoMetaRequest.getSeoMetaCanonicalUrl())
+                .seoMetaIndex(seoMetaRequest.getSeoMetaIndex())
+                .seoMetaFollow(seoMetaRequest.getSeoMetaFollow())
+                .seoMetaSchemaType(seoMetaRequest.getSeoMetaSchemaType())
+                .seoMetaCustomJson(seoMetaRequest.getSeoMetaCustomJson())
+                .seoMetaEnabled(seoMetaRequest.getSeoMetaEnabled())
+                .build();
     }
 }
