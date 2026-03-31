@@ -97,6 +97,15 @@ public class CartMapper {
             dto.setCartItemState(toDto(cartItem.getCartItemState()));
         }
         
+        // Set cart item attributes (selected product attributes)
+        if (cartItem.getCartItemAttributes() != null && !cartItem.getCartItemAttributes().isEmpty()) {
+            List<CartItemAttributeDto> attributeDtos = cartItem.getCartItemAttributes().stream()
+                    .map(CartItemAttributeMapperUtil::toDto)
+                    .filter(attrDto -> attrDto != null)  // Filter out null results
+                    .collect(Collectors.toList());
+            dto.setCartItemAttributes(attributeDtos);
+        }
+        
         // Set computed fields
         setComputedFields(dto, cartItem);
 

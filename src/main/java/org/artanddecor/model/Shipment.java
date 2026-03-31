@@ -1,9 +1,7 @@
 package org.artanddecor.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,7 +14,8 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "SHIPMENT")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class Shipment {
@@ -55,9 +54,6 @@ public class Shipment {
 
     @Column(name = "CITY", nullable = false, length = 100)
     private String city;
-
-    @Column(name = "DISTRICT", length = 100)
-    private String district;
 
     @Column(name = "WARD", length = 100)
     private String ward;
@@ -108,7 +104,6 @@ public class Shipment {
         StringBuilder sb = new StringBuilder();
         if (addressLine != null) sb.append(addressLine);
         if (ward != null) sb.append(", ").append(ward);
-        if (district != null) sb.append(", ").append(district);
         if (city != null) sb.append(", ").append(city);
         if (country != null) sb.append(", ").append(country);
         return sb.toString();

@@ -50,14 +50,6 @@ public interface OrderItemService {
     OrderItemDto addOrderItem(Long orderId, Long productId, Integer quantity);
 
     /**
-     * Update order item quantity (simplified signature)
-     * @param orderItemId Order item ID
-     * @param quantity New quantity  
-     * @return Updated order item
-     */
-    OrderItemDto updateOrderItem(Long orderItemId, Integer quantity);
-
-    /**
      * Get order items by product ID
      * @param productId Product ID
      * @return List of order items for specific product
@@ -142,19 +134,7 @@ public interface OrderItemService {
      */
     BigDecimal calculateTotalRevenueForProduct(Long productId);
 
-    /**
-     * Get top selling products by quantity
-     * @param pageable Pagination information (limit results)
-     * @return Page of products sorted by total quantity sold
-     */
-    Page<Object[]> getTopSellingProductsByQuantity(Pageable pageable);
 
-    /**
-     * Get top revenue generating products
-     * @param pageable Pagination information (limit results)
-     * @return Page of products sorted by total revenue
-     */
-    Page<Object[]> getTopRevenueGeneratingProducts(Pageable pageable);
 
     /**
      * Count order items for specific order
@@ -163,11 +143,7 @@ public interface OrderItemService {
      */
     Long countOrderItemsByOrderId(Long orderId);
 
-    /**
-     * Get order items with high quantity (for inventory alerts)
-     * @return List of order items that might cause stock issues
-     */
-    List<OrderItemDto> getHighQuantityOrderItems();
+
 
     /**
      * Validate order item quantity against product stock
@@ -178,26 +154,22 @@ public interface OrderItemService {
     boolean validateOrderItemQuantity(Long productId, Integer requestedQuantity);
 
     /**
-     * Search order items by multiple criteria
-     * @param orderItemId Filter by order item ID (optional)
+     * Search order items by multiple criteria (simplified signature for controller)
      * @param orderId Filter by order ID (optional)
      * @param productId Filter by product ID (optional)
-     * @param productName Filter by product name (optional)
      * @param minQuantity Filter by minimum quantity (optional)
      * @param maxQuantity Filter by maximum quantity (optional)
      * @param minUnitPrice Filter by minimum unit price (optional)
      * @param maxUnitPrice Filter by maximum unit price (optional)
      * @param minTotalPrice Filter by minimum total price (optional)
      * @param maxTotalPrice Filter by maximum total price (optional)
-     * @param textSearch Search text in product name, description, image (optional)
+     * @param textSearch Search text in product name or code (optional)
      * @param pageable Pagination information
      * @return Page of order items matching criteria
      */
-    Page<OrderItemDto> searchOrderItemsByCriteria(
-            Long orderItemId,
-            Long orderId,
+    Page<OrderItemDto> searchOrderItems(
+            List<Long> orderIds,
             Long productId,
-            String productName,
             Integer minQuantity,
             Integer maxQuantity,
             BigDecimal minUnitPrice,
@@ -213,13 +185,6 @@ public interface OrderItemService {
      * @return true if exists, false otherwise
      */
     boolean existsById(Long orderItemId);
-
-    /**
-     * Check if product is used in any order
-     * @param productId Product ID
-     * @return true if product is used in orders, false otherwise
-     */
-    boolean isProductUsedInOrders(Long productId);
 
     /**
      * Get order summary for specific order (total items, total quantity, total amount)

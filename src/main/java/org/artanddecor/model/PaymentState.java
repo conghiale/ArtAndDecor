@@ -1,9 +1,7 @@
 package org.artanddecor.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,7 +14,8 @@ import java.util.List;
  */
 @Entity
 @Table(name = "PAYMENT_STATE")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class PaymentState {
@@ -48,6 +47,7 @@ public class PaymentState {
 
     // One-to-Many relationship with Payment
     @OneToMany(mappedBy = "paymentState", fetch = FetchType.LAZY)
+    @ToString.Exclude
     private List<Payment> payments;
 
     @PrePersist

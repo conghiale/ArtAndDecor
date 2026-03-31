@@ -10,16 +10,23 @@ import org.artanddecor.repository.OrderStateHistoryRepository;
 import org.artanddecor.repository.OrderStateRepository;
 import org.artanddecor.repository.UserRepository;
 import org.artanddecor.services.OrderStateHistoryService;
-import org.artanddecor.utils.OrderStateHistoryMapperUtil;
+import org.artanddecor.utils.OrderMapperUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
 /**
  * OrderStateHistory Service Implementation for business logic operations
+ * Updated to support new API requirements
  */
 @Service
 @Transactional
@@ -38,14 +45,14 @@ public class OrderStateHistoryServiceImpl implements OrderStateHistoryService {
     private UserRepository userRepository;
 
     @Autowired
-    private OrderStateHistoryMapperUtil orderStateHistoryMapperUtil;
+    private OrderMapperUtil orderMapperUtil; // Using consolidated mapper
 
     @Override
     @Transactional(readOnly = true)
     public List<OrderStateHistoryDto> getOrderStateHistory(Long orderId) {
         List<OrderStateHistory> historyList = orderStateHistoryRepository.findByOrderIdOrderByStateChangeDateDesc(orderId);
         return historyList.stream()
-                .map(orderStateHistoryMapperUtil::mapToDto)
+                .map(orderMapperUtil::mapToDto)
                 .collect(Collectors.toList());
     }
 
@@ -82,6 +89,62 @@ public class OrderStateHistoryServiceImpl implements OrderStateHistoryService {
         OrderStateHistory savedHistory = orderStateHistoryRepository.save(orderStateHistory);
         
         // Return mapped DTO
-        return orderStateHistoryMapperUtil.mapToDto(savedHistory);
+        return orderMapperUtil.mapToDto(savedHistory);
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public Page<OrderStateHistoryDto> getOrderStateHistory(
+            Long orderId,
+            LocalDate fromDate,
+            LocalDate toDate,
+            Long oldStateId,
+            Long newStateId,
+            Pageable pageable) {
+        
+        List<OrderStateHistory> allHistory = orderStateHistoryRepository.findAll();
+        
+        // Apply filters
+        List<OrderStateHistory> filteredHistory = allHistory.stream()
+                .filter(history -> {
+                    // Filter by order ID
+                    if (orderId != null && !history.getOrder().getOrderId().equals(orderId)) {
+                        return false;
+                    }
+                    
+                    // Filter by date range
+                    LocalDateTime historyDate = history.getCreatedDt();
+                    if (fromDate != null && historyDate.isBefore(fromDate.atStartOfDay())) {
+                        return false;
+                    }
+                    if (toDate != null && historyDate.isAfter(toDate.atTime(LocalTime.MAX))) {
+                        return false;
+                    }
+                    
+                    // Filter by old state ID
+                    if (oldStateId != null && !history.getOldState().getOrderStateId().equals(oldStateId)) {
+                        return false;
+                    }
+                    
+                    // Filter by new state ID
+                    if (newStateId != null && !history.getNewState().getOrderStateId().equals(newStateId)) {
+                        return false;
+                    }
+                    
+                    return true;
+                })
+                .collect(Collectors.toList());
+        
+        // Convert to DTO
+        List<OrderStateHistoryDto> dtoList = filteredHistory.stream()
+                .map(orderMapperUtil::mapToDto)
+                .collect(Collectors.toList());
+        
+        // Apply pagination manually since we're filtering in memory
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), dtoList.size());
+        
+        List<OrderStateHistoryDto> pageContent = dtoList.subList(start, end);
+        return new PageImpl<>(pageContent, pageable, dtoList.size());
     }
 }

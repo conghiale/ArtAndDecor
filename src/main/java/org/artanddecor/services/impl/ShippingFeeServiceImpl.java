@@ -8,7 +8,7 @@ import org.artanddecor.model.ShippingFeeType;
 import org.artanddecor.repository.ShippingFeeRepository;
 import org.artanddecor.repository.ShippingFeeTypeRepository;
 import org.artanddecor.services.ShippingFeeService;
-import org.artanddecor.utils.ShippingFeeMapperUtil;
+import org.artanddecor.utils.ShipmentMapperUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -32,14 +32,14 @@ public class ShippingFeeServiceImpl implements ShippingFeeService {
 
     private final ShippingFeeRepository shippingFeeRepository;
     private final ShippingFeeTypeRepository shippingFeeTypeRepository;
-    private final ShippingFeeMapperUtil shippingFeeMapperUtil;
+    private final ShipmentMapperUtil shipmentMapperUtil;
 
     @Override
     @Transactional(readOnly = true)
     public Page<ShippingFeeDto> getAllShippingFees(Pageable pageable) {
         logger.debug("Getting all shipping fees with pagination: {}", pageable);
         Page<ShippingFee> feePage = shippingFeeRepository.findAll(pageable);
-        return feePage.map(shippingFeeMapperUtil::mapToDto);
+        return feePage.map(shipmentMapperUtil::mapShippingFeeToDto);
     }
 
     @Override
@@ -48,7 +48,7 @@ public class ShippingFeeServiceImpl implements ShippingFeeService {
         logger.debug("Getting shipping fee by ID: {}", shippingFeeId);
         ShippingFee shippingFee = shippingFeeRepository.findById(shippingFeeId)
             .orElseThrow(() -> new ResourceNotFoundException("Shipping fee not found with ID: " + shippingFeeId));
-        return shippingFeeMapperUtil.mapToDto(shippingFee);
+        return shipmentMapperUtil.mapShippingFeeToDto(shippingFee);
     }
 
     @Override
@@ -57,7 +57,7 @@ public class ShippingFeeServiceImpl implements ShippingFeeService {
         logger.debug("Getting shipping fees by type ID: {}", shippingFeeTypeId);
         List<ShippingFee> fees = shippingFeeRepository.findByShippingFeeTypeShippingFeeTypeIdOrderByMinOrderPrice(shippingFeeTypeId);
         return fees.stream()
-            .map(shippingFeeMapperUtil::mapToDto)
+            .map(shipmentMapperUtil::mapShippingFeeToDto)
             .toList();
     }
 
@@ -67,7 +67,7 @@ public class ShippingFeeServiceImpl implements ShippingFeeService {
         logger.debug("Getting all enabled shipping fees");
         List<ShippingFee> fees = shippingFeeRepository.findByShippingFeeEnabledTrueOrderByMinOrderPrice();
         return fees.stream()
-            .map(shippingFeeMapperUtil::mapToDto)
+            .map(shipmentMapperUtil::mapShippingFeeToDto)
             .toList();
     }
 
@@ -91,13 +91,13 @@ public class ShippingFeeServiceImpl implements ShippingFeeService {
             throw new IllegalArgumentException("Price range overlaps with existing shipping fee");
         }
 
-        ShippingFee shippingFee = shippingFeeMapperUtil.mapToEntity(shippingFeeDto);
+        ShippingFee shippingFee = shipmentMapperUtil.mapShippingFeeToEntity(shippingFeeDto);
         shippingFee.setShippingFeeType(feeType);
 
         ShippingFee savedFee = shippingFeeRepository.save(shippingFee);
         logger.info("Created shipping fee with ID: {}", savedFee.getShippingFeeId());
         
-        return shippingFeeMapperUtil.mapToDto(savedFee);
+        return shipmentMapperUtil.mapShippingFeeToDto(savedFee);
     }
 
     @Override
@@ -137,7 +137,7 @@ public class ShippingFeeServiceImpl implements ShippingFeeService {
         ShippingFee updatedFee = shippingFeeRepository.save(existingFee);
         logger.info("Updated shipping fee with ID: {}", updatedFee.getShippingFeeId());
         
-        return shippingFeeMapperUtil.mapToDto(updatedFee);
+        return shipmentMapperUtil.mapShippingFeeToDto(updatedFee);
     }
 
     @Override
@@ -164,7 +164,7 @@ public class ShippingFeeServiceImpl implements ShippingFeeService {
         logger.info("Toggled enabled status for shipping fee ID: {} to: {}", 
                    shippingFeeId, updatedFee.getShippingFeeEnabled());
         
-        return shippingFeeMapperUtil.mapToDto(updatedFee);
+        return shipmentMapperUtil.mapShippingFeeToDto(updatedFee);
     }
 
     @Override
@@ -182,7 +182,7 @@ public class ShippingFeeServiceImpl implements ShippingFeeService {
             textSearch, pageable
         );
         
-        return feePage.map(shippingFeeMapperUtil::mapToDto);
+        return feePage.map(shipmentMapperUtil::mapShippingFeeToDto);
     }
 
     @Override
@@ -198,7 +198,7 @@ public class ShippingFeeServiceImpl implements ShippingFeeService {
             return null;
         }
         
-        return shippingFeeMapperUtil.mapToDto(cheapestFee);
+        return shipmentMapperUtil.mapShippingFeeToDto(cheapestFee);
     }
 
     @Override
@@ -208,7 +208,7 @@ public class ShippingFeeServiceImpl implements ShippingFeeService {
         
         List<ShippingFee> fees = shippingFeeRepository.findApplicableShippingFees(orderAmount);
         return fees.stream()
-            .map(shippingFeeMapperUtil::mapToDto)
+            .map(shipmentMapperUtil::mapShippingFeeToDto)
             .toList();
     }
 

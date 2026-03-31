@@ -9,7 +9,7 @@ import org.artanddecor.repository.OrderItemRepository;
 import org.artanddecor.repository.OrderRepository;
 import org.artanddecor.repository.ProductRepository;
 import org.artanddecor.services.OrderItemService;
-import org.artanddecor.utils.OrderItemMapperUtil;
+import org.artanddecor.utils.OrderMapperUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -38,13 +38,13 @@ public class OrderItemServiceImpl implements OrderItemService {
     private ProductRepository productRepository;
 
     @Autowired 
-    private OrderItemMapperUtil orderItemMapperUtil;
+    private OrderMapperUtil orderMapperUtil; // Using consolidated mapper
 
     @Override
     @Transactional(readOnly = true)
     public Page<OrderItemDto> getAllOrderItems(Pageable pageable) {
         Page<OrderItem> orderItemsPage = orderItemRepository.findAll(pageable);
-        return orderItemsPage.map(orderItemMapperUtil::mapToDto);
+        return orderItemsPage.map(orderMapperUtil::mapToDto);
     }
 
     @Override
@@ -52,7 +52,7 @@ public class OrderItemServiceImpl implements OrderItemService {
     public OrderItemDto getOrderItemById(Long orderItemId) {
         OrderItem orderItem = orderItemRepository.findById(orderItemId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order Item not found with ID: " + orderItemId));
-        return orderItemMapperUtil.mapToDto(orderItem);
+        return orderMapperUtil.mapToDto(orderItem);
     }
 
     @Override
@@ -60,7 +60,7 @@ public class OrderItemServiceImpl implements OrderItemService {
     public List<OrderItemDto> getOrderItemsByOrderId(Long orderId) {
         List<OrderItem> orderItems = orderItemRepository.findByOrderOrderId(orderId);
         return orderItems.stream()
-                .map(orderItemMapperUtil::mapToDto)
+                .map(orderMapperUtil::mapToDto)
                 .collect(Collectors.toList());
     }
 
@@ -69,7 +69,7 @@ public class OrderItemServiceImpl implements OrderItemService {
     public List<OrderItemDto> getOrderItemsByProductId(Long productId) {
         List<OrderItem> orderItems = orderItemRepository.findByProductProductId(productId);
         return orderItems.stream()
-                .map(orderItemMapperUtil::mapToDto)
+                .map(orderMapperUtil::mapToDto)
                 .collect(Collectors.toList());
     }
 
@@ -97,11 +97,11 @@ public class OrderItemServiceImpl implements OrderItemService {
             orderItemDto.setUnitPrice(product.getProductPrice());
         }
 
-        OrderItem orderItem = orderItemMapperUtil.mapToEntity(orderItemDto);
+        OrderItem orderItem = orderMapperUtil.mapToEntity(orderItemDto);
         orderItem.setOrder(order);
 
         OrderItem savedOrderItem = orderItemRepository.save(orderItem);
-        return orderItemMapperUtil.mapToDto(savedOrderItem);
+        return orderMapperUtil.mapToDto(savedOrderItem);
     }
 
     @Override
@@ -124,11 +124,25 @@ public class OrderItemServiceImpl implements OrderItemService {
         OrderItem existingOrderItem = orderItemRepository.findById(orderItemId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order Item not found with ID: " + orderItemId));
 
-        // Update fields
-        orderItemMapperUtil.updateEntityFromDto(existingOrderItem, orderItemDto);
+        // Update fields manually
+        if (orderItemDto.getProductName() != null) {
+            existingOrderItem.setProductName(orderItemDto.getProductName());
+        }
+        if (orderItemDto.getProductCode() != null) {
+            existingOrderItem.setProductCode(orderItemDto.getProductCode());
+        }
+        if (orderItemDto.getQuantity() != null) {
+            existingOrderItem.setQuantity(orderItemDto.getQuantity());
+        }
+        if (orderItemDto.getUnitPrice() != null) {
+            existingOrderItem.setUnitPrice(orderItemDto.getUnitPrice());
+        }
+        if (orderItemDto.getTotalPrice() != null) {
+            existingOrderItem.setTotalPrice(orderItemDto.getTotalPrice());
+        }
 
         OrderItem updatedOrderItem = orderItemRepository.save(existingOrderItem);
-        return orderItemMapperUtil.mapToDto(updatedOrderItem);
+        return orderMapperUtil.mapToDto(updatedOrderItem);
     }
 
     @Override
@@ -139,7 +153,7 @@ public class OrderItemServiceImpl implements OrderItemService {
         orderItem.setQuantity(newQuantity);
 
         OrderItem updatedOrderItem = orderItemRepository.save(orderItem);
-        return orderItemMapperUtil.mapToDto(updatedOrderItem);
+        return orderMapperUtil.mapToDto(updatedOrderItem);
     }
 
     @Override
@@ -150,7 +164,7 @@ public class OrderItemServiceImpl implements OrderItemService {
         orderItem.setUnitPrice(newUnitPrice);
 
         OrderItem updatedOrderItem = orderItemRepository.save(orderItem);
-        return orderItemMapperUtil.mapToDto(updatedOrderItem);
+        return orderMapperUtil.mapToDto(updatedOrderItem);
     }
 
     @Override
@@ -206,31 +220,12 @@ public class OrderItemServiceImpl implements OrderItemService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public Page<Object[]> getTopSellingProductsByQuantity(Pageable pageable) {
-        // Return empty page since this is not used
-        return Page.empty(pageable);
-    }
 
-    @Override
-    @Transactional(readOnly = true)
-    public Page<Object[]> getTopRevenueGeneratingProducts(Pageable pageable) {
-        // Return empty page since this is not used
-        return Page.empty(pageable);
-    }
 
     @Override
     @Transactional(readOnly = true)
     public Long countOrderItemsByOrderId(Long orderId) {
         return (long) orderItemRepository.findByOrderOrderId(orderId).size();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<OrderItemDto> getHighQuantityOrderItems() {
-        // Return empty list since this is not used
-        return List.of();
     }
 
     @Override
@@ -254,11 +249,9 @@ public class OrderItemServiceImpl implements OrderItemService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<OrderItemDto> searchOrderItemsByCriteria(
-            Long orderItemId,
-            Long orderId,
+    public Page<OrderItemDto> searchOrderItems(
+            List<Long> orderIds,
             Long productId,
-            String productName,
             Integer minQuantity,
             Integer maxQuantity,
             BigDecimal minUnitPrice,
@@ -268,24 +261,19 @@ public class OrderItemServiceImpl implements OrderItemService {
             String textSearch,
             Pageable pageable) {
 
-        // Simple implementation - return all order items with pagination
-        return getAllOrderItems(pageable);
+        // Optimized single repository call with unified filtering method
+        Page<OrderItem> orderItemsPage = orderItemRepository.findWithFilters(
+                orderIds, productId, minQuantity, maxQuantity, 
+                minUnitPrice, maxUnitPrice, minTotalPrice, maxTotalPrice, 
+                textSearch, pageable);
+        return orderItemsPage.map(orderMapperUtil::mapToDto);
     }
 
     @Override
-    @Transactional(readOnly = true)
     public boolean existsById(Long orderItemId) {
         return orderItemRepository.existsById(orderItemId);
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public boolean isProductUsedInOrders(Long productId) {
-        return !orderItemRepository.findByProductProductId(productId).isEmpty();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
     public Object[] getOrderSummary(Long orderId) {
         List<OrderItem> orderItems = orderItemRepository.findByOrderOrderId(orderId);
         
@@ -336,7 +324,7 @@ public class OrderItemServiceImpl implements OrderItemService {
         // Recalculate order totals
         recalculateOrderTotals(orderId);
         
-        return orderItemMapperUtil.mapToDtoWithoutOrder(savedOrderItem);
+        return orderMapperUtil.mapToDto(savedOrderItem);
     }
 
     /**
@@ -364,10 +352,5 @@ public class OrderItemServiceImpl implements OrderItemService {
         order.setModifiedDt(LocalDateTime.now());
 
         orderRepository.save(order);
-    }
-
-    @Override
-    public OrderItemDto updateOrderItem(Long orderItemId, Integer quantity) {
-        return updateOrderItemQuantity(orderItemId, quantity);
     }
 }

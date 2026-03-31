@@ -9,6 +9,8 @@ import lombok.NoArgsConstructor;
 import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.ArrayList;
 
 /**
  * CartItem DTO for API requests and responses
@@ -47,6 +49,10 @@ public class CartItemDto {
     private CartDto cart;
     private ProductDto product;
     private CartItemStateDto cartItemState;
+    
+    // Selected product attributes for this cart item
+    @Builder.Default
+    private List<CartItemAttributeDto> cartItemAttributes = new ArrayList<>();
     
     // Computed fields
     private Boolean isAvailable;
@@ -91,5 +97,49 @@ public class CartItemDto {
             return product.getProductPrice().multiply(new BigDecimal(quantity));
         }
         return totalPrice;
+    }
+    
+    /**
+     * Check if this cart item has selected attributes
+     * @return true if has attributes, false otherwise
+     */
+    public boolean hasAttributes() {
+        return cartItemAttributes != null && !cartItemAttributes.isEmpty();
+    }
+    
+    /**
+     * Get count of selected attributes
+     * @return Number of selected attributes
+     */
+    public int getAttributesCount() {
+        return cartItemAttributes != null ? cartItemAttributes.size() : 0;
+    }
+    
+    /**
+     * Get formatted attributes display text
+     * @return Comma-separated attribute display text
+     */
+    public String getFormattedAttributes() {
+        if (!hasAttributes()) {
+            return "No attributes selected";
+        }
+        
+        return cartItemAttributes.stream()
+                .map(CartItemAttributeDto::getFormattedDisplay)
+                .reduce((a, b) -> a + ", " + b)
+                .orElse("No attributes selected");
+    }
+    
+    /**
+     * Add a cart item attribute
+     * @param attribute Attribute to add
+     */
+    public void addAttribute(CartItemAttributeDto attribute) {
+        if (attribute != null) {
+            if (cartItemAttributes == null) {
+                cartItemAttributes = new ArrayList<>();
+            }
+            cartItemAttributes.add(attribute);
+        }
     }
 }

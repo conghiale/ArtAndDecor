@@ -167,7 +167,7 @@ INSERT INTO `CART_STATE` (`CART_STATE_NAME`, `CART_STATE_DISPLAY_NAME`, `CART_ST
 -- Insert Cart Item States
 INSERT INTO `CART_ITEM_STATE` (`CART_ITEM_STATE_NAME`, `CART_ITEM_STATE_DISPLAY_NAME`, `CART_ITEM_STATE_REMARK`, `CART_ITEM_STATE_ENABLED`) VALUES
 ('ACTIVE', 'Active cart item', 'Sản phẩm trong giỏ hàng đang hoạt động', TRUE),
-('ORDERED', 'Cart item ordered', 'Sản phẩm đã được đặt hàng', TRUE);
+('ORDERED', 'Cart item ordered', 'Sản phẩm đã được đặt hàng', TRUE),
 ('REMOVED', 'Cart item removed', 'Sản phẩm đã được xoá', TRUE);
 
 -- Insert Order States
@@ -434,6 +434,27 @@ INSERT INTO `CART_ITEM` (`CART_ID`, `PRODUCT_ID`, `CART_ITEM_QUANTITY`, `CART_IT
 (2, 8, 1, 350000.00, 1),
 (4, 3, 1, 680000.00, 1);
 
+-- INSERT SAMPLE CART ITEM ATTRIBUTES (simplified mapping between cart items and their selected product attributes)
+INSERT INTO `CART_ITEM_ATTRIBUTE` (`CART_ITEM_ID`, `PRODUCT_ATTRIBUTE_ID`) VALUES
+-- Cart Item 1 (Product 1): User selected 40x60cm size, Canvas material, Warm colors
+(1, 1),    -- Product 1: Size 40x60cm (PRODUCT_ATTRIBUTE_ID = 1)
+(1, 5),    -- Product 1: Canvas material (PRODUCT_ATTRIBUTE_ID = 5)  
+(1, 3),    -- Product 1: Warm colors (PRODUCT_ATTRIBUTE_ID = 3)
+
+-- Cart Item 2 (Product 4): User selected 30x40cm size 
+(2, 10),   -- Product 4: Size 30x40cm (PRODUCT_ATTRIBUTE_ID = 10)
+
+-- Cart Item 3 (Product 2): User selected 50x70cm size, Canvas material
+(3, 6),    -- Product 2: Size 50x70cm (PRODUCT_ATTRIBUTE_ID = 6)
+(3, 8),    -- Product 2: Canvas material (PRODUCT_ATTRIBUTE_ID = 8)
+
+-- Cart Item 4 (Product 6): No specific attributes selected (decorative product)
+-- Cart Item 5 (Product 8): No specific attributes selected (tool product)
+
+-- Cart Item 6 (Product 3): User selected 60x80cm size, Colorful variant
+(6, 9),    -- Product 3: Size 60x80cm (PRODUCT_ATTRIBUTE_ID = 9)
+(6, 11);   -- Product 3: Colorful variant (PRODUCT_ATTRIBUTE_ID = 11)
+
 -- INSERT SAMPLE DISCOUNTS
 INSERT INTO `DISCOUNT` (`DISCOUNT_CODE`, `DISCOUNT_NAME`, `DISCOUNT_TYPE_ID`, `DISCOUNT_VALUE`, `MAX_DISCOUNT_AMOUNT`, `MIN_ORDER_AMOUNT`, `START_AT`, `END_AT`, `TOTAL_USAGE_LIMIT`, `USED_COUNT`, `IS_ACTIVE`, `DISCOUNT_DISPLAY_NAME`, `DISCOUNT_REMARK`) VALUES
 ('WELCOME2026', 'Chào mừng năm mới 2026', 1, 10.00, 100000.00, 500000.00, '2026-01-01 00:00:00', '2026-03-31 23:59:59', 1000, 25, TRUE, 'Mã giảm giá chào mừng năm mới 2026', 'Mã giảm giá chào mừng năm mới 2026'),
@@ -447,10 +468,10 @@ INSERT INTO `SHIPPING_FEE` (`SHIPPING_FEE_TYPE_ID`, `MIN_ORDER_PRICE`, `MAX_ORDE
 (2, 0.00, 499999.99, 30000.00, 'Phí vận chuyển cố định', 'Phí vận chuyển cố định 30k cho đơn hàng dưới 500k', TRUE);
 
 -- INSERT SAMPLE ORDERS
-INSERT INTO `ORDER` (`USER_ID`, `ORDER_CODE`, `ORDER_SLUG`, `CART_ID`, `ORDER_STATE_ID`, `DISCOUNT_ID`, `DISCOUNT_CODE`, `DISCOUNT_TYPE`, `DISCOUNT_VALUE`, `CUSTOMER_NAME`, `CUSTOMER_PHONE_NUMBER`, `CUSTOMER_EMAIL`, `CUSTOMER_ADDRESS`, `RECEIVER_NAME`, `RECEIVER_PHONE`, `RECEIVER_EMAIL`, `RECEIVER_ADDRESS`, `SUBTOTAL_AMOUNT`, `DISCOUNT_AMOUNT`, `SHIPPING_FEE_AMOUNT`, `TOTAL_AMOUNT`, `ORDER_NOTE`) VALUES
-(4, 'ORD-20260115-001', 'ord-20260115-001', 3, 5, 1, 'WELCOME2026', 'PERCENTAGE', 10.00, 'Nguyen Van A', '0904567890', 'customer1@gmail.com', '789 Đường Lê Lợi, Phường Bến Nghé, Quận 1, TP.HCM', 'Alice Johnson', '0904567890', 'alice.johnson@gmail.com', '123 Đường ABC, Phường XYZ, Quận 1, TP.HCM', 1200000.00, 30000.00, 0.00, 1170000.00, 'Giao hàng trong giờ hành chính'),
-(5, 'ORD-20260116-002', 'ord-20260116-002', 2, 3, 2, 'ARTLOVER50', 'FIXED_AMOUNT', 50000.00, 'Tran Thi B', '0905678901', 'customer2@gmail.com', '456 Đường Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP.HCM', 'Tran Thi B', '0905678901', 'customer2@gmail.com', '456 Đường DEF, Phường UVW, Quận 2, TP.HCM', 1620000.00, 50000.00, 0.00, 1570000.00, 'Gọi điện truớc khi giao'),
-(6, 'ORD-20260117-003', 'ord-20260117-003', 1, 2, NULL, NULL, NULL, NULL, 'Le Van C', '0906789012', 'customer3@yahoo.com', '321 Đường Đồng Khởi, Phường Bến Nghé, Quận 1, TP.HCM', 'Le Van C', '0906789012', 'customer3@yahoo.com', '789 Đường GHI, Phường RST, Quận 3, TP.HCM', 770000.00, 0.00, 0.00, 770000.00, 'Để hàng ở bảo vệ nếu không có người');
+INSERT INTO `ORDER` (`USER_ID`, `ORDER_CODE`, `ORDER_SLUG`, `CART_ID`, `ORDER_STATE_ID`, `DISCOUNT_ID`, `DISCOUNT_CODE`, `DISCOUNT_TYPE`, `DISCOUNT_VALUE`, `CUSTOMER_NAME`, `CUSTOMER_PHONE_NUMBER`, `CUSTOMER_EMAIL`, `CUSTOMER_ADDRESS`, `RECEIVER_NAME`, `RECEIVER_PHONE`, `RECEIVER_EMAIL`, `ADDRESS_LINE`, `CITY`, `WARD`, `COUNTRY`, `SUBTOTAL_AMOUNT`, `DISCOUNT_AMOUNT`, `SHIPPING_FEE_AMOUNT`, `TOTAL_AMOUNT`, `ORDER_NOTE`) VALUES
+(4, 'ORD-20260115-001', 'ord-20260115-001', 3, 5, 1, 'WELCOME2026', 'PERCENTAGE', 10.00, 'Nguyen Van A', '0904567890', 'customer1@gmail.com', '789 Đường Lê Lợi, Phường Bến Nghé, Quận 1, TP.HCM', 'Alice Johnson', '0904567890', 'alice.johnson@gmail.com', '123 Đường ABC', 'TP.HCM', 'Phường XYZ, Quận 1', 'Vietnam', 1200000.00, 30000.00, 0.00, 1170000.00, 'Giao hàng trong giờ hành chính'),
+(5, 'ORD-20260116-002', 'ord-20260116-002', 2, 3, 2, 'ARTLOVER50', 'FIXED_AMOUNT', 50000.00, 'Tran Thi B', '0905678901', 'customer2@gmail.com', '456 Đường Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP.HCM', 'Tran Thi B', '0905678901', 'customer2@gmail.com', '456 Đường DEF', 'TP.HCM', 'Phường UVW, Quận 2', 'Vietnam', 1620000.00, 50000.00, 0.00, 1570000.00, 'Gọi điện truớc khi giao'),
+(6, 'ORD-20260117-003', 'ord-20260117-003', 1, 2, NULL, NULL, NULL, NULL, 'Le Van C', '0906789012', 'customer3@yahoo.com', '321 Đường Đồng Khởi, Phường Bến Nghé, Quận 1, TP.HCM', 'Le Van C', '0906789012', 'customer3@yahoo.com', '789 Đường GHI', 'TP.HCM', 'Phường RST, Quận 3', 'Vietnam', 770000.00, 0.00, 0.00, 770000.00, 'Để hàng ở bảo vệ nếu không có người');
 
 -- INSERT ORDER ITEMS
 INSERT INTO `ORDER_ITEM` (`ORDER_ID`, `PRODUCT_ID`, `PRODUCT_NAME`, `PRODUCT_CODE`, `PRODUCT_CATEGORY_NAME`, `PRODUCT_TYPE_NAME`, `PRODUCT_ATTR_JSON`, `UNIT_PRICE`, `QUANTITY`, `TOTAL_PRICE`) VALUES
@@ -459,6 +480,8 @@ INSERT INTO `ORDER_ITEM` (`ORDER_ID`, `PRODUCT_ID`, `PRODUCT_NAME`, `PRODUCT_COD
 (2, 3, 'Tranh nghệ thuật trữa tượng hiện đại', 'ART-ABSTRACT-003', 'Tranh thiên nhiên', 'Nghệ thuật', '{"material": "Canvas", "size": "60x80cm", "style": "Abstract"}', 850000.00, 1, 850000.00),
 (2, 4, 'Bộ cọ vẽ chuyên nghiệp 24 cây', 'TOOL-BRUSH-004', 'Dụng cụ vẽ', 'Dụng cụ nghệ thuật', '{"type": "Brush Set", "count": "24", "material": "Natural & Synthetic"}', 720000.00, 1, 720000.00),
 (3, 5, 'Bảng palette pha màu gỗ tự nhiên', 'TOOL-PALETTE-005', 'Dụng cụ vẽ', 'Dụng cụ nghệ thuật', '{"material": "Wood", "size": "30x40cm", "type": "Color Mixing Palette"}', 770000.00, 1, 770000.00);
+
+
 
 -- INSERT ORDER STATE HISTORY
 INSERT INTO `ORDER_STATE_HISTORY` (`ORDER_ID`, `OLD_STATE_ID`, `NEW_STATE_ID`, `CHANGED_BY_USER_ID`) VALUES
@@ -477,10 +500,10 @@ INSERT INTO `PAYMENT` (`ORDER_ID`, `PAYMENT_SLUG`, `PAYMENT_METHOD_ID`, `PAYMENT
 (3, 'payment-cod-20260117-003', 1, 1, 770000.00, 'COD_TXN_20260117_003', 'Thanh toán khi nhận hàng');
 
 -- INSERT SAMPLE SHIPMENTS
-INSERT INTO `SHIPMENT` (`ORDER_ID`, `SHIPMENT_CODE`, `SHIPMENT_STATE_ID`, `RECEIVER_NAME`, `RECEIVER_PHONE`, `RECEIVER_EMAIL`, `ADDRESS_LINE`, `CITY`, `DISTRICT`, `WARD`, `COUNTRY`, `SHIPPING_FEE_AMOUNT`, `SHIPPED_AT`, `DELIVERED_AT`, `SHIPMENT_REMARK`) VALUES
-(1, 'SHIP-20260115-001', 4, 'Alice Johnson', '0904567890', 'alice.johnson@gmail.com', '123 Đường ABC, Phường XYZ', 'TP.HCM', 'Quận 1', 'Phường XYZ', 'Việt Nam', 0.00, '2026-01-16 10:00:00', '2026-01-17 15:30:00', 'Giao hàng thành công'),
-(2, 'SHIP-20260116-002', 3, 'Tran Thi B', '0905678901', 'customer2@gmail.com', '456 Đường DEF, Phường UVW', 'TP.HCM', 'Quận 2', 'Phường UVW', 'Việt Nam', 0.00, '2026-01-17 09:00:00', NULL, 'Đang vận chuyển'),
-(3, 'SHIP-20260117-003', 1, 'Le Van C', '0906789012', 'customer3@yahoo.com', '789 Đường GHI, Phường RST', 'TP.HCM', 'Quận 3', 'Phường RST', 'Việt Nam', 0.00, NULL, NULL, 'Đang chuẩn bị hàng');
+INSERT INTO `SHIPMENT` (`ORDER_ID`, `SHIPMENT_CODE`, `SHIPMENT_STATE_ID`, `RECEIVER_NAME`, `RECEIVER_PHONE`, `RECEIVER_EMAIL`, `ADDRESS_LINE`, `CITY`, `WARD`, `COUNTRY`, `SHIPPING_FEE_AMOUNT`, `SHIPPED_AT`, `DELIVERED_AT`, `SHIPMENT_REMARK`) VALUES
+(1, 'SHIP-20260115-001', 4, 'Alice Johnson', '0904567890', 'alice.johnson@gmail.com', '123 Đường ABC, Phường XYZ', 'TP.HCM', 'Phường XYZ', 'Việt Nam', 0.00, '2026-01-16 10:00:00', '2026-01-17 15:30:00', 'Giao hàng thành công'),
+(2, 'SHIP-20260116-002', 3, 'Tran Thi B', '0905678901', 'customer2@gmail.com', '456 Đường DEF, Phường UVW', 'TP.HCM', 'Phường UVW', 'Việt Nam', 0.00, '2026-01-17 09:00:00', NULL, 'Đang vận chuyển'),
+(3, 'SHIP-20260117-003', 1, 'Le Van C', '0906789012', 'customer3@yahoo.com', '789 Đường GHI, Phường RST', 'TP.HCM', 'Phường RST', 'Việt Nam', 0.00, NULL, NULL, 'Đang chuẩn bị hàng');
 
 -- INSERT SAMPLE CONTACT
 INSERT INTO `CONTACT` (`CONTACT_NAME`, `CONTACT_SLUG`, `CONTACT_ADDRESS`, `CONTACT_EMAIL`, `CONTACT_PHONE`, `CONTACT_FANPAGE`, `CONTACT_ENABLED`, `CONTACT_REMARK`, `SEO_META_ID`) VALUES

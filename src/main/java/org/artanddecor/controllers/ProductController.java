@@ -926,6 +926,37 @@ public class ProductController {
      =============================================*/
 
     /**
+     * Get product attr by ID
+     */
+    @GetMapping("/attrs/{productAttrId}")
+    @Operation(
+        summary = "Get product attribute by ID",
+        description = "Retrieve detailed information about a specific product attribute definition by its database ID. Product attributes define the attribute types like Size, Color, Material that can be applied to products."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Product attribute retrieved successfully",
+                    content = @Content(schema = @Schema(implementation = ProductAttrDto.class))),
+        @ApiResponse(responseCode = "404", description = "Product attribute not found with the specified ID"),
+        @ApiResponse(responseCode = "500", description = "Internal server error occurred while retrieving product attribute")
+    })
+    public ResponseEntity<BaseResponseDto<ProductAttrDto>> getProductAttrById(
+            @Parameter(description = "Database product attribute identifier", example = "1")
+            @PathVariable Long productAttrId) {
+        
+        logger.info("Getting product attribute by ID: {}", productAttrId);
+        
+        try {
+            return productAttrService.findProductAttrById(productAttrId)
+                    .map(dto -> ResponseEntity.ok(BaseResponseDto.success("Product attribute retrieved successfully", dto)))
+                    .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                            .body(BaseResponseDto.notFound("Product attribute not found with ID: " + productAttrId)));
+        } catch (Exception e) {
+            logger.error("Error getting product attribute by ID {}: {}", productAttrId, e.getMessage(), e);
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to get product attribute: " + e.getMessage()));
+        }
+    }
+
+    /**
      * Get product attributes with filtering and pagination (similar to getProductStatesByCriteria)
      */
     @GetMapping("/attrs")

@@ -6,7 +6,7 @@ import org.artanddecor.exception.ResourceNotFoundException;
 import org.artanddecor.model.ShippingFeeType;
 import org.artanddecor.repository.ShippingFeeTypeRepository;
 import org.artanddecor.services.ShippingFeeTypeService;
-import org.artanddecor.utils.ShippingFeeTypeMapperUtil;
+import org.artanddecor.utils.ShipmentMapperUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -28,14 +28,14 @@ public class ShippingFeeTypeServiceImpl implements ShippingFeeTypeService {
     private static final Logger logger = LoggerFactory.getLogger(ShippingFeeTypeServiceImpl.class);
 
     private final ShippingFeeTypeRepository shippingFeeTypeRepository;
-    private final ShippingFeeTypeMapperUtil shippingFeeTypeMapperUtil;
+    private final ShipmentMapperUtil shipmentMapperUtil;
 
     @Override
     @Transactional(readOnly = true)
     public Page<ShippingFeeTypeDto> getAllShippingFeeTypes(Pageable pageable) {
         logger.debug("Getting all shipping fee types with pagination: {}", pageable);
         Page<ShippingFeeType> typePage = shippingFeeTypeRepository.findAll(pageable);
-        return typePage.map(shippingFeeTypeMapperUtil::mapToDto);
+        return typePage.map(shipmentMapperUtil::mapShippingFeeTypeToDto);
     }
 
     @Override
@@ -44,7 +44,7 @@ public class ShippingFeeTypeServiceImpl implements ShippingFeeTypeService {
         logger.debug("Getting shipping fee type by ID: {}", shippingFeeTypeId);
         ShippingFeeType feeType = shippingFeeTypeRepository.findById(shippingFeeTypeId)
             .orElseThrow(() -> new ResourceNotFoundException("Shipping fee type not found with ID: " + shippingFeeTypeId));
-        return shippingFeeTypeMapperUtil.mapToDto(feeType);
+        return shipmentMapperUtil.mapShippingFeeTypeToDto(feeType);
     }
 
     @Override
@@ -53,7 +53,7 @@ public class ShippingFeeTypeServiceImpl implements ShippingFeeTypeService {
         logger.debug("Getting shipping fee type by name: {}", shippingFeeTypeName);
         ShippingFeeType feeType = shippingFeeTypeRepository.findByShippingFeeTypeName(shippingFeeTypeName)
             .orElseThrow(() -> new ResourceNotFoundException("Shipping fee type not found with name: " + shippingFeeTypeName));
-        return shippingFeeTypeMapperUtil.mapToDto(feeType);
+        return shipmentMapperUtil.mapShippingFeeTypeToDto(feeType);
     }
 
     @Override
@@ -62,7 +62,7 @@ public class ShippingFeeTypeServiceImpl implements ShippingFeeTypeService {
         logger.debug("Getting all enabled shipping fee types");
         List<ShippingFeeType> types = shippingFeeTypeRepository.findByShippingFeeTypeEnabledTrueOrderByShippingFeeTypeName();
         return types.stream()
-            .map(shippingFeeTypeMapperUtil::mapToDto)
+            .map(shipmentMapperUtil::mapShippingFeeTypeToDto)
             .toList();
     }
 
@@ -75,12 +75,12 @@ public class ShippingFeeTypeServiceImpl implements ShippingFeeTypeService {
             throw new IllegalArgumentException("Shipping fee type name already exists: " + shippingFeeTypeDto.getShippingFeeTypeName());
         }
 
-        ShippingFeeType feeType = shippingFeeTypeMapperUtil.mapToEntity(shippingFeeTypeDto);
+        ShippingFeeType feeType = shipmentMapperUtil.mapShippingFeeTypeToEntity(shippingFeeTypeDto);
         ShippingFeeType savedType = shippingFeeTypeRepository.save(feeType);
         logger.info("Created shipping fee type with ID: {} and name: {}", 
                    savedType.getShippingFeeTypeId(), savedType.getShippingFeeTypeName());
         
-        return shippingFeeTypeMapperUtil.mapToDto(savedType);
+        return shipmentMapperUtil.mapShippingFeeTypeToDto(savedType);
     }
 
     @Override
@@ -106,7 +106,7 @@ public class ShippingFeeTypeServiceImpl implements ShippingFeeTypeService {
         ShippingFeeType updatedType = shippingFeeTypeRepository.save(existingType);
         logger.info("Updated shipping fee type with ID: {}", updatedType.getShippingFeeTypeId());
         
-        return shippingFeeTypeMapperUtil.mapToDto(updatedType);
+        return shipmentMapperUtil.mapShippingFeeTypeToDto(updatedType);
     }
 
     @Override
@@ -133,7 +133,7 @@ public class ShippingFeeTypeServiceImpl implements ShippingFeeTypeService {
         logger.info("Toggled enabled status for shipping fee type ID: {} to: {}", 
                    shippingFeeTypeId, updatedType.getShippingFeeTypeEnabled());
         
-        return shippingFeeTypeMapperUtil.mapToDto(updatedType);
+        return shipmentMapperUtil.mapShippingFeeTypeToDto(updatedType);
     }
 
     @Override
@@ -148,7 +148,7 @@ public class ShippingFeeTypeServiceImpl implements ShippingFeeTypeService {
             shippingFeeTypeId, shippingFeeTypeName, shippingFeeTypeEnabled, textSearch, pageable
         );
         
-        return typePage.map(shippingFeeTypeMapperUtil::mapToDto);
+        return typePage.map(shipmentMapperUtil::mapShippingFeeTypeToDto);
     }
 
     @Override

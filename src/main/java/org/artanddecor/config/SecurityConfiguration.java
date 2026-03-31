@@ -68,11 +68,11 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/products/search", "/products/in-stock").permitAll()
                         .requestMatchers(HttpMethod.GET, "/products/top-selling", "/products/featured").permitAll()
                         .requestMatchers(HttpMethod.GET, "/products/highlighted", "/products/latest").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/products/*/images").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/products/{productId:[\\d+]}/images").permitAll()
                         .requestMatchers(HttpMethod.GET, "/products/types/**", "/products/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/products/states", "/products/attrs").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/products/attributes/*").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/products/*").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/products/attributes/{attributeId:[\\d+]}").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/products/{productId:[\\d+]}").permitAll()
                         
                         // Admin-only product read access (management operations)
                         .requestMatchers(HttpMethod.GET, "/products/stats/**").hasAnyRole("ADMIN", "MANAGER")
@@ -80,7 +80,7 @@ public class SecurityConfiguration {
                         
                         // Product management operations (Admin/Manager only)
                         .requestMatchers(HttpMethod.POST, "/products").hasAnyRole("ADMIN", "MANAGER")
-                        .requestMatchers(HttpMethod.POST, "/products/*/images/*").hasAnyRole("ADMIN", "MANAGER")
+                        .requestMatchers(HttpMethod.POST, "/products/{productId:[\\d+]}/images/{imageId:[\\d+]}").hasAnyRole("ADMIN", "MANAGER")
                         .requestMatchers(HttpMethod.POST, "/products/attributes").hasAnyRole("ADMIN", "MANAGER")
                         .requestMatchers(HttpMethod.POST, "/products/types").hasAnyRole("ADMIN", "MANAGER")
                         .requestMatchers(HttpMethod.POST, "/products/categories").hasAnyRole("ADMIN", "MANAGER")
@@ -118,28 +118,19 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/images/stats/**").hasAnyRole("ADMIN", "MANAGER")
                         .requestMatchers("/images/**").hasAnyRole("ADMIN", "MANAGER")
 
-                        // Order endpoints - structured by functionality
-                        // Customer order operations  
-                        .requestMatchers(HttpMethod.POST, "/orders/checkout").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/orders/my-orders", "/orders/my-orders/**").authenticated()
-                        .requestMatchers(HttpMethod.PUT, "/orders/my-orders/*/cancel").authenticated()
+                        // Order endpoints - restructured according to new API requirements
+                        // Order creation - permitAll (accessible by ADMIN and GUEST users)
+                        .requestMatchers(HttpMethod.POST, "/orders/checkout").permitAll()
                         
-                        // Order management operations (Admin/Manager)
-                        .requestMatchers(HttpMethod.GET, "/orders/management", "/orders/management/**").hasAnyRole("ADMIN", "MANAGER")
-                        .requestMatchers(HttpMethod.POST, "/orders/management").hasAnyRole("ADMIN", "MANAGER")
-                        .requestMatchers(HttpMethod.PUT, "/orders/management/*/state").hasAnyRole("ADMIN", "MANAGER")
+                        // Customer order operations - CUSTOMER role required
+                        .requestMatchers(HttpMethod.GET, "/orders/my-orders", "/orders/my-orders/**").hasRole("CUSTOMER")
+                        .requestMatchers(HttpMethod.POST, "/orders/my-orders/*/cancel").hasRole("CUSTOMER")
                         
-                        // Order history - mixed access with @PreAuthorize validation
-                        .requestMatchers(HttpMethod.GET, "/orders/*/history").authenticated()
-                        
-                        // Order states - master data for admin
-                        .requestMatchers(HttpMethod.GET, "/orders/states").hasAnyRole("ADMIN", "MANAGER")
-                        
-                        // Discount operations
-                        .requestMatchers(HttpMethod.POST, "/orders/discounts/validate").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/orders/discounts", "/orders/discount-types").hasAnyRole("ADMIN", "MANAGER")
-                        .requestMatchers(HttpMethod.POST, "/orders/discounts").hasAnyRole("ADMIN", "MANAGER")
-                        .requestMatchers(HttpMethod.PUT, "/orders/discounts/*").hasAnyRole("ADMIN", "MANAGER")
+                        // Order read operations - permitAll (accessible by both ADMIN and CUSTOMER)
+                        .requestMatchers(HttpMethod.GET, "/orders").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/orders/states").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/orders/state-history").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/orders/items").permitAll()
 
                         // Policy endpoints - public read by slug, admin for management
                         .requestMatchers(HttpMethod.GET, "/policies/slug/**").permitAll()
@@ -152,13 +143,37 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.PUT, "/reviews/**").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/reviews/**").hasAnyRole("ADMIN", "MANAGER")
 
-                        // Shipment endpoints - structured by functionality
-                        .requestMatchers(HttpMethod.GET, "/shipments/my-shipments/**").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/shipments/track/**", "/shipments/calculate-shipping-fee").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/shipments/states").permitAll()
-                        .requestMatchers("/shipments/states/management/**").hasRole("ADMIN")
-                        .requestMatchers("/shipments/management/**").hasAnyRole("ADMIN", "MANAGER")
-                        .requestMatchers("/shipments/**").hasAnyRole("ADMIN", "MANAGER")
+                        // Shipment endpoints - only API endpoints that actually exist in ShipmentController
+                        // Public read access for shipping configuration (customer needs to see shipping options)
+                        .requestMatchers(HttpMethod.GET, "/shipments/fee-types").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/shipments/fees").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/shipments/states").permitAll() 
+                        .requestMatchers(HttpMethod.GET, "/shipments").permitAll()
+                        
+                        // Admin-only shipment management operations (exact API endpoints)
+                        .requestMatchers(HttpMethod.POST, "/shipments/fee-types").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/shipments/fee-types/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/shipments/fees").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/shipments/fees/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/shipments/states").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/shipments/states/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/shipments/**").hasRole("ADMIN")
+
+                        // Payment endpoints - only API endpoints that actually exist in PaymentController
+                        // Public read access for payment configuration (customer needs to see payment options)
+                        .requestMatchers(HttpMethod.GET, "/payments/methods").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/payments/states").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/payments").permitAll()
+                        
+                        // Admin-only payment management operations (exact API endpoints)
+                        .requestMatchers(HttpMethod.POST, "/payments/methods").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/payments/methods/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/payments/states").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/payments/states/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/payments/**").hasRole("ADMIN")
+                        
+                        // Admin-only payment statistics endpoints
+                        .requestMatchers(HttpMethod.GET, "/payments/stats/**").hasRole("ADMIN")
 
                         // User endpoints - role-based access
                         .requestMatchers(HttpMethod.GET, "/users/roles/**", "/users/providers/**").permitAll()

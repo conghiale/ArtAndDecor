@@ -1,9 +1,7 @@
 package org.artanddecor.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,7 +15,8 @@ import java.util.List;
  */
 @Entity
 @Table(name = "ORDER")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class Order {
@@ -84,8 +83,18 @@ public class Order {
     @Column(name = "RECEIVER_EMAIL", length = 150)
     private String receiverEmail;
     
-    @Column(name = "RECEIVER_ADDRESS", columnDefinition = "TEXT")
-    private String receiverAddress;
+    // Receiver address details (địa chỉ người nhận chi tiết)
+    @Column(name = "ADDRESS_LINE", length = 255)
+    private String addressLine;
+    
+    @Column(name = "CITY", length = 100)
+    private String city;
+    
+    @Column(name = "WARD", length = 100)
+    private String ward;
+    
+    @Column(name = "COUNTRY", length = 100)
+    private String country;
 
     // Financial breakdown
     @Column(name = "SUBTOTAL_AMOUNT", nullable = false, precision = 15, scale = 2)
@@ -111,12 +120,15 @@ public class Order {
 
     // One-to-Many relationships
     @OneToMany(mappedBy = "order", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @ToString.Exclude
     private List<OrderItem> orderItems;
 
     @OneToMany(mappedBy = "order", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @ToString.Exclude
     private List<OrderStateHistory> orderStateHistories;
 
     @OneToMany(mappedBy = "order", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @ToString.Exclude
     private List<Payment> payments;
 
     @OneToMany(mappedBy = "order", fetch = FetchType.LAZY, cascade = CascadeType.ALL)

@@ -1,9 +1,7 @@
 package org.artanddecor.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,7 +14,8 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "ORDER_ITEM")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class OrderItem {
@@ -49,6 +48,7 @@ public class OrderItem {
     @Column(name = "PRODUCT_TYPE_NAME", nullable = false, length = 100)
     private String productTypeName;
 
+    // JSON snapshot of selected product attributes at order time
     @Column(name = "PRODUCT_ATTR_JSON", columnDefinition = "JSON")
     private String productAttrJson;
 
@@ -81,5 +81,14 @@ public class OrderItem {
     protected void onUpdate() {
         logger.debug("Updating OrderItem ID: {}", orderItemId);
         this.modifiedDt = LocalDateTime.now();
+    }
+
+    /**
+     * Check if this order item has product attributes in JSON
+     * @return true if has attributes, false otherwise
+     */
+    public boolean hasAttributes() {
+        return productAttrJson != null && !productAttrJson.trim().isEmpty() && 
+               !productAttrJson.equals("null") && !productAttrJson.equals("{}");
     }
 }

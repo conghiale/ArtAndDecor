@@ -5,7 +5,7 @@ import org.artanddecor.exception.ResourceNotFoundException;
 import org.artanddecor.model.DiscountType;
 import org.artanddecor.repository.DiscountTypeRepository;
 import org.artanddecor.services.DiscountTypeService;
-import org.artanddecor.utils.DiscountTypeMapperUtil;
+import org.artanddecor.utils.DiscountMapperUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -27,13 +27,13 @@ public class DiscountTypeServiceImpl implements DiscountTypeService {
     private DiscountTypeRepository discountTypeRepository;
 
     @Autowired
-    private DiscountTypeMapperUtil discountTypeMapperUtil;
+    private DiscountMapperUtil discountMapperUtil;
 
     @Override
     @Transactional(readOnly = true)
     public Page<DiscountTypeDto> getAllDiscountTypes(Pageable pageable) {
         Page<DiscountType> discountTypesPage = discountTypeRepository.findAll(pageable);
-        return discountTypesPage.map(discountTypeMapperUtil::mapToDto);
+        return discountTypesPage.map(discountMapperUtil::mapDiscountTypeToDto);
     }
 
     @Override
@@ -41,7 +41,7 @@ public class DiscountTypeServiceImpl implements DiscountTypeService {
     public DiscountTypeDto getDiscountTypeById(Long discountTypeId) {
         DiscountType discountType = discountTypeRepository.findById(discountTypeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Discount Type not found with ID: " + discountTypeId));
-        return discountTypeMapperUtil.mapToDto(discountType);
+        return discountMapperUtil.mapDiscountTypeToDto(discountType);
     }
 
     @Override
@@ -49,7 +49,7 @@ public class DiscountTypeServiceImpl implements DiscountTypeService {
     public DiscountTypeDto getDiscountTypeByName(String discountTypeName) {
         DiscountType discountType = discountTypeRepository.findByDiscountTypeName(discountTypeName)
                 .orElseThrow(() -> new ResourceNotFoundException("Discount Type not found with name: " + discountTypeName));
-        return discountTypeMapperUtil.mapToDto(discountType);
+        return discountMapperUtil.mapDiscountTypeToDto(discountType);
     }
 
     @Override
@@ -57,7 +57,7 @@ public class DiscountTypeServiceImpl implements DiscountTypeService {
     public List<DiscountTypeDto> getAllEnabledDiscountTypes() {
         List<DiscountType> enabledDiscountTypes = discountTypeRepository.findByDiscountTypeEnabledOrderByDiscountTypeName(true);
         return enabledDiscountTypes.stream()
-                .map(discountTypeMapperUtil::mapToDto)
+                .map(discountMapperUtil::mapDiscountTypeToDto)
                 .collect(Collectors.toList());
     }
 
@@ -68,12 +68,12 @@ public class DiscountTypeServiceImpl implements DiscountTypeService {
             throw new IllegalArgumentException("Discount Type name already exists: " + discountTypeDto.getDiscountTypeName());
         }
 
-        DiscountType discountType = discountTypeMapperUtil.mapToEntity(discountTypeDto);
+        DiscountType discountType = discountMapperUtil.mapDiscountTypeToEntity(discountTypeDto);
         discountType.setCreatedDt(LocalDateTime.now());
         discountType.setModifiedDt(LocalDateTime.now());
         
         DiscountType savedDiscountType = discountTypeRepository.save(discountType);
-        return discountTypeMapperUtil.mapToDto(savedDiscountType);
+        return discountMapperUtil.mapDiscountTypeToDto(savedDiscountType);
     }
 
     @Override
@@ -95,7 +95,7 @@ public class DiscountTypeServiceImpl implements DiscountTypeService {
         existingDiscountType.setModifiedDt(LocalDateTime.now());
 
         DiscountType updatedDiscountType = discountTypeRepository.save(existingDiscountType);
-        return discountTypeMapperUtil.mapToDto(updatedDiscountType);
+        return discountMapperUtil.mapDiscountTypeToDto(updatedDiscountType);
     }
 
     @Override
@@ -116,7 +116,7 @@ public class DiscountTypeServiceImpl implements DiscountTypeService {
         discountType.setModifiedDt(LocalDateTime.now());
 
         DiscountType updatedDiscountType = discountTypeRepository.save(discountType);
-        return discountTypeMapperUtil.mapToDto(updatedDiscountType);
+        return discountMapperUtil.mapDiscountTypeToDto(updatedDiscountType);
     }
 
     @Override
@@ -131,7 +131,7 @@ public class DiscountTypeServiceImpl implements DiscountTypeService {
         Page<DiscountType> discountTypesPage = discountTypeRepository.findDiscountTypesByCriteria(
                 discountTypeId, discountTypeName, discountTypeEnabled, textSearch, pageable);
         
-        return discountTypesPage.map(discountTypeMapperUtil::mapToDto);
+        return discountTypesPage.map(discountMapperUtil::mapDiscountTypeToDto);
     }
 
     @Override

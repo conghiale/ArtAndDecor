@@ -426,7 +426,7 @@ public class ProductMapperUtil {
         // Filter attributes with quantity > 0 and group by ProductAttr
         Map<Long, List<ProductAttribute>> groupedByAttr = productAttributes.stream()
                 .filter(attr -> attr.getProductAttributeQuantity() != null && attr.getProductAttributeQuantity() > 0)
-                .filter(attr -> attr.getProductAttributeEnabled() != null && attr.getProductAttributeEnabled())
+//                .filter(attr -> attr.getProductAttributeEnabled() != null && attr.getProductAttributeEnabled())
                 .collect(Collectors.groupingBy(
                     attr -> attr.getProductAttr().getProductAttrId()
                 ));

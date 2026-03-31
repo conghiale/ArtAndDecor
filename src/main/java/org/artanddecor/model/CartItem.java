@@ -1,14 +1,14 @@
 package org.artanddecor.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.ArrayList;
 
 /**
  * CartItem Entity
@@ -16,7 +16,8 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "CART_ITEM")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class CartItem {
@@ -45,6 +46,10 @@ public class CartItem {
 
     @Column(name = "CART_ITEM_TOTAL_PRICE", nullable = false, precision = 15, scale = 2)
     private BigDecimal cartItemTotalPrice;
+
+    // Relationship with selected product attributes
+    @OneToMany(mappedBy = "cartItem", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<CartItemAttribute> cartItemAttributes = new ArrayList<>();
 
     @Column(name = "CREATED_DT", nullable = false, updatable = false)
     private LocalDateTime createdDt;
@@ -91,5 +96,36 @@ public class CartItem {
             calculateTotalPrice();
             logger.debug("Updated CartItem quantity to {} with new total price: {}", newQuantity, cartItemTotalPrice);
         }
+    }
+
+    /**
+     * Add selected product attribute to this cart item
+     * @param cartItemAttribute Selected attribute to add
+     */
+    public void addAttribute(CartItemAttribute cartItemAttribute) {
+        if (cartItemAttribute != null) {
+            cartItemAttribute.setCartItem(this);
+            this.cartItemAttributes.add(cartItemAttribute);
+            logger.debug("Added attribute {} = {} to cart item {}", 
+                       cartItemAttribute.getAttributeName(), 
+                       cartItemAttribute.getAttributeValue(), 
+                       cartItemId);
+        }
+    }
+
+    /**
+     * Remove all attributes from this cart item
+     */
+    public void clearAttributes() {
+        this.cartItemAttributes.clear();
+        logger.debug("Cleared all attributes from cart item {}", cartItemId);
+    }
+
+    /**
+     * Check if this cart item has any selected attributes
+     * @return true if has attributes, false otherwise
+     */
+    public boolean hasAttributes() {
+        return cartItemAttributes != null && !cartItemAttributes.isEmpty();
     }
 }

@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.artanddecor.dto.BaseResponseDto;
 import org.artanddecor.dto.CartDto;
 import org.artanddecor.dto.CartItemDto;
+import org.artanddecor.dto.CartItemRequestDto;
 import org.artanddecor.services.CartService;
 import org.artanddecor.services.CartItemService;
 import org.slf4j.Logger;
@@ -13,7 +14,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 // Removed SecurityContextHolder and PreAuthorize imports - using SecurityConfiguration instead
 import org.springframework.web.bind.annotation.*;
-import org.artanddecor.dto.CartItemUpdateRequestDto;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -93,41 +93,37 @@ public class CartController {
 
     @Operation(
         summary = "Add product to cart",
-        description = "Add a product to the current active cart. Handles both logged in users and guest sessions."
+        description = "Add a product to cart with optional attributes. Supports multiple cart identification methods: direct cartId, userId (finds/creates active cart), or sessionId (guest cart). Handles product attribute selection for comprehensive product configuration."
     )
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Product added to cart successfully"),
-        @ApiResponse(responseCode = "400", description = "Bad request"),
-        @ApiResponse(responseCode = "404", description = "Product not found")
+        @ApiResponse(responseCode = "400", description = "Bad request - Invalid product attributes or cart not found"),
+        @ApiResponse(responseCode = "404", description = "Product or attributes not found")
     })
     @PostMapping("/items")
     public ResponseEntity<BaseResponseDto<CartItemDto>> addProductToCart(
-            @Parameter(description = "Product ID to add", required = true)
-            @RequestParam Long productId,
-            
-            @Parameter(description = "Quantity to add", example = "1")
-            @RequestParam(defaultValue = "1") Integer quantity,
-            
-            @Parameter(description = "User ID for logged in users (optional)", example = "1")
-            @RequestParam(required = false) Long userId,
-            
-            @Parameter(description = "Session ID for guest users (optional)")
-            @RequestParam(required = false) String sessionId) {
+            @Valid @RequestBody CartItemRequestDto request) {
         
-        logger.info("POST /carts/items - productId: {}, quantity: {}, userId: {}, sessionId: {}", productId, quantity, userId, sessionId);
+        logger.info("POST /carts/items - request: {}", request);
 
         try {
-            CartItemDto cartItem;
-            if (userId != null) {
-                // User is logged in - get/create active cart and add item
-                CartDto cart = cartService.createOrGetActiveCart(userId);
-                cartItem = cartItemService.addItemToCart(cart.getCartId(), productId, quantity);
-            } else {
-                // Guest user - handle session-based cart
-                cartItem = cartItemService.addProductToGuestCart(sessionId, productId, quantity);
+            // Validate the request
+            if (!request.isValidForAdd()) {
+                return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Invalid request: missing required fields"));
             }
+
+            // Add product to cart (with or without attributes)
+            CartItemDto cartItem = cartItemService.addProductToCart(request);
             
-            return ResponseEntity.ok(BaseResponseDto.success("Product added to cart successfully", cartItem));
+            String message = request.hasSelectedAttributes() ? 
+                "Product with attributes added to cart successfully" : 
+                "Product added to cart successfully";
+            
+            return ResponseEntity.ok(BaseResponseDto.success(message, cartItem));
+            
+        } catch (IllegalArgumentException e) {
+            logger.error("Validation error adding product to cart: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Validation error: " + e.getMessage()));
             
         } catch (Exception e) {
             logger.error("Error adding product to cart: {}", e.getMessage(), e);
@@ -257,24 +253,28 @@ public class CartController {
 
     @Operation(
         summary = "Admin: Add product to guest cart",
-        description = "Create a new guest cart and add a product. Admin access required.",
+        description = "Create a new guest cart and add a product with optional attributes. Admin access required.",
         security = @SecurityRequirement(name = "bearerAuth")
     )
     @PostMapping("/admin/guest/items")
     public ResponseEntity<BaseResponseDto<CartItemDto>> addProductToGuestCart(
-            @Parameter(description = "Product ID to add", required = true)
-            @RequestParam Long productId,
-            
-            @Parameter(description = "Quantity to add", example = "1")
-            @RequestParam(defaultValue = "1") Integer quantity,
-            
-            @Parameter(description = "Session ID (optional - auto-generated if not provided)")
-            @RequestParam(required = false) String sessionId) {
+            @Valid @RequestBody CartItemRequestDto request) {
         
-        logger.info("POST /carts/admin/guest/items - productId: {}, quantity: {}", productId, quantity);
+        logger.info("POST /carts/admin/guest/items - request: {}", request);
 
         try {
-            CartItemDto cartItem = cartItemService.addProductToGuestCart(sessionId, productId, quantity);
+            // Validate that essential fields are provided
+            if (request.getProductId() == null || request.getQuantity() == null) {
+                return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Product ID and quantity are required"));
+            }
+            
+            // Ensure sessionId is provided or generate if not (for guest cart)
+            if (request.getSessionId() == null || request.getSessionId().trim().isEmpty()) {
+                request.setSessionId(cartService.generateSessionId());
+                logger.info("Generated session ID for guest cart: {}", request.getSessionId());
+            }
+
+            CartItemDto cartItem = cartItemService.addProductToCart(request);
             return ResponseEntity.ok(BaseResponseDto.success("Product added to guest cart successfully", cartItem));
             
         } catch (Exception e) {
@@ -285,7 +285,7 @@ public class CartController {
 
     @Operation(
         summary = "Update cart item",
-        description = "Update cart item details. If quantity is 0, item state will be set to REMOVED. Admin access required.",
+        description = "Update cart item details including quantity and attributes. If quantity is 0, item state will be set to REMOVED. Admin access required.",
         security = @SecurityRequirement(name = "bearerAuth")
     )
     @PutMapping("/items/{cartItemId}")
@@ -293,14 +293,24 @@ public class CartController {
             @Parameter(description = "Cart item ID", required = true)
             @PathVariable Long cartItemId,
             
-            @Valid @RequestBody CartItemUpdateRequestDto request) {
+            @Valid @RequestBody CartItemRequestDto request) {
         
-        logger.info("PUT /carts/items/{} - admin update, quantity: {}", cartItemId, request.getQuantity());
+        logger.info("PUT /carts/items/{} - update request: {}", cartItemId, request);
 
         try {
-            // Use unified service method with built-in quantity=0 logic
-            CartItemDto updatedCartItem = cartItemService.updateCartItemByRequest(cartItemId, request);
-            return ResponseEntity.ok(BaseResponseDto.success("Cart item updated successfully", updatedCartItem));
+            // Validate request for update operations
+            if (!request.isValidForUpdate()) {
+                return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Invalid update request"));
+            }
+
+            // Use unified service method with quantity and attribute handling
+            CartItemDto updatedCartItem = cartItemService.updateCartItem(cartItemId, request);
+            
+            String message = request.hasSelectedAttributes() ? 
+                "Cart item and attributes updated successfully" : 
+                "Cart item updated successfully";
+                
+            return ResponseEntity.ok(BaseResponseDto.success(message, updatedCartItem));
             
         } catch (Exception e) {
             logger.error("Error updating cart item {}: {}", cartItemId, e.getMessage(), e);

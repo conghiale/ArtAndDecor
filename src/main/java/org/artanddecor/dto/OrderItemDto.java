@@ -102,4 +102,29 @@ public class OrderItemDto {
     public boolean hasSavings() {
         return savings != null && savings.compareTo(BigDecimal.ZERO) > 0;
     }
+    
+    /**
+     * Check if this order item has product attributes
+     * @return true if has attributes JSON, false otherwise
+     */
+    public boolean hasAttributes() {
+        return productAttrJson != null && !productAttrJson.trim().isEmpty() && 
+               !productAttrJson.equals("null") && !productAttrJson.equals("{}");
+    }
+    
+    /**
+     * Get formatted attributes display text from JSON
+     * @return Formatted attribute text or default message
+     */
+    public String getFormattedAttributes() {
+        if (!hasAttributes()) {
+            return "No attributes selected";
+        }
+        
+        // For now, return simplified JSON content
+        // In a full implementation, this would parse JSON and format nicely
+        return productAttrJson.length() > 100 ? 
+               productAttrJson.substring(0, 97) + "..." : 
+               productAttrJson;
+    }
 }

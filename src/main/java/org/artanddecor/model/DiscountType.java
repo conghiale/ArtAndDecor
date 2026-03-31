@@ -1,9 +1,7 @@
 package org.artanddecor.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,7 +14,8 @@ import java.util.List;
  */
 @Entity
 @Table(name = "DISCOUNT_TYPE")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class DiscountType {
@@ -48,6 +47,7 @@ public class DiscountType {
 
     // One-to-Many relationship with Discount
     @OneToMany(mappedBy = "discountType", fetch = FetchType.LAZY)
+    @ToString.Exclude
     private List<Discount> discounts;
 
     @PrePersist

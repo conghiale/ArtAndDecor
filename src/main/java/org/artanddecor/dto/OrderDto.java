@@ -77,8 +77,18 @@ public class OrderDto {
     @Size(max = 150, message = "Receiver email must not exceed 150 characters")
     private String receiverEmail;
     
-    // Combined address from SHIPMENT (ADDRESS_LINE, CITY, DISTRICT, WARD, COUNTRY)
-    private String receiverAddress;
+    // Receiver address details (from SHIPMENT table fields)
+    @Size(max = 255, message = "Address line must not exceed 255 characters")
+    private String addressLine;
+    
+    @Size(max = 100, message = "City must not exceed 100 characters") 
+    private String city;
+    
+    @Size(max = 100, message = "Ward must not exceed 100 characters")
+    private String ward;
+    
+    @Size(max = 100, message = "Country must not exceed 100 characters")
+    private String country;
     
     // Financial breakdown (ORDER table fields)
     // Maps to ORDER.SUBTOTAL_AMOUNT - original order amount before any adjustments
@@ -217,16 +227,28 @@ public class OrderDto {
     }
     
     /**
-     * Generate full receiver address from shipment data
-     * Combines ADDRESS_LINE, WARD, DISTRICT, CITY, COUNTRY from SHIPMENT
+     * Generate full receiver address from current order address fields
+     * or from shipment data as fallback
      */
     public String generateReceiverAddress(ShipmentDto shipment) {
-        if (shipment == null) return receiverAddress;
+        // Try to use order's address fields first
+        StringBuilder orderAddress = new StringBuilder();
+        if (addressLine != null) orderAddress.append(addressLine);
+        if (ward != null) orderAddress.append(", ").append(ward);
+        if (city != null) orderAddress.append(", ").append(city);
+        if (country != null) orderAddress.append(", ").append(country);
+        
+        // If order has address info, use it
+        if (orderAddress.length() > 0) {
+            return orderAddress.toString();
+        }
+        
+        // Otherwise use shipment address as fallback
+        if (shipment == null) return "";
         
         StringBuilder address = new StringBuilder();
         if (shipment.getAddressLine() != null) address.append(shipment.getAddressLine());
         if (shipment.getWard() != null) address.append(", ").append(shipment.getWard());
-        if (shipment.getDistrict() != null) address.append(", ").append(shipment.getDistrict());
         if (shipment.getCity() != null) address.append(", ").append(shipment.getCity());
         if (shipment.getCountry() != null) address.append(", ").append(shipment.getCountry());
         

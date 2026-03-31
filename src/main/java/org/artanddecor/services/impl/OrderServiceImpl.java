@@ -1,27 +1,27 @@
 package org.artanddecor.services.impl;
 
-import org.artanddecor.dto.OrderDto;
 import org.artanddecor.dto.CreateOrderItemRequest;
+import org.artanddecor.dto.OrderDto;
+import org.artanddecor.dto.UpdateOrderRequest;
 import org.artanddecor.dto.CartDto;
 import org.artanddecor.dto.CartItemDto;
 import org.artanddecor.dto.ShippingFeeDto;
+import org.artanddecor.dto.DiscountDto;
 import org.artanddecor.exception.ResourceNotFoundException;
 import org.artanddecor.model.Order;
 import org.artanddecor.model.OrderState;
 import org.artanddecor.model.OrderItem;
 import org.artanddecor.model.Product;
-import org.artanddecor.model.Discount;
 import org.artanddecor.repository.OrderRepository;
 import org.artanddecor.repository.OrderStateRepository;
 import org.artanddecor.repository.OrderItemRepository;
 import org.artanddecor.repository.ProductRepository;
-import org.artanddecor.repository.DiscountRepository;
 import org.artanddecor.services.OrderService;
 import org.artanddecor.services.OrderStateHistoryService;
-import org.artanddecor.services.DiscountService;
 import org.artanddecor.services.CartService;
 import org.artanddecor.services.CartItemService;
 import org.artanddecor.services.ShippingFeeService;
+import org.artanddecor.services.DiscountService;
 import org.artanddecor.utils.OrderMapperUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,6 +47,9 @@ import java.util.stream.Collectors;
 public class OrderServiceImpl implements OrderService {
 
     private static final Logger logger = LoggerFactory.getLogger(OrderServiceImpl.class);
+    
+    // Default shipping fee configuration - can be moved to application.properties later
+    private static final BigDecimal DEFAULT_SHIPPING_FEE = BigDecimal.valueOf(50000); // 50,000 VND
 
     @Autowired
     private OrderRepository orderRepository;
@@ -55,13 +58,7 @@ public class OrderServiceImpl implements OrderService {
     private OrderStateRepository orderStateRepository;
 
     @Autowired
-    private DiscountRepository discountRepository;
-
-    @Autowired
     private OrderStateHistoryService orderStateHistoryService;
-
-    @Autowired
-    private DiscountService discountService;
 
     @Autowired
     private CartService cartService;
@@ -71,6 +68,9 @@ public class OrderServiceImpl implements OrderService {
 
     @Autowired
     private ShippingFeeService shippingFeeService;
+
+    @Autowired
+    private DiscountService discountService;
 
     @Autowired
     private OrderMapperUtil orderMapperUtil;
@@ -147,8 +147,8 @@ public class OrderServiceImpl implements OrderService {
         }
         
         // Cancel the order by updating its state
-        OrderState canceledState = orderStateRepository.findByOrderStateName("CANCELED")
-                .orElseThrow(() -> new ResourceNotFoundException("CANCELED order state not found"));
+        OrderState canceledState = orderStateRepository.findByOrderStateName("CANCELLED")
+                .orElseThrow(() -> new ResourceNotFoundException("CANCELLED order state not found"));
 
         return updateOrderState(orderId, canceledState.getOrderStateId(), userId);
     }
@@ -175,8 +175,15 @@ public class OrderServiceImpl implements OrderService {
     
     private boolean isOrderCodeUnique(String orderCode, Long excludeId) {
         return orderRepository.findByOrderCode(orderCode)
-                .map(existingOrder -> excludeId != null && existingOrder.getOrderId().equals(excludeId))
-                .orElse(true);
+                .map(existingOrder -> {
+                    // If we're excluding an ID (update case), check if found order has different ID
+                    if (excludeId != null) {
+                        return !existingOrder.getOrderId().equals(excludeId); // Return false if different ID found
+                    }
+                    // For create case, any existing order means code is not unique
+                    return false;
+                })
+                .orElse(true); // No existing order found, code is unique
     }
     
     @Override
@@ -213,39 +220,41 @@ public class OrderServiceImpl implements OrderService {
                 .map(item -> item.getUnitPrice().multiply(new BigDecimal(item.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         
-        // Apply discount if provided
+        // Auto-select best discount for customer (enabled discounts only)
         BigDecimal discountAmount = BigDecimal.ZERO;
-        if (discountCode != null && !discountCode.trim().isEmpty()) {
+        DiscountDto bestDiscount = findBestDiscountForOrder(subtotalAmount);
+        if (bestDiscount != null) {
             try {
-                Discount discount = discountRepository.findValidDiscountByCode(discountCode, LocalDateTime.now())
-                        .orElse(null);
-                if (discount != null && discountService.canUseDiscount(discount.getDiscountId())) {
-                    order.setDiscount(discount);
-                    // Store discount snapshot
-                    order.setDiscountCode(discount.getDiscountCode());
-                    order.setDiscountType(discount.getDiscountType() != null ? 
-                            discount.getDiscountType().getDiscountTypeName() : null);
-                    order.setDiscountValue(discount.getDiscountValue());
-                    
-                    // Calculate discount amount
-                    discountAmount = discountService.calculateDiscountAmount(
-                            discount.getDiscountId(), subtotalAmount);
-                }
+                discountAmount = discountService.calculateDiscountAmount(bestDiscount.getDiscountId(), subtotalAmount);
+                // Store discount snapshot in order
+                order.setDiscountCode(bestDiscount.getDiscountCode());
+                order.setDiscountType(bestDiscount.getDiscountType() != null ? 
+                        bestDiscount.getDiscountType().getDiscountTypeName() : null);
+                order.setDiscountValue(bestDiscount.getDiscountValue());
+                logger.info("Applied best discount {} with amount {} for order amount {}", 
+                        bestDiscount.getDiscountCode(), discountAmount, subtotalAmount);
             } catch (Exception e) {
-                // Ignore invalid discount codes
+                logger.warn("Failed to apply discount {}: {}", bestDiscount.getDiscountCode(), e.getMessage());
+                discountAmount = BigDecimal.ZERO;
             }
         }
         
-        // Calculate shipping fee
+        // Auto-select best shipping fee for order amount (enabled shipping fees only)
         BigDecimal shippingFeeAmount = BigDecimal.ZERO;
         try {
             ShippingFeeDto shippingFee = shippingFeeService.calculateShippingFee(subtotalAmount);
-            if (shippingFee != null && shippingFee.getShippingFeeValue() != null) {
+            if (shippingFee != null && shippingFee.getShippingFeeEnabled() && shippingFee.getShippingFeeValue() != null) {
                 shippingFeeAmount = shippingFee.getShippingFeeValue();
+                logger.info("Applied shipping fee {} for order amount {}", shippingFeeAmount, subtotalAmount);
+            } else {
+                // Use default shipping fee if no enabled shipping fee found
+                shippingFeeAmount = DEFAULT_SHIPPING_FEE;
+                logger.info("Using default shipping fee {} for order amount {}", shippingFeeAmount, subtotalAmount);
             }
         } catch (Exception e) {
+            logger.warn("Failed to calculate shipping fee for order amount {}, using default: {}", subtotalAmount, e.getMessage());
             // Use default shipping fee if calculation fails
-            shippingFeeAmount = BigDecimal.valueOf(50000); // Default 50,000 VND
+            shippingFeeAmount = DEFAULT_SHIPPING_FEE;
         }
         
         // Set order amounts
@@ -284,10 +293,6 @@ public class OrderServiceImpl implements OrderService {
                 newState.getOrderStateId(),
                 userId);
         
-        // Increment discount usage if applied
-        if (order.getDiscount() != null) {
-            discountService.incrementDiscountUsage(order.getDiscount().getDiscountId());
-        }
         
         // Clear cart after successful checkout
         try {
@@ -303,6 +308,7 @@ public class OrderServiceImpl implements OrderService {
     }
     
     @Override
+    @Transactional(readOnly = true)
     public Page<OrderDto> getMyOrders(
             Long userId, 
             String state, 
@@ -310,43 +316,15 @@ public class OrderServiceImpl implements OrderService {
             LocalDate toDate, 
             Pageable pageable) {
         
-        // Get user's orders
-        List<Order> orders = orderRepository.findByUser_UserIdOrderByCreatedDtDesc(userId);
+        // Convert LocalDate to LocalDateTime for repository call
+        LocalDateTime fromDateTime = fromDate != null ? fromDate.atStartOfDay() : null;
+        LocalDateTime toDateTime = toDate != null ? toDate.atTime(23, 59, 59) : null;
         
-        // Apply state filter
-        if (state != null && !state.trim().isEmpty()) {
-            orders = orders.stream()
-                .filter(order -> state.equalsIgnoreCase(order.getOrderState().getOrderStateName()))
-                .collect(Collectors.toList());
-        }
+        // Use database-level filtering and pagination for better performance
+        Page<Order> ordersPage = orderRepository.findUserOrdersWithFiltering(
+                userId, state, fromDateTime, toDateTime, pageable);
         
-        // Apply date filters
-        if (fromDate != null || toDate != null) {
-            orders = orders.stream()
-                .filter(order -> {
-                    LocalDate orderDate = order.getCreatedDt().toLocalDate();
-                    if (fromDate != null && orderDate.isBefore(fromDate)) {
-                        return false;
-                    }
-                    if (toDate != null && orderDate.isAfter(toDate)) {
-                        return false;
-                    }
-                    return true;
-                })
-                .collect(Collectors.toList());
-        }
-        
-        // Convert to DTOs
-        List<OrderDto> orderDtos = orders.stream()
-                .map(orderMapperUtil::mapToDtoWithoutItems)
-                .collect(Collectors.toList());
-        
-        // Manual pagination
-        int start = (int) pageable.getOffset();
-        int end = Math.min(start + pageable.getPageSize(), orderDtos.size());
-        List<OrderDto> pageContent = orderDtos.subList(start, end);
-        
-        return new PageImpl<>(pageContent, pageable, orderDtos.size());
+        return ordersPage.map(orderMapperUtil::mapToDtoWithoutItems);
     }
     
     @Override
@@ -404,11 +382,9 @@ public class OrderServiceImpl implements OrderService {
         // Apply discount if provided
         if (discountCode != null && !discountCode.trim().isEmpty()) {
             try {
-                Discount discount = discountRepository.findValidDiscountByCode(discountCode, LocalDateTime.now())
-                        .orElse(null);
+                DiscountDto discount = discountService.getValidDiscountByCode(discountCode);
                 if (discount != null && discountService.canUseDiscount(discount.getDiscountId())) {
-                    order.setDiscount(discount);
-                    // Store discount snapshot
+                    // Store discount snapshot in order
                     order.setDiscountCode(discount.getDiscountCode());
                     order.setDiscountType(discount.getDiscountType() != null ? 
                             discount.getDiscountType().getDiscountTypeName() : null);
@@ -445,11 +421,18 @@ public class OrderServiceImpl implements OrderService {
             subtotalAmount = subtotalAmount.add(unitPrice.multiply(BigDecimal.valueOf(itemRequest.getQuantity())));
         }
         
-        // Calculate discount amount  
+        // Calculate discount amount if discount was applied
         BigDecimal discountAmount = BigDecimal.ZERO;
-        if (order.getDiscount() != null) {
-            discountAmount = discountService.calculateDiscountAmount(
-                    order.getDiscount().getDiscountId(), subtotalAmount);
+        if (order.getDiscountCode() != null && !order.getDiscountCode().trim().isEmpty()) {
+            try {
+                DiscountDto discount = discountService.getValidDiscountByCode(order.getDiscountCode());
+                if (discount != null) {
+                    discountAmount = discountService.calculateDiscountAmount(
+                            discount.getDiscountId(), subtotalAmount);
+                }
+            } catch (Exception e) {
+                logger.warn("Failed to calculate discount for code {}: {}", order.getDiscountCode(), e.getMessage());
+            }
         }
         
         // Calculate shipping fee
@@ -461,8 +444,8 @@ public class OrderServiceImpl implements OrderService {
             }
         } catch (Exception e) {
             // Use default shipping fee if calculation fails
-            shippingFeeAmount = BigDecimal.valueOf(50000); // Default 50,000 VND 
-            logger.error("Failed to calculate shipping fee, using default: {}", e.getMessage());
+            shippingFeeAmount = DEFAULT_SHIPPING_FEE; 
+            logger.error("Failed to calculate shipping fee for admin order, using default {}: {}", shippingFeeAmount, e.getMessage());
         }
         
         // Update order with calculated amounts
@@ -481,12 +464,23 @@ public class OrderServiceImpl implements OrderService {
                 newState.getOrderStateId(),
                 createdByUserId);
         
-        // Increment discount usage if applied
-        if (order.getDiscount() != null) {
-            discountService.incrementDiscountUsage(order.getDiscount().getDiscountId());
-        }
+        // DISCOUNT functionality removed
         
         return orderMapperUtil.mapToDto(finalOrder);
+    }
+    
+    @Override
+    public Page<OrderDto> searchOrders(
+            Long orderId,
+            Long customerId,
+            String state,
+            LocalDate fromDate,
+            LocalDate toDate,
+            BigDecimal minAmount,
+            BigDecimal maxAmount,
+            Pageable pageable) {
+        
+        return adminSearchOrders(orderId, customerId, state, fromDate, toDate, minAmount, maxAmount, pageable);
     }
     
     @Override
@@ -494,5 +488,63 @@ public class OrderServiceImpl implements OrderService {
         return orderRepository.findById(orderId)
                 .map(order -> order.getUser() != null && order.getUser().getUserId().equals(userId))
                 .orElse(false);
+    }
+
+    /**
+     * Find the best discount for given order amount
+     * Selects discount that provides maximum savings while meeting eligibility criteria
+     * @param orderAmount Total order amount
+     * @return Best applicable discount or null if none found
+     */
+    private DiscountDto findBestDiscountForOrder(BigDecimal orderAmount) {
+        try {
+            // Get all active and enabled discounts
+            List<DiscountDto> activeDiscounts = discountService.getAllActiveDiscounts();
+            if (activeDiscounts == null || activeDiscounts.isEmpty()) {
+                return null;
+            }
+            
+            DiscountDto bestDiscount = null;
+            BigDecimal maxSavings = BigDecimal.ZERO;
+            
+            for (DiscountDto discount : activeDiscounts) {
+                // Check if discount is enabled and meets minimum order requirement
+                if (!discount.getIsActive()) {
+                    continue;
+                }
+                
+                // Check minimum order amount requirement
+                if (discount.getMinOrderAmount() != null && 
+                    orderAmount.compareTo(discount.getMinOrderAmount()) < 0) {
+                    continue;
+                }
+                
+                // Check if discount has remaining usage
+                if (discount.getTotalUsageLimit() != null && discount.getUsedCount() != null &&
+                    discount.getUsedCount().intValue() >= discount.getTotalUsageLimit().intValue()) {
+                    continue;
+                }
+                
+                try {
+                    // Calculate potential savings from this discount
+                    BigDecimal discountAmount = discountService.calculateDiscountAmount(
+                            discount.getDiscountId(), orderAmount);
+                    
+                    // Select discount with maximum savings
+                    if (discountAmount.compareTo(maxSavings) > 0) {
+                        maxSavings = discountAmount;
+                        bestDiscount = discount;
+                    }
+                } catch (Exception e) {
+                    logger.warn("Failed to calculate discount amount for {}: {}", 
+                            discount.getDiscountCode(), e.getMessage());
+                }
+            }
+            
+            return bestDiscount;
+        } catch (Exception e) {
+            logger.error("Error finding best discount for order amount {}: {}", orderAmount, e.getMessage());
+            return null;
+        }
     }
 }

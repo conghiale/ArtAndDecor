@@ -1,22 +1,27 @@
 package org.artanddecor.utils;
 
-import lombok.RequiredArgsConstructor;
 import org.artanddecor.dto.OrderDto;
+import org.artanddecor.dto.OrderItemDto;
+import org.artanddecor.dto.OrderStateDto;
+import org.artanddecor.dto.OrderStateHistoryDto;
 import org.artanddecor.model.Order;
+import org.artanddecor.model.OrderItem;
+import org.artanddecor.model.OrderState;
+import org.artanddecor.model.OrderStateHistory;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 /**
- * Order Mapper Utility for converting between Entity and DTO
+ * Unified Order Mapper Utility for converting between Entity and DTO
+ * Consolidates all Order-related mappers into single class for efficiency
+ * Version: 8.0 - DISCOUNT functionality removed
  */
 @Component
-@RequiredArgsConstructor
 public class OrderMapperUtil {
 
-    private final OrderStateMapperUtil orderStateMapperUtil;
-
-    private final DiscountMapperUtil discountMapperUtil;
-
-    private final OrderItemMapperUtil orderItemMapperUtil;
+    // ===== ORDER MAPPING =====
 
     /**
      * Map Order entity to OrderDto
@@ -40,7 +45,10 @@ public class OrderMapperUtil {
         dto.setReceiverName(order.getReceiverName());
         dto.setReceiverPhone(order.getReceiverPhone());
         dto.setReceiverEmail(order.getReceiverEmail());
-        dto.setReceiverAddress(order.getReceiverAddress());
+        dto.setAddressLine(order.getAddressLine());
+        dto.setCity(order.getCity());
+        dto.setWard(order.getWard());
+        dto.setCountry(order.getCountry());
         dto.setSubtotalAmount(order.getSubtotalAmount());
         dto.setDiscountAmount(order.getDiscountAmount());
         dto.setShippingFeeAmount(order.getShippingFeeAmount());
@@ -51,26 +59,22 @@ public class OrderMapperUtil {
 
         // Map nested OrderState
         if (order.getOrderState() != null) {
-            dto.setOrderState(orderStateMapperUtil.mapToDto(order.getOrderState()));
+            dto.setOrderState(mapToDto(order.getOrderState()));
             dto.setOrderStateId(order.getOrderState().getOrderStateId());
             dto.setOrderStateName(order.getOrderState().getOrderStateName());
         }
 
-        // Map nested Discount
-        if (order.getDiscount() != null) {
-            dto.setDiscount(discountMapperUtil.mapToDto(order.getDiscount()));
-            dto.setDiscountId(order.getDiscount().getDiscountId());
-            dto.setDiscountCode(order.getDiscount().getDiscountCode());
-        }
-        
-        // Map discount snapshot data
-        dto.setDiscountType(order.getDiscountType());
-        dto.setDiscountValue(order.getDiscountValue());
+        // DISCOUNT functionality removed - set null values
+        dto.setDiscount(null);
+        dto.setDiscountId(null);
+        dto.setDiscountCode(null);
+        dto.setDiscountType(null);
+        dto.setDiscountValue(null);
 
         // Map OrderItems if loaded
-        if (order.getOrderItems() != null) {
+        if (order.getOrderItems() != null && !order.getOrderItems().isEmpty()) {
             dto.setOrderItems(order.getOrderItems().stream()
-                    .map(orderItemMapperUtil::mapToDto)
+                    .map(this::mapToDto)
                     .collect(java.util.stream.Collectors.toList()));
         }
 
@@ -98,124 +102,236 @@ public class OrderMapperUtil {
         entity.setReceiverName(orderDto.getReceiverName());
         entity.setReceiverPhone(orderDto.getReceiverPhone());
         entity.setReceiverEmail(orderDto.getReceiverEmail());
-        entity.setReceiverAddress(orderDto.getReceiverAddress());
+        entity.setAddressLine(orderDto.getAddressLine());
+        entity.setCity(orderDto.getCity());
+        entity.setWard(orderDto.getWard());
+        entity.setCountry(orderDto.getCountry());
         entity.setSubtotalAmount(orderDto.getSubtotalAmount());
         entity.setDiscountAmount(orderDto.getDiscountAmount());
         entity.setShippingFeeAmount(orderDto.getShippingFeeAmount());
         entity.setTotalAmount(orderDto.getTotalAmount());
         entity.setOrderNote(orderDto.getOrderNote());
-        entity.setCreatedDt(orderDto.getCreatedDt());
-        entity.setModifiedDt(orderDto.getModifiedDt());
-
-        // Map nested OrderState
-        if (orderDto.getOrderState() != null) {
-            entity.setOrderState(orderStateMapperUtil.mapToEntity(orderDto.getOrderState()));
-        }
-
-        // Map nested Discount
-        if (orderDto.getDiscount() != null) {
-            entity.setDiscount(discountMapperUtil.mapToEntity(orderDto.getDiscount()));
-        }
         
-        // Map discount snapshot data
-        entity.setDiscountCode(orderDto.getDiscountCode());
-        entity.setDiscountType(orderDto.getDiscountType());
-        entity.setDiscountValue(orderDto.getDiscountValue());
-
-        // Map OrderItems
-        if (orderDto.getOrderItems() != null) {
-            entity.setOrderItems(orderDto.getOrderItems().stream()
-                    .map(orderItemMapperUtil::mapToEntity)
-                    .collect(java.util.stream.Collectors.toList()));
-        }
+        // DISCOUNT fields removed but structure maintained for compatibility
+        entity.setDiscountType(null);
+        entity.setDiscountValue(null);
 
         return entity;
     }
 
     /**
-     * Map Order entity to OrderDto without nested collections (for performance)
+     * Map Order entity to OrderDto without loading OrderItems (for performance)
      * @param order Order entity
-     * @return OrderDto without nested collections
+     * @return OrderDto without order items
      */
     public OrderDto mapToDtoWithoutItems(Order order) {
         if (order == null) {
             return null;
         }
 
-        OrderDto dto = mapToDto(order);
-        dto.setOrderItems(null); // Remove items for performance
+        OrderDto dto = new OrderDto();
+        dto.setOrderId(order.getOrderId());
+        dto.setOrderCode(order.getOrderCode());
+        dto.setOrderSlug(order.getOrderSlug());
+        dto.setUserId(order.getUser() != null ? order.getUser().getUserId() : null);
+        dto.setCustomerName(order.getCustomerName());
+        dto.setCustomerPhoneNumber(order.getCustomerPhoneNumber());
+        dto.setCustomerEmail(order.getCustomerEmail());
+        dto.setCustomerAddress(order.getCustomerAddress());
+        dto.setReceiverName(order.getReceiverName());
+        dto.setReceiverPhone(order.getReceiverPhone());
+        dto.setReceiverEmail(order.getReceiverEmail());
+        dto.setAddressLine(order.getAddressLine());
+        dto.setCity(order.getCity());
+        dto.setWard(order.getWard());
+        dto.setCountry(order.getCountry());
+        dto.setSubtotalAmount(order.getSubtotalAmount());
+        dto.setDiscountAmount(order.getDiscountAmount());
+        dto.setShippingFeeAmount(order.getShippingFeeAmount());
+        dto.setTotalAmount(order.getTotalAmount());
+        dto.setOrderNote(order.getOrderNote());
+        dto.setCreatedDt(order.getCreatedDt());
+        dto.setModifiedDt(order.getModifiedDt());
+
+        // Map nested OrderState
+        if (order.getOrderState() != null) {
+            dto.setOrderState(mapToDto(order.getOrderState()));
+            dto.setOrderStateId(order.getOrderState().getOrderStateId());
+            dto.setOrderStateName(order.getOrderState().getOrderStateName());
+        }
+
+        // DISCOUNT functionality removed - set null values
+        dto.setDiscount(null);
+        dto.setDiscountId(null);
+        dto.setDiscountCode(null);
+        dto.setDiscountType(null);
+        dto.setDiscountValue(null);
+
+        // Skip OrderItems loading for performance
+        dto.setOrderItems(null);
+
+        return dto;
+    }
+
+    // ===== ORDER STATE MAPPING =====
+
+    /**
+     * Map OrderState entity to OrderStateDto
+     * @param orderState OrderState entity
+     * @return OrderStateDto
+     */
+    public OrderStateDto mapToDto(OrderState orderState) {
+        if (orderState == null) {
+            return null;
+        }
+
+        OrderStateDto dto = new OrderStateDto();
+        dto.setOrderStateId(orderState.getOrderStateId());
+        dto.setOrderStateName(orderState.getOrderStateName());
+        dto.setOrderStateDisplayName(orderState.getOrderStateDisplayName());
+        dto.setOrderStateRemark(orderState.getOrderStateRemark());
+        dto.setOrderStateEnabled(orderState.getOrderStateEnabled());
+        dto.setOrderStateCreatedDate(orderState.getCreatedDt());
+        dto.setOrderStateModifiedDate(orderState.getModifiedDt());
 
         return dto;
     }
 
     /**
-     * Update existing Order entity with data from DTO
-     * @param existingEntity Existing Order entity
-     * @param dto OrderDto with updated data
-     * @return Updated Order entity
+     * Map OrderStateDto to OrderState entity
+     * @param orderStateDto OrderStateDto
+     * @return OrderState entity
      */
-    public Order updateEntityFromDto(Order existingEntity, OrderDto dto) {
-        if (existingEntity == null || dto == null) {
-            return existingEntity;
+    public OrderState mapToEntity(OrderStateDto orderStateDto) {
+        if (orderStateDto == null) {
+            return null;
         }
 
-        if (dto.getOrderCode() != null) {
-            existingEntity.setOrderCode(dto.getOrderCode());
+        OrderState entity = new OrderState();
+        entity.setOrderStateId(orderStateDto.getOrderStateId());
+        entity.setOrderStateName(orderStateDto.getOrderStateName());
+        entity.setOrderStateDisplayName(orderStateDto.getOrderStateDisplayName());
+        entity.setOrderStateRemark(orderStateDto.getOrderStateRemark());
+        entity.setOrderStateEnabled(orderStateDto.getOrderStateEnabled() != null ? orderStateDto.getOrderStateEnabled() : true);
+
+        return entity;
+    }
+
+    // ===== ORDER ITEM MAPPING =====
+
+    /**
+     * Map OrderItem entity to OrderItemDto
+     * @param orderItem OrderItem entity
+     * @return OrderItemDto
+     */
+    public OrderItemDto mapToDto(OrderItem orderItem) {
+        if (orderItem == null) {
+            return null;
         }
-        if (dto.getOrderSlug() != null) {
-            existingEntity.setOrderSlug(dto.getOrderSlug());
+
+        OrderItemDto dto = new OrderItemDto();
+        dto.setOrderItemId(orderItem.getOrderItemId());
+        dto.setProductId(orderItem.getProduct() != null ? orderItem.getProduct().getProductId() : null);
+        dto.setProductName(orderItem.getProductName());
+        dto.setProductCode(orderItem.getProductCode());
+        dto.setProductCategoryName(orderItem.getProductCategoryName());
+        dto.setProductTypeName(orderItem.getProductTypeName());
+        dto.setProductAttrJson(orderItem.getProductAttrJson());
+        dto.setQuantity(orderItem.getQuantity());
+        dto.setUnitPrice(orderItem.getUnitPrice());
+        dto.setTotalPrice(orderItem.getTotalPrice());
+        dto.setCreatedDt(orderItem.getCreatedDt());
+        dto.setModifiedDt(orderItem.getModifiedDt());
+
+        // Set order information
+        if (orderItem.getOrder() != null) {
+            dto.setOrderId(orderItem.getOrder().getOrderId());
         }
-        if (dto.getCustomerName() != null) {
-            existingEntity.setCustomerName(dto.getCustomerName());
+
+        // Set product attributes JSON snapshot
+        dto.setProductAttrJson(orderItem.getProductAttrJson());
+
+        return dto;
+    }
+
+    /**
+     * Map OrderItemDto to OrderItem entity
+     * @param orderItemDto OrderItemDto
+     * @return OrderItem entity
+     */
+    public OrderItem mapToEntity(OrderItemDto orderItemDto) {
+        if (orderItemDto == null) {
+            return null;
         }
-        if (dto.getCustomerPhoneNumber() != null) {
-            existingEntity.setCustomerPhoneNumber(dto.getCustomerPhoneNumber());
+
+        OrderItem entity = new OrderItem();
+        entity.setOrderItemId(orderItemDto.getOrderItemId());
+        entity.setProductName(orderItemDto.getProductName());
+        entity.setProductCode(orderItemDto.getProductCode());
+        entity.setProductCategoryName(orderItemDto.getProductCategoryName());
+        entity.setProductTypeName(orderItemDto.getProductTypeName());
+        entity.setProductAttrJson(orderItemDto.getProductAttrJson());
+        entity.setQuantity(orderItemDto.getQuantity());
+        entity.setUnitPrice(orderItemDto.getUnitPrice());
+        entity.setTotalPrice(orderItemDto.getTotalPrice());
+
+        return entity;
+    }
+
+    // ===== ORDER STATE HISTORY MAPPING =====
+
+    /**
+     * Map OrderStateHistory entity to OrderStateHistoryDto
+     * @param orderStateHistory OrderStateHistory entity
+     * @return OrderStateHistoryDto
+     */
+    public OrderStateHistoryDto mapToDto(OrderStateHistory orderStateHistory) {
+        if (orderStateHistory == null) {
+            return null;
         }
-        if (dto.getCustomerEmail() != null) {
-            existingEntity.setCustomerEmail(dto.getCustomerEmail());
+
+        OrderStateHistoryDto dto = new OrderStateHistoryDto();
+        dto.setHistoryId(orderStateHistory.getOrderStateHistoryId());
+        dto.setOrderStateHistoryId(orderStateHistory.getOrderStateHistoryId()); // Keep for compatibility
+        dto.setStateChangeDate(orderStateHistory.getCreatedDt());
+        dto.setCreatedDt(orderStateHistory.getCreatedDt()); // Keep for compatibility
+        dto.setChangedByUserId(orderStateHistory.getChangedByUserId());
+        dto.setChangedByUserName(orderStateHistory.getChangedByUserName());
+
+        // Set order information
+        if (orderStateHistory.getOrder() != null) {
+            dto.setOrderId(orderStateHistory.getOrder().getOrderId());
+            dto.setOrderCode(orderStateHistory.getOrder().getOrderCode());
         }
-        if (dto.getCustomerAddress() != null) {
-            existingEntity.setCustomerAddress(dto.getCustomerAddress());
-        }
-        if (dto.getReceiverName() != null) {
-            existingEntity.setReceiverName(dto.getReceiverName());
-        }
-        if (dto.getReceiverPhone() != null) {
-            existingEntity.setReceiverPhone(dto.getReceiverPhone());
-        }
-        if (dto.getReceiverEmail() != null) {
-            existingEntity.setReceiverEmail(dto.getReceiverEmail());
-        }
-        if (dto.getReceiverAddress() != null) {
-            existingEntity.setReceiverAddress(dto.getReceiverAddress());
-        }
-        if (dto.getSubtotalAmount() != null) {
-            existingEntity.setSubtotalAmount(dto.getSubtotalAmount());
-        }
-        if (dto.getDiscountAmount() != null) {
-            existingEntity.setDiscountAmount(dto.getDiscountAmount());
-        }
-        if (dto.getShippingFeeAmount() != null) {
-            existingEntity.setShippingFeeAmount(dto.getShippingFeeAmount());
-        }
-        if (dto.getTotalAmount() != null) {
-            existingEntity.setTotalAmount(dto.getTotalAmount());
-        }
-        if (dto.getOrderNote() != null) {
-            existingEntity.setOrderNote(dto.getOrderNote());
+
+        // Map old and new states
+        if (orderStateHistory.getOldState() != null) {
+            dto.setOldState(mapToDto(orderStateHistory.getOldState()));
         }
         
-        // Update discount snapshot data
-        if (dto.getDiscountCode() != null) {
-            existingEntity.setDiscountCode(dto.getDiscountCode());
-        }
-        if (dto.getDiscountType() != null) {
-            existingEntity.setDiscountType(dto.getDiscountType());
-        }
-        if (dto.getDiscountValue() != null) {
-            existingEntity.setDiscountValue(dto.getDiscountValue());
+        if (orderStateHistory.getNewState() != null) {
+            dto.setNewState(mapToDto(orderStateHistory.getNewState()));
         }
 
-        return existingEntity;
+        return dto;
+    }
+
+    /**
+     * Map OrderStateHistoryDto to OrderStateHistory entity
+     * @param dto OrderStateHistoryDto
+     * @return OrderStateHistory entity
+     */
+    public OrderStateHistory mapToEntity(OrderStateHistoryDto dto) {
+        if (dto == null) {
+            return null;
+        }
+
+        OrderStateHistory entity = new OrderStateHistory();
+        entity.setOrderStateHistoryId(dto.getHistoryId());
+        // Note: changedByUser will be set by service layer using User entity
+        // entity.setChangedByUserId(dto.getChangedByUserId()); // Not available in entity
+        // entity.setChangedByUserName(dto.getChangedByUserName()); // Not available in entity
+
+        return entity;
     }
 }

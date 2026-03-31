@@ -129,7 +129,6 @@ public class ShipmentServiceImpl implements ShipmentService {
         existingShipment.setReceiverEmail(shipmentDto.getReceiverEmail());
         existingShipment.setAddressLine(shipmentDto.getAddressLine());
         existingShipment.setCity(shipmentDto.getCity());
-        existingShipment.setDistrict(shipmentDto.getDistrict());
         existingShipment.setWard(shipmentDto.getWard());
         existingShipment.setCountry(shipmentDto.getCountry());
         existingShipment.setShippingFeeAmount(shipmentDto.getShippingFeeAmount());

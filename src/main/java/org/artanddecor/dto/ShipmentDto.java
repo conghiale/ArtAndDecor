@@ -53,9 +53,6 @@ public class ShipmentDto {
     @Size(max = 100, message = "City must not exceed 100 characters")
     private String city;
     
-    @Size(max = 100, message = "District must not exceed 100 characters")
-    private String district;
-    
     @Size(max = 100, message = "Ward must not exceed 100 characters")
     private String ward;
     
@@ -89,7 +86,6 @@ public class ShipmentDto {
     
     // Computed fields for display
     private String fullAddress;
-    private Long deliveryDurationInDays;
     
     /**
      * Get full formatted address
@@ -98,7 +94,6 @@ public class ShipmentDto {
         StringBuilder sb = new StringBuilder();
         if (addressLine != null) sb.append(addressLine);
         if (ward != null) sb.append(", ").append(ward);
-        if (district != null) sb.append(", ").append(district);
         if (city != null) sb.append(", ").append(city);
         if (country != null) sb.append(", ").append(country);
         return sb.toString();

@@ -32,8 +32,27 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
      * @return List of orders for specific user
      */
     List<Order> findByUser_UserIdOrderByCreatedDtDesc(Long userId);
-
-
+    
+    /**
+     * Find user orders with filtering and pagination (performance optimized)
+     * @param userId User ID
+     * @param orderStateName Order state name (optional)
+     * @param fromDate From date (optional)
+     * @param toDate To date (optional)
+     * @param pageable Pagination information
+     * @return Page of orders matching criteria
+     */
+    @Query("SELECT o FROM Order o LEFT JOIN o.orderState os LEFT JOIN o.user u WHERE " +
+           "u.userId = :userId AND " +
+           "(:orderStateName IS NULL OR LOWER(os.orderStateName) = LOWER(:orderStateName)) AND " +
+           "(:fromDate IS NULL OR o.createdDt >= :fromDate) AND " +
+           "(:toDate IS NULL OR o.createdDt <= :toDate)")
+    Page<Order> findUserOrdersWithFiltering(
+        @Param("userId") Long userId,
+        @Param("orderStateName") String orderStateName,
+        @Param("fromDate") LocalDateTime fromDate,
+        @Param("toDate") LocalDateTime toDate,
+        Pageable pageable);
 
     /**
      * Find orders by multiple criteria
@@ -87,7 +106,10 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
            " LOWER(o.receiverName) LIKE LOWER(CONCAT('%', :textSearch, '%')) OR " +
            " LOWER(o.receiverPhone) LIKE LOWER(CONCAT('%', :textSearch, '%')) OR " +
            " LOWER(o.receiverEmail) LIKE LOWER(CONCAT('%', :textSearch, '%')) OR " +
-           " LOWER(o.receiverAddress) LIKE LOWER(CONCAT('%', :textSearch, '%')))")
+           " LOWER(o.addressLine) LIKE LOWER(CONCAT('%', :textSearch, '%')) OR " +
+           " LOWER(o.city) LIKE LOWER(CONCAT('%', :textSearch, '%')) OR " +
+           " LOWER(o.ward) LIKE LOWER(CONCAT('%', :textSearch, '%')) OR " +
+           " LOWER(o.customerAddress) LIKE LOWER(CONCAT('%', :textSearch, '%')))")
     Page<Order> findOrdersByCriteria(
         @Param("orderId") Long orderId,
         @Param("orderCode") String orderCode,

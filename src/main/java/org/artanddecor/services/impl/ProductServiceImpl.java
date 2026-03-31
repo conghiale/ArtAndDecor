@@ -606,7 +606,8 @@ public class ProductServiceImpl implements ProductService {
     }
     
     /**
-     * Update product attributes using differential approach to avoid duplicate key errors  
+     * Update product attributes using differential approach with multi-value support
+     * Supports multiple values per attribute (e.g., Color: Cool/Warm, Size: 30x40/40x60)
      * Compares existing attributes with requested attributes and performs selective operations
      * @param product Product entity
      * @param requestAttributes List of requested product attributes
@@ -626,70 +627,138 @@ public class ProductServiceImpl implements ProductService {
             existing = List.of(); // Convert null to empty list
         }
         
-        // 2. Map existing by productAttrId for efficient lookup
-        Map<Long, ProductAttribute> existingMap = existing.stream()
-            .collect(Collectors.toMap(
-                pa -> pa.getProductAttr().getProductAttrId(),
-                Function.identity()
-            ));
+        // 2. Group existing attributes by productAttrId to support multi-value attributes
+        Map<Long, List<ProductAttribute>> existingGrouped = existing.stream()
+            .collect(Collectors.groupingBy(pa -> pa.getProductAttr().getProductAttrId()));
         
-        // 3. Map request by productAttrId and validate for duplicates
-        Map<Long, ProductAttributeRequestDto> requestMap = requestAttributes.stream()
-            .collect(Collectors.toMap(
-                ProductAttributeRequestDto::getProductAttrId,
-                Function.identity(),
-                (a, b) -> {
-                    throw new IllegalArgumentException(
-                        "Duplicate productAttrId in request: " + a.getProductAttrId());
+        // 3. Group request attributes by productAttrId to support multi-value attributes
+        Map<Long, List<ProductAttributeRequestDto>> requestGrouped = requestAttributes.stream()
+            .collect(Collectors.groupingBy(ProductAttributeRequestDto::getProductAttrId));
+        
+        // 4. Get all attribute IDs from both existing and request
+        Set<Long> allAttrIds = new HashSet<>();
+        allAttrIds.addAll(existingGrouped.keySet());
+        allAttrIds.addAll(requestGrouped.keySet());
+        
+        // 5. Process each attribute group
+        for (Long attrId : allAttrIds) {
+            List<ProductAttribute> existingForAttr = existingGrouped.getOrDefault(attrId, List.of());
+            List<ProductAttributeRequestDto> requestForAttr = requestGrouped.getOrDefault(attrId, List.of());
+            
+            if (requestForAttr.isEmpty()) {
+                // CASE A: Attribute not in request - remove all existing values
+                for (ProductAttribute _existing : existingForAttr) {
+                    productAttributeRepository.delete(_existing);
+                    logger.debug("Removed attribute {} with value '{}' from product {}", 
+                                attrId, _existing.getProductAttributeValue(), productId);
                 }
-            ));
-        
-        // 4. REMOVE: Delete attributes that exist in DB but not in request
-        for (ProductAttribute existingAttr : existing) {
-            Long attrId = existingAttr.getProductAttr().getProductAttrId();
-            if (!requestMap.containsKey(attrId)) {
-                productAttributeRepository.delete(existingAttr);
-                logger.debug("Removed attribute {} from product {}", attrId, productId);
-            }
-        }
-        
-        // 5. ADD or UPDATE: Process each requested attribute
-        for (Map.Entry<Long, ProductAttributeRequestDto> entry : requestMap.entrySet()) {
-            Long attrId = entry.getKey();
-            ProductAttributeRequestDto req = entry.getValue();
-            
-            ProductAttribute existingAttr = existingMap.get(attrId);
-            
-            if (existingAttr != null) {
-                // UPDATE existing attribute
-                existingAttr.setProductAttributeValue(req.getProductAttributeValue());
-                existingAttr.setProductAttributeQuantity(req.getProductAttributeQuantity());
-                existingAttr.setProductAttributeEnabled(req.getProductAttributeEnabled());
-                
-                productAttributeRepository.save(existingAttr);
-                logger.debug("Updated attribute {} for product {}: {} (qty: {})", 
-                           attrId, productId, req.getProductAttributeValue(), req.getProductAttributeQuantity());
-            } else {
-                // INSERT new attribute
+            } else if (existingForAttr.isEmpty()) {
+                // CASE B: New attribute - add all requested values
                 ProductAttr productAttr = productAttrRepository.findById(attrId)
                     .orElseThrow(() -> new IllegalArgumentException(
                         "Product attribute definition not found with ID: " + attrId));
                 
+                for (ProductAttributeRequestDto req : requestForAttr) {
+                    ProductAttribute newAttr = new ProductAttribute();
+                    newAttr.setProduct(product);
+                    newAttr.setProductAttr(productAttr);
+                    newAttr.setProductAttributeValue(req.getProductAttributeValue());
+                    newAttr.setProductAttributeQuantity(req.getProductAttributeQuantity());
+                    newAttr.setProductAttributeEnabled(req.getProductAttributeEnabled());
+                    
+                    productAttributeRepository.save(newAttr);
+                    logger.debug("Added new attribute {} to product {}: {} (qty: {})", 
+                                attrId, productId, req.getProductAttributeValue(), req.getProductAttributeQuantity());
+                }
+            } else {
+                // CASE C: Attribute exists - perform value-based differential update
+                updateAttributeValuesDifferentially(productId, attrId, existingForAttr, requestForAttr);
+            }
+        }
+        
+        logger.info("Successfully updated attributes for product {} - {} total attribute groups processed", 
+                   productId, allAttrIds.size());
+    }
+    
+    /**
+     * Perform differential update for multiple values of the same attribute
+     * Matches existing and requested values by attribute value string
+     * @param productId Product ID for logging
+     * @param attrId Attribute ID for logging
+     * @param existing List of existing ProductAttribute for this attrId
+     * @param requested List of requested ProductAttributeRequestDto for this attrId
+     */
+    private void updateAttributeValuesDifferentially(Long productId, Long attrId,
+                                                   List<ProductAttribute> existing,
+                                                   List<ProductAttributeRequestDto> requested) {
+        // Map existing by value for efficient lookup
+        Map<String, ProductAttribute> existingByValue = existing.stream()
+            .collect(Collectors.toMap(
+                ProductAttribute::getProductAttributeValue,
+                Function.identity(),
+                (a, b) -> {
+                    logger.warn("Duplicate attribute value found for product {} attribute {}: {}", 
+                                productId, attrId, a.getProductAttributeValue());
+                    return a; // Keep first one if duplicates exist
+                }
+            ));
+        
+        // Map requested by value and validate for duplicates within this attribute
+        Map<String, ProductAttributeRequestDto> requestedByValue = requested.stream()
+            .collect(Collectors.toMap(
+                ProductAttributeRequestDto::getProductAttributeValue,
+                Function.identity(),
+                (a, b) -> {
+                    throw new IllegalArgumentException(
+                        "Duplicate attribute value in request for attribute " + attrId + ": " + a.getProductAttributeValue());
+                }
+            ));
+        
+        // REMOVE: Delete existing values not in request
+        for (ProductAttribute existingAttr : existing) {
+            String value = existingAttr.getProductAttributeValue();
+            if (!requestedByValue.containsKey(value)) {
+                productAttributeRepository.delete(existingAttr);
+                logger.debug("Removed attribute {} value '{}' from product {}", attrId, value, productId);
+            }
+        }
+        
+        // ADD or UPDATE: Process each requested value
+        ProductAttr productAttr = null; // Cache for new attributes
+        
+        for (Map.Entry<String, ProductAttributeRequestDto> entry : requestedByValue.entrySet()) {
+            String value = entry.getKey();
+            ProductAttributeRequestDto req = entry.getValue();
+            ProductAttribute existingAttr = existingByValue.get(value);
+            
+            if (existingAttr != null) {
+                // UPDATE existing attribute value
+                existingAttr.setProductAttributeQuantity(req.getProductAttributeQuantity());
+                existingAttr.setProductAttributeEnabled(req.getProductAttributeEnabled());
+                
+                productAttributeRepository.save(existingAttr);
+                logger.debug("Updated attribute {} value '{}' for product {}: qty={}, enabled={}", 
+                           attrId, value, productId, req.getProductAttributeQuantity(), req.getProductAttributeEnabled());
+            } else {
+                // INSERT new attribute value
+                if (productAttr == null) {
+                    productAttr = productAttrRepository.findById(attrId)
+                        .orElseThrow(() -> new IllegalArgumentException(
+                            "Product attribute definition not found with ID: " + attrId));
+                }
+                
                 ProductAttribute newAttr = new ProductAttribute();
-                newAttr.setProduct(product);
+                newAttr.setProduct(existing.get(0).getProduct()); // Use product from existing
                 newAttr.setProductAttr(productAttr);
                 newAttr.setProductAttributeValue(req.getProductAttributeValue());
                 newAttr.setProductAttributeQuantity(req.getProductAttributeQuantity());
                 newAttr.setProductAttributeEnabled(req.getProductAttributeEnabled());
                 
                 productAttributeRepository.save(newAttr);
-                logger.debug("Added new attribute {} to product {}: {} (qty: {})", 
-                           attrId, productId, req.getProductAttributeValue(), req.getProductAttributeQuantity());
+                logger.debug("Added new attribute {} value '{}' to product {}: qty={}, enabled={}", 
+                           attrId, value, productId, req.getProductAttributeQuantity(), req.getProductAttributeEnabled());
             }
         }
-        
-        logger.info("Successfully updated attributes for product {} - {} total attributes", 
-                   productId, requestMap.size());
     }
     
     // =============================================

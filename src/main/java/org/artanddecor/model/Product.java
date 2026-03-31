@@ -1,9 +1,7 @@
 package org.artanddecor.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,7 +15,8 @@ import java.util.List;
  */
 @Entity
 @Table(name = "PRODUCT")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class Product {
@@ -82,15 +81,19 @@ public class Product {
 
     // One-to-Many relationships
     @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @ToString.Exclude
     private List<ProductImage> productImages;
 
     @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @ToString.Exclude
     private List<ProductAttribute> productAttributes;
 
     @OneToMany(mappedBy = "product", fetch = FetchType.LAZY)
+    @ToString.Exclude
     private List<Review> reviews;
 
     @OneToMany(mappedBy = "product", fetch = FetchType.LAZY)
+    @ToString.Exclude
     private List<CartItem> cartItems;
 
     @PrePersist

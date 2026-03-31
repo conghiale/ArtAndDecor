@@ -1,9 +1,7 @@
 package org.artanddecor.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.slf4j.Logger;
@@ -18,7 +16,8 @@ import java.util.List;
  */
 @Entity
 @Table(name = "USER_ROLE")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserRole {
@@ -52,6 +51,7 @@ public class UserRole {
 
     // One-to-Many relationship with User
     @OneToMany(mappedBy = "userRole", fetch = FetchType.LAZY)
+    @ToString.Exclude
     private List<User> users;
 
     // Business methods

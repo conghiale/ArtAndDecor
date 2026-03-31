@@ -22,6 +22,4 @@ public class CheckoutCartRequest {
     
     @NotBlank(message = "Payment method is required")
     private String paymentMethod;
-    
-    private String discountCode; // Optional
 }

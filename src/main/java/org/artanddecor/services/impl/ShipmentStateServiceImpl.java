@@ -6,7 +6,7 @@ import org.artanddecor.exception.ResourceNotFoundException;
 import org.artanddecor.model.ShipmentState;
 import org.artanddecor.repository.ShipmentStateRepository;
 import org.artanddecor.services.ShipmentStateService;
-import org.artanddecor.utils.ShipmentStateMapperUtil;
+import org.artanddecor.utils.ShipmentMapperUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -28,14 +28,14 @@ public class ShipmentStateServiceImpl implements ShipmentStateService {
     private static final Logger logger = LoggerFactory.getLogger(ShipmentStateServiceImpl.class);
 
     private final ShipmentStateRepository shipmentStateRepository;
-    private final ShipmentStateMapperUtil shipmentStateMapperUtil;
+    private final ShipmentMapperUtil shipmentMapperUtil;
 
     @Override
     @Transactional(readOnly = true)
     public Page<ShipmentStateDto> getAllShipmentStates(Pageable pageable) {
         logger.debug("Getting all shipment states with pagination: {}", pageable);
         Page<ShipmentState> statePage = shipmentStateRepository.findAll(pageable);
-        return statePage.map(shipmentStateMapperUtil::mapToDto);
+        return statePage.map(shipmentMapperUtil::mapShipmentStateToDto);
     }
 
     @Override
@@ -44,7 +44,7 @@ public class ShipmentStateServiceImpl implements ShipmentStateService {
         logger.debug("Getting shipment state by ID: {}", shipmentStateId);
         ShipmentState shipmentState = shipmentStateRepository.findById(shipmentStateId)
             .orElseThrow(() -> new ResourceNotFoundException("Shipment state not found with ID: " + shipmentStateId));
-        return shipmentStateMapperUtil.mapToDto(shipmentState);
+        return shipmentMapperUtil.mapShipmentStateToDto(shipmentState);
     }
 
     @Override
@@ -53,7 +53,7 @@ public class ShipmentStateServiceImpl implements ShipmentStateService {
         logger.debug("Getting shipment state by name: {}", shipmentStateName);
         ShipmentState shipmentState = shipmentStateRepository.findByShipmentStateName(shipmentStateName)
             .orElseThrow(() -> new ResourceNotFoundException("Shipment state not found with name: " + shipmentStateName));
-        return shipmentStateMapperUtil.mapToDto(shipmentState);
+        return shipmentMapperUtil.mapShipmentStateToDto(shipmentState);
     }
 
     @Override
@@ -62,7 +62,7 @@ public class ShipmentStateServiceImpl implements ShipmentStateService {
         logger.debug("Getting all enabled shipment states");
         List<ShipmentState> states = shipmentStateRepository.findByShipmentStateEnabledTrueOrderByShipmentStateName();
         return states.stream()
-            .map(shipmentStateMapperUtil::mapToDto)
+            .map(shipmentMapperUtil::mapShipmentStateToDto)
             .toList();
     }
 
@@ -75,11 +75,11 @@ public class ShipmentStateServiceImpl implements ShipmentStateService {
             throw new IllegalArgumentException("Shipment state name already exists: " + shipmentStateDto.getShipmentStateName());
         }
 
-        ShipmentState shipmentState = shipmentStateMapperUtil.mapToEntity(shipmentStateDto);
+        ShipmentState shipmentState = shipmentMapperUtil.mapShipmentStateToEntity(shipmentStateDto);
         ShipmentState savedState = shipmentStateRepository.save(shipmentState);
         logger.info("Created shipment state with ID: {} and name: {}", savedState.getShipmentStateId(), savedState.getShipmentStateName());
         
-        return shipmentStateMapperUtil.mapToDto(savedState);
+        return shipmentMapperUtil.mapShipmentStateToDto(savedState);
     }
 
     @Override
@@ -105,7 +105,7 @@ public class ShipmentStateServiceImpl implements ShipmentStateService {
         ShipmentState updatedState = shipmentStateRepository.save(existingState);
         logger.info("Updated shipment state with ID: {}", updatedState.getShipmentStateId());
         
-        return shipmentStateMapperUtil.mapToDto(updatedState);
+        return shipmentMapperUtil.mapShipmentStateToDto(updatedState);
     }
 
     @Override
@@ -132,7 +132,7 @@ public class ShipmentStateServiceImpl implements ShipmentStateService {
         logger.info("Toggled enabled status for shipment state ID: {} to: {}", 
                    shipmentStateId, updatedState.getShipmentStateEnabled());
         
-        return shipmentStateMapperUtil.mapToDto(updatedState);
+        return shipmentMapperUtil.mapShipmentStateToDto(updatedState);
     }
 
     @Override
@@ -147,7 +147,7 @@ public class ShipmentStateServiceImpl implements ShipmentStateService {
             shipmentStateId, shipmentStateName, shipmentStateEnabled, textSearch, pageable
         );
         
-        return statePage.map(shipmentStateMapperUtil::mapToDto);
+        return statePage.map(shipmentMapperUtil::mapShipmentStateToDto);
     }
 
     @Override

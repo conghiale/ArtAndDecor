@@ -1,9 +1,7 @@
 package org.artanddecor.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.slf4j.Logger;
@@ -18,7 +16,8 @@ import java.util.List;
  */
 @Entity
 @Table(name = "PRODUCT_CATEGORY")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class ProductCategory {
@@ -77,6 +76,7 @@ public class ProductCategory {
 
     // One-to-Many relationship with Product
     @OneToMany(mappedBy = "productCategory", fetch = FetchType.LAZY)
+    @ToString.Exclude
     private List<Product> products;
 
     @PrePersist

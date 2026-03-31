@@ -1,7 +1,7 @@
 package org.artanddecor.services;
 
 import org.artanddecor.dto.CartItemDto;
-import org.artanddecor.dto.CartItemUpdateRequestDto;
+import org.artanddecor.dto.CartItemRequestDto;
 import org.springframework.data.domain.Page;
 
 import java.math.BigDecimal;
@@ -29,30 +29,24 @@ public interface CartItemService {
     List<CartItemDto> getActiveCartItemsByUser(Long userId);
 
     /**
-     * Add item to cart
-     * @param cartId Cart ID
-     * @param productId Product ID
-     * @param quantity Quantity
+     * Add product to cart with optional attributes
+     * Unified method supporting all add scenarios:
+     * - Direct cart ID
+     * - User ID (finds/creates active cart)
+     * - Session ID (finds/creates guest cart)
+     * - With or without product attributes
+     * @param request Cart item request with product and cart identification
      * @return CartItemDto
      */
-    CartItemDto addItemToCart(Long cartId, Long productId, Integer quantity);
+    CartItemDto addProductToCart(CartItemRequestDto request);
 
     /**
-     * Add product to guest cart (creates cart if needed)
-     * @param sessionId Session ID (creates new if null)
-     * @param productId Product ID
-     * @param quantity Quantity
-     * @return CartItemDto
-     */
-    CartItemDto addProductToGuestCart(String sessionId, Long productId, Integer quantity);
-
-    /**
-     * Update cart item quantity
+     * Update cart item
      * @param cartItemId Cart item ID
-     * @param quantity New quantity
+     * @param request Updated cart item data
      * @return Updated CartItemDto
      */
-    CartItemDto updateCartItemQuantity(Long cartItemId, Integer quantity);
+    CartItemDto updateCartItem(Long cartItemId, CartItemRequestDto request);
 
     /**
      * Remove cart item (set state to REMOVED)
@@ -62,32 +56,10 @@ public interface CartItemService {
     CartItemDto removeCartItem(Long cartItemId);
 
     /**
-     * Update cart item using request DTO (for admin)
-     * @param cartItemId Cart item ID
-     * @param request Updated cart item data from request DTO
-     * @return Updated CartItemDto
-     */
-    CartItemDto updateCartItemByRequest(Long cartItemId, CartItemUpdateRequestDto request);
-
-    /**
      * Clear all items from cart
      * @param cartId Cart ID
      */
     void clearCart(Long cartId);
-
-    /**
-     * Get cart total value
-     * @param cartId Cart ID
-     * @return Total value
-     */
-    BigDecimal getCartTotalValue(Long cartId);
-
-    /**
-     * Get cart total quantity
-     * @param cartId Cart ID
-     * @return Total quantity
-     */
-    Integer getCartTotalQuantity(Long cartId);
 
     /**
      * Get cart items count with filters - priority lookup by cartId, userId, or sessionId
@@ -106,13 +78,6 @@ public interface CartItemService {
      * @return List of CartItemDto
      */
     List<CartItemDto> getCartItemsByCartId(Long cartId, Long cartItemStateId);
-
-    /**
-     * Convert CartItem entity to DTO
-     * @param cartItem CartItem entity
-     * @return CartItemDto
-     */
-    CartItemDto convertToDto(org.artanddecor.model.CartItem cartItem);
 
     /**
      * Get active cart items by cart ID (for CUSTOMER role)

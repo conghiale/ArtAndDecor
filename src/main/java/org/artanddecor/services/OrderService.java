@@ -1,7 +1,7 @@
 package org.artanddecor.services;
 
-import org.artanddecor.dto.OrderDto;
 import org.artanddecor.dto.CreateOrderItemRequest;
+import org.artanddecor.dto.OrderDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -11,7 +11,7 @@ import java.util.List;
 
 /**
  * Orders Service Interface for business logic operations
- * Cleaned up - Contains only methods used by OrderController
+ * Updated to support new API requirements - DISCOUNT functionality removed
  */
 public interface OrderService {
 
@@ -23,12 +23,12 @@ public interface OrderService {
     OrderDto getOrderById(Long orderId);
 
     /**
-     * Checkout cart to create order (API 1)
+     * Checkout cart to create order (API 1) - DISCOUNT removed
      * @param userId User ID
      * @param cartId Cart ID
      * @param shippingAddressId Shipping address ID
      * @param paymentMethod Payment method
-     * @param discountCode Discount code (optional)
+     * @param discountCode Discount code (set to null, kept for backward compatibility)
      * @return Created order
      */
     OrderDto checkoutCart(
@@ -69,9 +69,31 @@ public interface OrderService {
      * @return Updated order
      */
     OrderDto cancelMyOrder(Long userId, Long orderId);
+    
+    /**
+     * Search orders with filters (API 5) - Used by both admin and public access
+     * @param orderId Filter by order ID (optional)
+     * @param customerId Filter by customer ID (optional)  
+     * @param state Filter by state (optional)
+     * @param fromDate Filter from date (optional)
+     * @param toDate Filter to date (optional)
+     * @param minAmount Filter by minimum amount (optional)
+     * @param maxAmount Filter by maximum amount (optional)
+     * @param pageable Pagination information
+     * @return Page of orders matching criteria
+     */
+    Page<OrderDto> searchOrders(
+            Long orderId,
+            Long customerId,
+            String state,
+            LocalDate fromDate,
+            LocalDate toDate,
+            BigDecimal minAmount,
+            BigDecimal maxAmount,
+            Pageable pageable);
 
     /**
-     * Admin search orders with filters (API 5)
+     * Admin search orders with filters (API 5) - Legacy method, delegates to searchOrders
      * @param orderId Filter by order ID (optional)
      * @param customerId Filter by customer ID (optional)
      * @param state Filter by state (optional)
@@ -93,10 +115,10 @@ public interface OrderService {
             Pageable pageable);
 
     /**
-     * Admin create order (API 7)
+     * Admin create order (API 6) - DISCOUNT removed
      * @param customerId Customer ID
      * @param shippingAddressId Shipping address ID
-     * @param discountCode Discount code (optional)
+     * @param discountCode Discount code (set to null, kept for backward compatibility)
      * @param orderItems List of order items
      * @param createdByUserId Admin user who created order
      * @return Created order
@@ -107,9 +129,18 @@ public interface OrderService {
             String discountCode,
             List<CreateOrderItemRequest> orderItems,
             Long createdByUserId);
+            
+    /**
+     * Admin update order (API 7) - If order state changes, creates history record
+     * @param orderId Order ID to update
+     * @param request Update request with fields to update
+     * @param updatedByUserId Admin user who updated order
+     * @return Updated order
+     */
+
 
     /**
-     * Update order state (API 8)
+     * Update order state (API 8) - Creates order state history
      * @param orderId Order ID
      * @param newOrderStateId New order state ID
      * @param changedByUserId User who made the change
