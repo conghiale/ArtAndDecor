@@ -1,6 +1,7 @@
 package org.artanddecor.services;
 
 import org.artanddecor.dto.ProductCategoryDto;
+import org.artanddecor.dto.ProductCategoryRequestDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -14,19 +15,15 @@ import java.util.Optional;
 public interface ProductCategoryService {
 
     // =============================================
-    // CUSTOMER-FOCUSED OPERATIONS (slug > name > ID priority)
+    // ADMIN-FOCUSED OPERATIONS
     // =============================================
 
     /**
-     * Find product category by slug for customer view
+     * Find product category by ID for admin management
      */
-    Optional<ProductCategoryDto> findProductCategoryBySlug(String productCategorySlug);
+    Optional<ProductCategoryDto> findProductCategoryById(Long productCategoryId);
 
     /**
-     * Get product categories by multiple criteria with pagination (all parameters optional)
-     * @param textSearch Text search in name, slug, displayName, remark (partial match, case-insensitive)
-     * @param enabled Filter by enabled status
-     * @param visible Filter by visible status
      * Get product categories by multiple criteria with pagination (all parameters optional)
      * @param textSearch Text search in name, slug, displayName, remark (partial match, case-insensitive)
      * @param enabled Filter by enabled status
@@ -42,69 +39,16 @@ public interface ProductCategoryService {
                                                            Pageable pageable);
 
     // =============================================
-    // ADMIN-FOCUSED OPERATIONS (ID > name > slug priority)
-    // =============================================
-
-    /**
-     * Find product category by ID for admin management
-     */
-    Optional<ProductCategoryDto> findProductCategoryById(Long productCategoryId);
-
-    /**
-     * Find product category by name
-     */
-    Optional<ProductCategoryDto> findProductCategoryByName(String productCategoryName);
-
-    // =============================================
     // CRUD OPERATIONS
     // =============================================
 
     /**
-     * Create new product category
+     * Create new product category using request DTO
      */
-    ProductCategoryDto createProductCategory(ProductCategoryDto productCategoryDto);
+    ProductCategoryDto createProductCategory(ProductCategoryRequestDto requestDto);
 
     /**
-     * Update existing product category
+     * Update existing product category using request DTO
      */
-    ProductCategoryDto updateProductCategory(Long productCategoryId, ProductCategoryDto productCategoryDto);
-
-    /**
-     * Delete product category by ID
-     */
-    void deleteProductCategoryById(Long productCategoryId);
-
-    // =============================================
-    // UTILITY OPERATIONS
-    // =============================================
-
-    /**
-     * Get total count of product categories
-     */
-    long getTotalProductCategoryCount();
-
-    /**
-     * Get categories by product type ID
-     */
-    List<ProductCategoryDto> getCategoriesByProductTypeId(Long productTypeId);
-
-    /**
-     * Get root categories (no parent)
-     */
-    List<ProductCategoryDto> getRootCategories();
-
-    /**
-     * Get child categories by parent ID
-     */
-    List<ProductCategoryDto> getChildCategoriesByParentId(Long parentId);
-
-    /**
-     * Check if slug exists (for validation)
-     */
-    boolean existsBySlug(String productCategorySlug);
-
-    /**
-     * Check if name exists (for validation)
-     */
-    boolean existsByName(String productCategoryName);
+    ProductCategoryDto updateProductCategory(Long productCategoryId, ProductCategoryRequestDto requestDto);
 }

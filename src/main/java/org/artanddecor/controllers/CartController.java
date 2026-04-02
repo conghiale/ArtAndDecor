@@ -93,7 +93,7 @@ public class CartController {
 
     @Operation(
         summary = "Add product to cart",
-        description = "Add a product to cart with optional attributes. Supports multiple cart identification methods: direct cartId, userId (finds/creates active cart), or sessionId (guest cart). Handles product attribute selection for comprehensive product configuration."
+        description = "Add a product to cart with optional attributes. Cart identification (cartId, userId, or sessionId) is optional - if not provided, a new guest cart will be created automatically. Supports comprehensive product configuration with attributes."
     )
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Product added to cart successfully"),
@@ -112,12 +112,27 @@ public class CartController {
                 return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Invalid request: missing required fields"));
             }
 
+            // Check if sessionId exists before processing (for new guest cart detection)
+            boolean hadCartIdentification = request.hasCartIdentification();
+            String originalSessionId = request.getSessionId();
+
             // Add product to cart (with or without attributes)
             CartItemDto cartItem = cartItemService.addProductToCart(request);
             
-            String message = request.hasSelectedAttributes() ? 
-                "Product with attributes added to cart successfully" : 
-                "Product added to cart successfully";
+            // Determine message based on attributes and cart creation
+            String message;
+            if (!hadCartIdentification && request.getSessionId() != null && !request.getSessionId().equals(originalSessionId)) {
+                // New guest cart was created
+                message = request.hasSelectedAttributes() ? 
+                    "New guest cart created and product with attributes added successfully. Session ID: " + request.getSessionId() : 
+                    "New guest cart created and product added successfully. Session ID: " + request.getSessionId();
+                logger.info("Created new guest cart with session ID: {}", request.getSessionId());
+            } else {
+                // Existing cart was used
+                message = request.hasSelectedAttributes() ? 
+                    "Product with attributes added to cart successfully" : 
+                    "Product added to cart successfully";
+            }
             
             return ResponseEntity.ok(BaseResponseDto.success(message, cartItem));
             
@@ -133,18 +148,18 @@ public class CartController {
 
     @Operation(
         summary = "Remove cart item",
-        description = "Remove an item from cart (set state to REMOVED). Works for both logged-in users and guest sessions."
+        description = "Remove an item from cart (permanently delete from database). Works for both logged-in users and guest sessions."
     )
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Cart item removed successfully"),
         @ApiResponse(responseCode = "404", description = "Cart item not found")
     })
-    @PutMapping("/items/{cartItemId}/remove")
+    @DeleteMapping("/items/{cartItemId}")
     public ResponseEntity<BaseResponseDto<CartItemDto>> removeCartItem(
             @Parameter(description = "Cart item ID", required = true)
             @PathVariable Long cartItemId) {
         
-        logger.info("PUT /carts/items/{}/remove", cartItemId);
+        logger.info("DELETE /carts/items/{}", cartItemId);
 
         try {
             CartItemDto cartItem = cartItemService.removeCartItem(cartItemId);

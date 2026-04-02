@@ -48,22 +48,7 @@ public class CartItemServiceImpl implements CartItemService {
     private final CartMapper cartMapper;
 
     /**
-     * Get cart item by ID
-     * @param cartItemId Cart item ID
-     * @return CartItemDto
-     */
-    @Override
-    @Transactional(readOnly = true)
-    public CartItemDto getCartItemById(Long cartItemId) {
-        logger.info("Fetching cart item with ID: {}", cartItemId);
 
-        CartItem cartItem = cartItemRepository.findById(cartItemId)
-            .orElseThrow(() -> new ResourceNotFoundException("Cart item not found with ID: " + cartItemId));
-
-        return cartMapper.toDto(cartItem);
-    }
-
-    /**
      * Get cart items by cart ID with state filter
      * @param cartId Cart ID
      * @param cartItemStateId Cart item state ID filter (optional)
@@ -81,34 +66,6 @@ public class CartItemServiceImpl implements CartItemService {
             cartItems = cartItemRepository.findByCart_CartId(cartId);
         }
         
-        return cartMapper.toCartItemDto(cartItems);
-    }
-
-    /**
-     * Get active cart items by user
-     * @param userId User ID
-     * @return List of active CartItemDto
-     */
-    @Override
-    @Transactional(readOnly = true)
-    public List<CartItemDto> getActiveCartItemsByUser(Long userId) {
-        logger.info("Fetching active cart items for user ID: {}", userId);
-
-        List<CartItem> cartItems = cartItemRepository.findActiveCartItemsByUser(userId);
-        return cartMapper.toCartItemDto(cartItems);
-    }
-
-    /**
-     * Get active cart items by cart ID (for CUSTOMER role)
-     * @param cartId Cart ID
-     * @return List of active CartItemDto
-     */
-    @Override
-    @Transactional(readOnly = true)
-    public List<CartItemDto> getActiveCartItemsByCartId(Long cartId) {
-        logger.info("Fetching active cart items for cart ID: {}", cartId);
-        
-        List<CartItem> cartItems = cartItemRepository.findActiveCartItemsByCartId(cartId);
         return cartMapper.toCartItemDto(cartItems);
     }
 
@@ -189,8 +146,8 @@ public class CartItemServiceImpl implements CartItemService {
         
         Optional<CartItemState> removedState = cartItemStateRepository.findByCartItemStateName("REMOVED");
 
-        // Check if item already exists in cart (any state)
-        Optional<CartItem> existingCartItem = cartItemRepository.findByCartIdAndProductId(targetCartId, request.getProductId());
+        // Check if item already exists in cart with same product and attributes
+        Optional<CartItem> existingCartItem = findExistingCartItemWithSameAttributes(targetCartId, request.getProductId(), request.getSelectedAttributeIds());
 
         CartItem cartItem;
         if (existingCartItem.isPresent()) {
@@ -290,9 +247,9 @@ public class CartItemServiceImpl implements CartItemService {
     }
 
     /**
-     * Remove cart item (set state to REMOVED)
+     * Remove cart item (hard delete from database)
      * @param cartItemId Cart item ID
-     * @return Updated CartItemDto
+     * @return Removed CartItemDto (for response purposes)
      */
     @Override
     public CartItemDto removeCartItem(Long cartItemId) {
@@ -301,18 +258,20 @@ public class CartItemServiceImpl implements CartItemService {
         CartItem cartItem = cartItemRepository.findById(cartItemId)
             .orElseThrow(() -> new ResourceNotFoundException("Cart item not found with ID: " + cartItemId));
 
-        // Get REMOVED state
-        CartItemState removedState = cartItemStateRepository.findByCartItemStateName("REMOVED")
-            .orElseThrow(() -> new ResourceNotFoundException("REMOVED cart item state not found"));
-
-        cartItem.setCartItemState(removedState);
-        CartItem updatedCartItem = cartItemRepository.save(cartItem);
+        // Store cart ID before deletion for updating total quantity
+        Long cartId = cartItem.getCart().getCartId();
         
-        // Update cart total quantity
-        updateCartTotalQuantity(cartItem.getCart().getCartId());
+        // Create DTO before deletion (for response)
+        CartItemDto removedCartItemDto = cartMapper.toDto(cartItem);
+        
+        // Hard delete the cart item (also removes associated attributes due to cascade)
+        cartItemRepository.deleteById(cartItemId);
+        
+        // Update cart total quantity after deletion
+        updateCartTotalQuantity(cartId);
 
-        logger.info("Cart item removed successfully (state changed to REMOVED)");
-        return cartMapper.toDto(updatedCartItem);
+        logger.info("Cart item removed successfully (hard deleted from database)");
+        return removedCartItemDto;
     }
 
     /**
@@ -335,8 +294,35 @@ public class CartItemServiceImpl implements CartItemService {
         logger.info("Cart cleared successfully");
     }
 
+    @Override
+    @Transactional
+    public void clearSelectedCartItems(List<Long> cartItemIds) {
+        if (cartItemIds != null && !cartItemIds.isEmpty()) {
+            logger.info("Clearing {} selected cart items: {}", cartItemIds.size(), cartItemIds);
+            
+            // Get cart items to update cart quantity
+            List<CartItem> cartItems = cartItemRepository.findAllById(cartItemIds);
+            if (!cartItems.isEmpty()) {
+                Cart cart = cartItems.get(0).getCart();
+                int deletedQuantity = cartItems.stream()
+                        .mapToInt(CartItem::getCartItemQuantity)
+                        .sum();
+                
+                // Delete selected cart items
+                cartItemRepository.deleteAllById(cartItemIds);
+                
+                // Update cart total quantity
+                cart.setTotalQuantity(Math.max(0, cart.getTotalQuantity() - deletedQuantity));
+                cartRepository.save(cart);
+                
+                logger.info("Cleared {} selected cart items successfully", cartItemIds.size());
+            }
+        }
+    }
+
     /**
      * Resolve cart ID from request based on priority: cartId > userId > sessionId
+     * If no identification provided, creates new guest cart
      * @param request CartItemRequestDto
      * @return Cart ID
      */
@@ -358,7 +344,16 @@ public class CartItemServiceImpl implements CartItemService {
             return cartDto.getCartId();
         }
         
-        throw new IllegalArgumentException("No cart identification provided (cartId, userId, or sessionId required)");
+        // No cart identification provided - create new guest cart
+        logger.info("No cart identification provided, creating new guest cart");
+        String newSessionId = cartService.generateSessionId();
+        var cartDto = cartService.createOrGetActiveCartForSession(newSessionId);
+        
+        // Update request with new session ID so client can use it for future requests
+        request.setSessionId(newSessionId);
+        logger.info("Created new guest cart with session ID: {}", newSessionId);
+        
+        return cartDto.getCartId();
     }
 
     /**
@@ -408,5 +403,53 @@ public class CartItemServiceImpl implements CartItemService {
             cart.setTotalQuantity(totalQuantity != null ? totalQuantity : 0);
             cartRepository.save(cart);
         }
+    }
+
+    /**
+     * Find existing cart item with same product and same attributes
+     * @param cartId Cart ID
+     * @param productId Product ID
+     * @param selectedAttributeIds List of selected attribute IDs (can be null/empty)
+     * @return Optional CartItem if found with matching attributes
+     */
+    private Optional<CartItem> findExistingCartItemWithSameAttributes(Long cartId, Long productId, List<Long> selectedAttributeIds) {
+        logger.debug("Looking for existing cart item - cartId: {}, productId: {}, attributes: {}", 
+                    cartId, productId, selectedAttributeIds);
+
+        // Get all cart items with same cart and product (with attributes loaded)
+        List<CartItem> candidateItems = cartItemRepository.findByCartIdAndProductIdWithAttributes(cartId, productId);
+        
+        if (candidateItems.isEmpty()) {
+            logger.debug("No existing cart items found for this product");
+            return Optional.empty();
+        }
+
+        // Normalize input: null or empty list both mean "no attributes"
+        List<Long> requestAttributes = (selectedAttributeIds == null || selectedAttributeIds.isEmpty()) 
+            ? List.of() : selectedAttributeIds;
+            
+        logger.debug("Found {} candidate cart items, checking attribute matches", candidateItems.size());
+
+        // Check each candidate for matching attributes
+        for (CartItem candidate : candidateItems) {
+            // Get attribute IDs from this cart item
+            List<Long> itemAttributeIds = candidate.getCartItemAttributes().stream()
+                .map(cia -> cia.getProductAttribute().getProductAttributeId())
+                .sorted()
+                .toList();
+
+            // Compare attribute sets
+            List<Long> sortedRequestAttributes = requestAttributes.stream().sorted().toList();
+            
+            logger.debug("Comparing attributes - candidate: {}, request: {}", itemAttributeIds, sortedRequestAttributes);
+            
+            if (itemAttributeIds.equals(sortedRequestAttributes)) {
+                logger.debug("Found matching cart item ID: {} with same attributes", candidate.getCartItemId());
+                return Optional.of(candidate);
+            }
+        }
+
+        logger.debug("No existing cart item found with matching attributes");
+        return Optional.empty();
     }
 }

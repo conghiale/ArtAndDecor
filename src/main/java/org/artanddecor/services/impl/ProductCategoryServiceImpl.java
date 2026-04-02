@@ -2,9 +2,16 @@ package org.artanddecor.services.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.artanddecor.dto.ProductCategoryDto;
+import org.artanddecor.dto.ProductCategoryRequestDto;
+import org.artanddecor.dto.SeoMetaDto;
+import org.artanddecor.model.Image;
 import org.artanddecor.model.ProductCategory;
+import org.artanddecor.model.ProductType;
+import org.artanddecor.repository.ImageRepository;
 import org.artanddecor.repository.ProductCategoryRepository;
+import org.artanddecor.repository.ProductTypeRepository;
 import org.artanddecor.services.ProductCategoryService;
+import org.artanddecor.services.SeoMetaService;
 import org.artanddecor.utils.ProductMapperUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,15 +37,18 @@ public class ProductCategoryServiceImpl implements ProductCategoryService {
     private static final Logger logger = LoggerFactory.getLogger(ProductCategoryServiceImpl.class);
     
     private final ProductCategoryRepository productCategoryRepository;
+    private final ProductTypeRepository productTypeRepository;
+    private final ImageRepository imageRepository;
+    private final SeoMetaService seoMetaService;
 
     // =============================================
-    // CUSTOMER-FOCUSED OPERATIONS
+    // ADMIN-FOCUSED OPERATIONS
     // =============================================
 
     @Override
-    public Optional<ProductCategoryDto> findProductCategoryBySlug(String productCategorySlug) {
-        logger.debug("Finding product category by slug: {}", productCategorySlug);
-        return productCategoryRepository.findByProductCategorySlug(productCategorySlug)
+    public Optional<ProductCategoryDto> findProductCategoryById(Long productCategoryId) {
+        logger.debug("Finding product category by ID: {}", productCategoryId);
+        return productCategoryRepository.findById(productCategoryId)
                 .map(this::convertToDto);
     }
 
@@ -62,134 +72,130 @@ public class ProductCategoryServiceImpl implements ProductCategoryService {
     }
 
     // =============================================
-    // ADMIN-FOCUSED OPERATIONS
-    // =============================================
-
-    @Override
-    public Optional<ProductCategoryDto> findProductCategoryById(Long productCategoryId) {
-        logger.debug("Finding product category by ID: {}", productCategoryId);
-        return productCategoryRepository.findById(productCategoryId)
-                .map(this::convertToDto);
-    }
-
-    @Override
-    public Optional<ProductCategoryDto> findProductCategoryByName(String productCategoryName) {
-        logger.debug("Finding product category by name: {}", productCategoryName);
-        return productCategoryRepository.findByProductCategoryName(productCategoryName)
-                .map(this::convertToDto);
-    }
-
-    // =============================================
     // CRUD OPERATIONS
     // =============================================
 
     @Override
     @Transactional
-    public ProductCategoryDto createProductCategory(ProductCategoryDto productCategoryDto) {
-        logger.info("Creating new product category: {}", productCategoryDto.getProductCategoryName());
+    public ProductCategoryDto createProductCategory(ProductCategoryRequestDto requestDto) {
+        logger.info("Creating new product category from request: {}", requestDto.getProductCategoryName());
         
-        // Validation
-        if (existsBySlug(productCategoryDto.getProductCategorySlug())) {
-            throw new IllegalArgumentException("Product category slug already exists: " + productCategoryDto.getProductCategorySlug());
+        // Validation - check slug uniqueness using repository query
+        if (productCategoryRepository.existsByProductCategorySlug(requestDto.getProductCategorySlug())) {
+            throw new IllegalArgumentException("Product category slug already exists: " + requestDto.getProductCategorySlug());
         }
-        if (existsByName(productCategoryDto.getProductCategoryName())) {
-            throw new IllegalArgumentException("Product category name already exists: " + productCategoryDto.getProductCategoryName());
+        if (productCategoryRepository.existsByProductCategoryName(requestDto.getProductCategoryName())) {
+            throw new IllegalArgumentException("Product category name already exists: " + requestDto.getProductCategoryName());
         }
         
-        ProductCategory productCategory = convertToEntity(productCategoryDto);
+        // Validate product type exists
+        ProductType productType = productTypeRepository.findById(requestDto.getProductTypeId())
+                .orElseThrow(() -> new IllegalArgumentException("Product type not found with ID: " + requestDto.getProductTypeId()));
+        
+        ProductCategory productCategory = new ProductCategory();
+        productCategory.setProductCategoryName(requestDto.getProductCategoryName());
+        productCategory.setProductCategorySlug(requestDto.getProductCategorySlug());
+        productCategory.setProductCategoryDisplayName(requestDto.getProductCategoryDisplayName());
+        productCategory.setProductCategoryRemark(requestDto.getProductCategoryRemark());
+        productCategory.setProductCategoryEnabled(requestDto.getProductCategoryEnabled() != null ? requestDto.getProductCategoryEnabled() : true);
+        productCategory.setProductCategoryVisible(requestDto.getProductCategoryVisible() != null ? requestDto.getProductCategoryVisible() : true);
+        productCategory.setProductType(productType);
+        
+        // Handle parent category
+        if (requestDto.getProductCategoryParentId() != null) {
+            ProductCategory parentCategory = productCategoryRepository.findById(requestDto.getProductCategoryParentId())
+                    .orElseThrow(() -> new IllegalArgumentException("Parent category not found with ID: " + requestDto.getProductCategoryParentId()));
+            productCategory.setParentCategory(parentCategory);
+        }
+        
+        // Handle image
+        if (requestDto.getImageId() != null) {
+            Image image = imageRepository.findById(requestDto.getImageId())
+                    .orElseThrow(() -> new IllegalArgumentException("Image not found with ID: " + requestDto.getImageId()));
+            productCategory.setImage(image);
+        }
+        
+        // Handle SEO meta
+        if (requestDto.getSeoMeta() != null) {
+            SeoMetaDto createdSeoMeta = seoMetaService.createSeoMetaFromRequest(requestDto.getSeoMeta());
+            productCategory.setSeoMetaId(createdSeoMeta.getSeoMetaId());
+        }
+        
         ProductCategory savedProductCategory = productCategoryRepository.save(productCategory);
+        logger.info("Product category created successfully with ID: {}", savedProductCategory.getProductCategoryId());
         
         return convertToDto(savedProductCategory);
     }
 
     @Override
     @Transactional
-    public ProductCategoryDto updateProductCategory(Long productCategoryId, ProductCategoryDto productCategoryDto) {
-        logger.info("Updating product category ID: {}", productCategoryId);
+    public ProductCategoryDto updateProductCategory(Long productCategoryId, ProductCategoryRequestDto requestDto) {
+        logger.info("Updating product category ID: {} from request", productCategoryId);
         
         ProductCategory existingProductCategory = productCategoryRepository.findById(productCategoryId)
                 .orElseThrow(() -> new IllegalArgumentException("Product category not found with ID: " + productCategoryId));
         
         // Validation - check if slug/name exists for other records
-        if (!existingProductCategory.getProductCategorySlug().equals(productCategoryDto.getProductCategorySlug()) && 
-            existsBySlug(productCategoryDto.getProductCategorySlug())) {
-            throw new IllegalArgumentException("Product category slug already exists: " + productCategoryDto.getProductCategorySlug());
+        if (!existingProductCategory.getProductCategorySlug().equals(requestDto.getProductCategorySlug()) && 
+            productCategoryRepository.existsByProductCategorySlug(requestDto.getProductCategorySlug())) {
+            throw new IllegalArgumentException("Product category slug already exists: " + requestDto.getProductCategorySlug());
         }
-        if (!existingProductCategory.getProductCategoryName().equals(productCategoryDto.getProductCategoryName()) && 
-            existsByName(productCategoryDto.getProductCategoryName())) {
-            throw new IllegalArgumentException("Product category name already exists: " + productCategoryDto.getProductCategoryName());
+        if (!existingProductCategory.getProductCategoryName().equals(requestDto.getProductCategoryName()) && 
+            productCategoryRepository.existsByProductCategoryName(requestDto.getProductCategoryName())) {
+            throw new IllegalArgumentException("Product category name already exists: " + requestDto.getProductCategoryName());
         }
         
-        // Update fields
-        existingProductCategory.setProductCategoryName(productCategoryDto.getProductCategoryName());
-        existingProductCategory.setProductCategorySlug(productCategoryDto.getProductCategorySlug());
-        existingProductCategory.setProductCategoryDisplayName(productCategoryDto.getProductCategoryDisplayName());
-        existingProductCategory.setProductCategoryRemark(productCategoryDto.getProductCategoryRemark());
-        existingProductCategory.setProductCategoryEnabled(productCategoryDto.getProductCategoryEnabled());
-        existingProductCategory.setProductCategoryVisible(productCategoryDto.getProductCategoryVisible());
-        existingProductCategory.setSeoMetaId(productCategoryDto.getSeoMetaId());
+        // Validate product type exists
+        ProductType productType = productTypeRepository.findById(requestDto.getProductTypeId())
+                .orElseThrow(() -> new IllegalArgumentException("Product type not found with ID: " + requestDto.getProductTypeId()));
+        
+        // Update basic fields
+        existingProductCategory.setProductCategoryName(requestDto.getProductCategoryName());
+        existingProductCategory.setProductCategorySlug(requestDto.getProductCategorySlug());
+        existingProductCategory.setProductCategoryDisplayName(requestDto.getProductCategoryDisplayName());
+        existingProductCategory.setProductCategoryRemark(requestDto.getProductCategoryRemark());
+        if (requestDto.getProductCategoryEnabled() != null) {
+            existingProductCategory.setProductCategoryEnabled(requestDto.getProductCategoryEnabled());
+        }
+        if (requestDto.getProductCategoryVisible() != null) {
+            existingProductCategory.setProductCategoryVisible(requestDto.getProductCategoryVisible());
+        }
+        existingProductCategory.setProductType(productType);
+        
+        // Handle parent category
+        if (requestDto.getProductCategoryParentId() != null) {
+            ProductCategory parentCategory = productCategoryRepository.findById(requestDto.getProductCategoryParentId())
+                    .orElseThrow(() -> new IllegalArgumentException("Parent category not found with ID: " + requestDto.getProductCategoryParentId()));
+            existingProductCategory.setParentCategory(parentCategory);
+        } else {
+            existingProductCategory.setParentCategory(null);
+        }
+        
+        // Handle image
+        if (requestDto.getImageId() != null) {
+            Image image = imageRepository.findById(requestDto.getImageId())
+                    .orElseThrow(() -> new IllegalArgumentException("Image not found with ID: " + requestDto.getImageId()));
+            existingProductCategory.setImage(image);
+        }
+        
+        // Handle SEO meta
+        if (requestDto.getSeoMeta() != null) {
+            if (existingProductCategory.getSeoMetaId() != null) {
+                // Update existing SEO meta
+                seoMetaService.updateSeoMetaFromRequest(existingProductCategory.getSeoMetaId(), requestDto.getSeoMeta());
+            } else {
+                // Create new SEO meta
+                SeoMetaDto createdSeoMeta = seoMetaService.createSeoMetaFromRequest(requestDto.getSeoMeta());
+                existingProductCategory.setSeoMetaId(createdSeoMeta.getSeoMetaId());
+            }
+        }
+        
         existingProductCategory.setModifiedDt(LocalDateTime.now());
         
         ProductCategory savedProductCategory = productCategoryRepository.save(existingProductCategory);
+        logger.info("Product category updated successfully with ID: {}", savedProductCategory.getProductCategoryId());
+        
         return convertToDto(savedProductCategory);
-    }
-
-    @Override
-    @Transactional
-    public void deleteProductCategoryById(Long productCategoryId) {
-        logger.info("Deleting product category ID: {}", productCategoryId);
-        
-        if (!productCategoryRepository.existsById(productCategoryId)) {
-            throw new IllegalArgumentException("Product category not found with ID: " + productCategoryId);
-        }
-        
-        productCategoryRepository.deleteById(productCategoryId);
-    }
-
-    // =============================================
-    // UTILITY OPERATIONS
-    // =============================================
-
-    @Override
-    public long getTotalProductCategoryCount() {
-        return productCategoryRepository.count();
-    }
-
-    @Override
-    public List<ProductCategoryDto> getCategoriesByProductTypeId(Long productTypeId) {
-        logger.debug("Getting categories by product type ID: {}", productTypeId);
-        return productCategoryRepository.findByProductTypeId(productTypeId)
-                .stream()
-                .map(this::convertToDto)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<ProductCategoryDto> getRootCategories() {
-        logger.debug("Getting root categories");
-        return productCategoryRepository.findRootCategories()
-                .stream()
-                .map(this::convertToDto)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<ProductCategoryDto> getChildCategoriesByParentId(Long parentId) {
-        logger.debug("Getting child categories by parent ID: {}", parentId);
-        return productCategoryRepository.findByParentCategoryId(parentId)
-                .stream()
-                .map(this::convertToDto)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public boolean existsBySlug(String productCategorySlug) {
-        return productCategoryRepository.existsByProductCategorySlug(productCategorySlug);
-    }
-
-    @Override
-    public boolean existsByName(String productCategoryName) {
-        return productCategoryRepository.existsByProductCategoryName(productCategoryName);
     }
 
     // =============================================
@@ -198,9 +204,5 @@ public class ProductCategoryServiceImpl implements ProductCategoryService {
 
     private ProductCategoryDto convertToDto(ProductCategory productCategory) {
         return ProductMapperUtil.toProductCategoryDto(productCategory);
-    }
-
-    private ProductCategory convertToEntity(ProductCategoryDto productCategoryDto) {
-        return ProductMapperUtil.toProductCategoryEntity(productCategoryDto);
     }
 }

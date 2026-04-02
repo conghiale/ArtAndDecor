@@ -13,7 +13,7 @@ import java.util.Optional;
 
 /**
  * Repository interface for CartItemState entity
- * Handles CRUD operations for cart item states
+ * Minimal interface for cart item state operations
  */
 @Repository
 public interface CartItemStateRepository extends JpaRepository<CartItemState, Long> {
@@ -26,28 +26,14 @@ public interface CartItemStateRepository extends JpaRepository<CartItemState, Lo
     Optional<CartItemState> findByCartItemStateName(String cartItemStateName);
 
     /**
-     * Check if cart item state exists by name
-     * @param cartItemStateName Cart item state name
-     * @return true if exists
+     * Find active cart item state (ACTIVE)
+     * @return Optional CartItemState
      */
-    boolean existsByCartItemStateName(String cartItemStateName);
+    @Query("SELECT cis FROM CartItemState cis WHERE cis.cartItemStateName = 'ACTIVE' AND cis.cartItemStateEnabled = true")
+    Optional<CartItemState> findActiveCartItemState();
 
     /**
-     * Find all enabled cart item states
-     * @return List of enabled cart item states
-     */
-    List<CartItemState> findByCartItemStateEnabledTrue();
-
-    /**
-     * Find cart item states by enabled status with pagination
-     * @param enabled Enabled status
-     * @param pageable Pagination parameters
-     * @return Page of cart item states
-     */
-    Page<CartItemState> findByCartItemStateEnabled(Boolean enabled, Pageable pageable);
-
-    /**
-     * Find cart item states by name containing keyword (case-insensitive)
+     * Find cart item states by name containing keyword (case-insensitive) with pagination
      * @param keyword Search keyword
      * @param pageable Pagination parameters
      * @return Page of cart item states
@@ -64,13 +50,6 @@ public interface CartItemStateRepository extends JpaRepository<CartItemState, Lo
            "GROUP BY cis.cartItemStateId " +
            "ORDER BY cis.cartItemStateName")
     Page<Object[]> findCartItemStatesWithCartItemCount(Pageable pageable);
-
-    /**
-     * Find active cart item state (ACTIVE)
-     * @return Optional CartItemState
-     */
-    @Query("SELECT cis FROM CartItemState cis WHERE cis.cartItemStateName = 'ACTIVE' AND cis.cartItemStateEnabled = true")
-    Optional<CartItemState> findActiveCartItemState();
 
     /**
      * Find ordered cart item state (ORDERED)

@@ -493,10 +493,10 @@ public class ProductController {
     @Operation(summary = "Update product attribute association", description = "Update entire product attribute association by PRODUCT_ATTRIBUTE_ID. Admin/Manager access required.")
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<BaseResponseDto<ProductAttributeDto>> updateProductAttribute(
-            @PathVariable Long productAttributeId, @Valid @RequestBody ProductAttributeDto productAttributeDto) {
+            @PathVariable Long productAttributeId, @Valid @RequestBody ProductAttributeRequestDto productAttributeRequestDto) {
         logger.info("Updating product attribute association ID: {}", productAttributeId);
         try {
-            ProductAttributeDto updatedProductAttribute = productAttributeService.updateProductAttribute(productAttributeId, productAttributeDto);
+            ProductAttributeDto updatedProductAttribute = productAttributeService.updateProductAttribute(productAttributeId, productAttributeRequestDto);
             return ResponseEntity.ok(BaseResponseDto.success("Product attribute association updated successfully", updatedProductAttribute));
         } catch (Exception e) {
             logger.error("Error updating product attribute association: {}", e.getMessage(), e);
@@ -678,14 +678,13 @@ public class ProductController {
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<BaseResponseDto<ProductAttributeDto>> createProductAttribute(
             @Parameter(description = "Product attribute data to create")
-            @Valid @RequestBody AddProductAttributeRequestDto request) {
+            @Valid @RequestBody ProductAttributeRequestDto request) {
         
         logger.info("Creating product attribute: productId={}, attrId={}, value={}, quantity={}", 
-                   request.getProductId(), request.getProductAttrId(), request.getAttrValue(), request.getQuantity());
+                   request.getProductId(), request.getProductAttrId(), request.getProductAttributeValue(), request.getProductAttributeQuantity());
         
         try {
-            ProductAttributeDto productAttribute = productAttributeService.createProductAttribute(
-                request.getProductId(), request.getProductAttrId(), request.getAttrValue(), request.getQuantity());
+            ProductAttributeDto productAttribute = productAttributeService.createProductAttribute(request);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(BaseResponseDto.success("Product attribute created successfully", productAttribute));
         } catch (IllegalArgumentException e) {
@@ -739,8 +738,6 @@ public class ProductController {
         }
     }
 
-
-
     /**
      * Create new product type (Admin only)
      */
@@ -748,10 +745,10 @@ public class ProductController {
     @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     @Operation(summary = "Create new product type", description = "Create a new product type. Admin/Manager access required.")
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<BaseResponseDto<ProductTypeDto>> createProductType(@Valid @RequestBody ProductTypeDto productTypeDto) {
-        logger.info("Creating new product type: {}", productTypeDto.getProductTypeName());
+    public ResponseEntity<BaseResponseDto<ProductTypeDto>> createProductType(@Valid @RequestBody ProductTypeRequestDto productTypeRequestDto) {
+        logger.info("Creating new product type: {}", productTypeRequestDto.getProductTypeName());
         try {
-            ProductTypeDto createdProductType = productTypeService.createProductType(productTypeDto);
+            ProductTypeDto createdProductType = productTypeService.createProductType(productTypeRequestDto);
             return ResponseEntity.status(HttpStatus.CREATED).body(BaseResponseDto.success("Product type created successfully", createdProductType));
         } catch (Exception e) {
             logger.error("Error creating product type: {}", e.getMessage(), e);
@@ -768,10 +765,10 @@ public class ProductController {
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<BaseResponseDto<ProductTypeDto>> updateProductType(
             @PathVariable Long productTypeId, 
-            @Valid @RequestBody ProductTypeDto productTypeDto) {
-        logger.info("Updating product type ID: {} with data: {}", productTypeId, productTypeDto.getProductTypeName());
+            @Valid @RequestBody ProductTypeRequestDto productTypeRequestDto) {
+        logger.info("Updating product type ID: {} with data: {}", productTypeId, productTypeRequestDto.getProductTypeName());
         try {
-            ProductTypeDto updatedProductType = productTypeService.updateProductType(productTypeId, productTypeDto);
+            ProductTypeDto updatedProductType = productTypeService.updateProductType(productTypeId, productTypeRequestDto);
             return ResponseEntity.ok(BaseResponseDto.success("Product type updated successfully", updatedProductType));
         } catch (Exception e) {
             logger.error("Error updating product type {}: {}", productTypeId, e.getMessage(), e);
@@ -864,10 +861,10 @@ public class ProductController {
     @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     @Operation(summary = "Create new product category", description = "Create a new product category. Admin/Manager access required.")
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<BaseResponseDto<ProductCategoryDto>> createProductCategory(@Valid @RequestBody ProductCategoryDto productCategoryDto) {
-        logger.info("Creating new product category: {}", productCategoryDto.getProductCategoryName());
+    public ResponseEntity<BaseResponseDto<ProductCategoryDto>> createProductCategory(@Valid @RequestBody ProductCategoryRequestDto productCategoryRequestDto) {
+        logger.info("Creating new product category: {}", productCategoryRequestDto.getProductCategoryName());
         try {
-            ProductCategoryDto createdProductCategory = productCategoryService.createProductCategory(productCategoryDto);
+            ProductCategoryDto createdProductCategory = productCategoryService.createProductCategory(productCategoryRequestDto);
             return ResponseEntity.status(HttpStatus.CREATED).body(BaseResponseDto.success("Product category created successfully", createdProductCategory));
         } catch (Exception e) {
             logger.error("Error creating product category: {}", e.getMessage(), e);
@@ -884,10 +881,10 @@ public class ProductController {
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<BaseResponseDto<ProductCategoryDto>> updateProductCategory(
             @PathVariable Long productCategoryId, 
-            @Valid @RequestBody ProductCategoryDto productCategoryDto) {
-        logger.info("Updating product category ID: {} with data: {}", productCategoryId, productCategoryDto.getProductCategoryName());
+            @Valid @RequestBody ProductCategoryRequestDto productCategoryRequestDto) {
+        logger.info("Updating product category ID: {} with data: {}", productCategoryId, productCategoryRequestDto.getProductCategoryName());
         try {
-            ProductCategoryDto updatedProductCategory = productCategoryService.updateProductCategory(productCategoryId, productCategoryDto);
+            ProductCategoryDto updatedProductCategory = productCategoryService.updateProductCategory(productCategoryId, productCategoryRequestDto);
             return ResponseEntity.ok(BaseResponseDto.success("Product category updated successfully", updatedProductCategory));
         } catch (Exception e) {
             logger.error("Error updating product category {}: {}", productCategoryId, e.getMessage(), e);
@@ -985,10 +982,10 @@ public class ProductController {
     @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     @Operation(summary = "Create new product attribute", description = "Create a new product attribute definition. Admin/Manager access required.")
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<BaseResponseDto<ProductAttrDto>> createProductAttr(@Valid @RequestBody ProductAttrDto productAttrDto) {
-        logger.info("Creating new product attribute: {}", productAttrDto.getProductAttrName());
+    public ResponseEntity<BaseResponseDto<ProductAttrDto>> createProductAttr(@Valid @RequestBody ProductAttrRequestDto productAttrRequestDto) {
+        logger.info("Creating new product attribute: {}", productAttrRequestDto.getProductAttrName());
         try {
-            ProductAttrDto createdProductAttr = productAttrService.createProductAttr(productAttrDto);
+            ProductAttrDto createdProductAttr = productAttrService.createProductAttr(productAttrRequestDto);
             return ResponseEntity.status(HttpStatus.CREATED).body(BaseResponseDto.success("Product attribute created successfully", createdProductAttr));
         } catch (Exception e) {
             logger.error("Error creating product attribute: {}", e.getMessage(), e);
@@ -1004,10 +1001,10 @@ public class ProductController {
     @Operation(summary = "Update existing product attribute", description = "Update product attribute definition. Admin/Manager access required.")
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<BaseResponseDto<ProductAttrDto>> updateProductAttr(
-            @PathVariable Long productAttrId, @Valid @RequestBody ProductAttrDto productAttrDto) {
+            @PathVariable Long productAttrId, @Valid @RequestBody ProductAttrRequestDto productAttrRequestDto) {
         logger.info("Updating product attribute ID: {}", productAttrId);
         try {
-            ProductAttrDto updatedProductAttr = productAttrService.updateProductAttr(productAttrId, productAttrDto);
+            ProductAttrDto updatedProductAttr = productAttrService.updateProductAttr(productAttrId, productAttrRequestDto);
             return ResponseEntity.ok(BaseResponseDto.success("Product attribute updated successfully", updatedProductAttr));
         } catch (Exception e) {
             logger.error("Error updating product attribute: {}", e.getMessage(), e);

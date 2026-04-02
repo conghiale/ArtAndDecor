@@ -64,6 +64,13 @@ public class OrderStateHistoryServiceImpl implements OrderStateHistoryService {
             Long newOrderStateId,
             Long changedByUserId) {
         
+        // Validate: OrderStateHistory requires oldOrderStateId (database constraint: OLD_STATE_ID NOT NULL)
+        // This service is only for tracking state transitions, not for initial state creation
+        if (oldOrderStateId == null) {
+            throw new IllegalArgumentException("Cannot create OrderStateHistory without oldOrderStateId. " +
+                    "OrderStateHistory is only for tracking state transitions, not initial state creation.");
+        }
+        
         // Get the related entities
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found with ID: " + orderId));
@@ -74,8 +81,12 @@ public class OrderStateHistoryServiceImpl implements OrderStateHistoryService {
         OrderState newState = orderStateRepository.findById(newOrderStateId)
                 .orElseThrow(() -> new RuntimeException("New Order State not found with ID: " + newOrderStateId));
         
-        User changedByUser = userRepository.findById(changedByUserId)
-                .orElseThrow(() -> new RuntimeException("User not found with ID: " + changedByUserId));
+        // Handle changed by user - can be null for guest orders
+        User changedByUser = null;
+        if (changedByUserId != null) {
+            changedByUser = userRepository.findById(changedByUserId)
+                    .orElseThrow(() -> new RuntimeException("User not found with ID: " + changedByUserId));
+        }
         
         // Create the new OrderStateHistory entity
         OrderStateHistory orderStateHistory = new OrderStateHistory();

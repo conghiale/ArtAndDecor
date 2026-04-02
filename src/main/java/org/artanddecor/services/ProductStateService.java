@@ -13,13 +13,13 @@ import java.util.Optional;
 public interface ProductStateService {
 
     // =============================================
-    // CUSTOMER-FOCUSED OPERATIONS (name > ID priority)
+    // ADMIN-FOCUSED OPERATIONS
     // =============================================
 
     /**
-     * Find product state by name for customer view
+     * Find product state by ID for admin management
      */
-    Optional<ProductStateDto> findProductStateByName(String productStateName);
+    Optional<ProductStateDto> findProductStateById(Long productStateId);
 
     /**
      * Get product states by multiple criteria with pagination (all parameters optional)
@@ -29,46 +29,4 @@ public interface ProductStateService {
      * @return Page of ProductStateDto matching criteria
      */
     Page<ProductStateDto> getProductStatesByCriteria(String textSearch, Boolean enabled, Pageable pageable);
-
-    // =============================================
-    // ADMIN-FOCUSED OPERATIONS (ID > name priority)
-    // =============================================
-
-    /**
-     * Find product state by ID for admin management
-     */
-    Optional<ProductStateDto> findProductStateById(Long productStateId);
-
-    // =============================================
-    // CRUD OPERATIONS
-    // =============================================
-
-    /**
-     * Create new product state
-     */
-    ProductStateDto createProductState(ProductStateDto productStateDto);
-
-    /**
-     * Update existing product state
-     */
-    ProductStateDto updateProductState(Long productStateId, ProductStateDto productStateDto);
-
-    /**
-     * Delete product state by ID
-     */
-    void deleteProductStateById(Long productStateId);
-
-    // =============================================
-    // UTILITY OPERATIONS
-    // =============================================
-
-    /**
-     * Get total count of product states
-     */
-    long getTotalProductStateCount();
-
-    /**
-     * Check if name exists (for validation)
-     */
-    boolean existsByName(String productStateName);
 }

@@ -2,18 +2,21 @@ package org.artanddecor.services.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.artanddecor.dto.ContactDto;
+import org.artanddecor.dto.ContactRequest;
 import org.artanddecor.model.Contact;
 import org.artanddecor.repository.ContactRepository;
 import org.artanddecor.services.ContactService;
+import org.artanddecor.utils.ContactMapper;
 import org.artanddecor.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 /**
  * Contact Service Implementation
@@ -26,13 +29,14 @@ public class ContactServiceImpl implements ContactService {
     
     private static final Logger logger = LoggerFactory.getLogger(ContactServiceImpl.class);
     private final ContactRepository contactRepository;
+    private final ContactMapper contactMapper;
     
     @Override
     @Transactional(readOnly = true)
     public Optional<ContactDto> findContactBySlug(String contactSlug) {
         logger.debug("Finding contact by slug: {}", contactSlug);
         return contactRepository.findByContactSlug(contactSlug)
-                .map(this::mapToDto);
+                .map(contactMapper::toContactDto);
     }
     
     @Override
@@ -40,40 +44,31 @@ public class ContactServiceImpl implements ContactService {
     public Optional<ContactDto> findContactById(Long contactId) {
         logger.debug("Finding contact by ID: {}", contactId);
         return contactRepository.findById(contactId)
-                .map(this::mapToDto);
+                .map(contactMapper::toContactDto);
     }
     
     @Override
-    public ContactDto createContact(ContactDto contactDto) {
-        logger.info("Creating new contact: {}", contactDto.getContactName());
+    public ContactDto createContact(ContactRequest contactRequest) {
+        logger.info("Creating new contact: {}", contactRequest.getContactName());
         
         // Auto-generate slug if not provided
-        String slug = contactDto.getContactSlug();
+        String slug = contactRequest.getContactSlug();
         if (slug == null || slug.isBlank()) {
-            slug = Utils.generateSlug(contactDto.getContactName());
+            slug = Utils.generateSlug(contactRequest.getContactName());
+            contactRequest.setContactSlug(slug);
             logger.info("Auto-generated slug for contact: {}", slug);
         }
         
-        // Create entity
-        Contact contact = new Contact();
-        contact.setContactName(contactDto.getContactName());
-        contact.setContactSlug(slug);
-        contact.setContactAddress(contactDto.getContactAddress());
-        contact.setContactEmail(contactDto.getContactEmail());
-        contact.setContactPhone(contactDto.getContactPhone());
-        contact.setContactFanpage(contactDto.getContactFanpage());
-        contact.setContactRemark(contactDto.getContactRemark());
-        contact.setContactEnabled(contactDto.getContactEnabled() != null ? contactDto.getContactEnabled() : true);
-        contact.setSeoMetaId(contactDto.getSeoMetaId());
-        
+        // Create entity using mapper
+        Contact contact = contactMapper.toContactEntity(contactRequest);
         Contact saved = contactRepository.save(contact);
-        logger.info("Contact created successfully with ID: {}", saved.getContactId());
         
-        return mapToDto(saved);
+        logger.info("Contact created successfully with ID: {}", saved.getContactId());
+        return contactMapper.toContactDto(saved);
     }
     
     @Override
-    public ContactDto updateContact(Long contactId, ContactDto contactDto) {
+    public ContactDto updateContact(Long contactId, ContactRequest contactRequest) {
         logger.info("Updating contact with ID: {}", contactId);
         
         Contact contact = contactRepository.findById(contactId)
@@ -83,31 +78,19 @@ public class ContactServiceImpl implements ContactService {
                 });
         
         // Auto-generate slug if not provided
-        String slug = contactDto.getContactSlug();
+        String slug = contactRequest.getContactSlug();
         if (slug == null || slug.isBlank()) {
-            slug = Utils.generateSlug(contactDto.getContactName());
+            slug = Utils.generateSlug(contactRequest.getContactName());
+            contactRequest.setContactSlug(slug);
             logger.info("Auto-generated slug for contact: {}", slug);
         }
         
-        // Update entity
-        contact.setContactName(contactDto.getContactName());
-        contact.setContactSlug(slug);
-        contact.setContactAddress(contactDto.getContactAddress());
-        contact.setContactEmail(contactDto.getContactEmail());
-        contact.setContactPhone(contactDto.getContactPhone());
-        contact.setContactFanpage(contactDto.getContactFanpage());
-        contact.setContactRemark(contactDto.getContactRemark());
-        if (contactDto.getContactEnabled() != null) {
-            contact.setContactEnabled(contactDto.getContactEnabled());
-        }
-        if (contactDto.getSeoMetaId() != null) {
-            contact.setSeoMetaId(contactDto.getSeoMetaId());
-        }
-        
+        // Update entity using mapper
+        contactMapper.updateContactFromRequest(contact, contactRequest);
         Contact updated = contactRepository.save(contact);
-        logger.info("Contact updated successfully with ID: {}", updated.getContactId());
         
-        return mapToDto(updated);
+        logger.info("Contact updated successfully with ID: {}", updated.getContactId());
+        return contactMapper.toContactDto(updated);
     }
     
     @Override
@@ -124,7 +107,7 @@ public class ContactServiceImpl implements ContactService {
         Contact updated = contactRepository.save(contact);
         
         logger.info("Contact status updated successfully with ID: {}", contactId);
-        return mapToDto(updated);
+        return contactMapper.toContactDto(updated);
     }
     
     @Override
@@ -150,13 +133,11 @@ public class ContactServiceImpl implements ContactService {
     
     @Override
     @Transactional(readOnly = true)
-    public List<ContactDto> findContactsByCriteria(String contactName, Boolean contactEnabled, String textSearch) {
+    public Page<ContactDto> findContactsByCriteria(String contactName, Boolean contactEnabled, String textSearch, Pageable pageable) {
         logger.debug("Finding contacts by criteria - name: {}, enabled: {}, textSearch: {}", 
                     contactName, contactEnabled, textSearch);
-        return contactRepository.findContactsByCriteria(contactName, contactEnabled, textSearch)
-                .stream()
-                .map(this::mapToDto)
-                .collect(Collectors.toList());
+        return contactRepository.findContactsByCriteria(contactName, contactEnabled, textSearch, pageable)
+                .map(contactMapper::toContactDto);
     }
     
     @Override
@@ -164,36 +145,5 @@ public class ContactServiceImpl implements ContactService {
     public List<String> getAllContactNames() {
         logger.debug("Getting all contact names");
         return contactRepository.findAllContactNames();
-    }
-    
-    // =============================================
-    // HELPER METHODS
-    // =============================================
-
-    
-    /**
-     * Map Contact entity to ContactDto
-     * @param contact the contact entity
-     * @return ContactDto
-     */
-    private ContactDto mapToDto(Contact contact) {
-        if (contact == null) {
-            return null;
-        }
-        
-        return ContactDto.builder()
-                .contactId(contact.getContactId())
-                .contactName(contact.getContactName())
-                .contactSlug(contact.getContactSlug())
-                .contactAddress(contact.getContactAddress())
-                .contactEmail(contact.getContactEmail())
-                .contactPhone(contact.getContactPhone())
-                .contactFanpage(contact.getContactFanpage())
-                .contactEnabled(contact.getContactEnabled())
-                .contactRemark(contact.getContactRemark())
-                .seoMetaId(contact.getSeoMetaId())
-                .createdDt(contact.getCreatedDt())
-                .modifiedDt(contact.getModifiedDt())
-                .build();
     }
 }

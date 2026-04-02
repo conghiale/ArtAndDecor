@@ -13,7 +13,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.Optional;
 
 /**
@@ -30,13 +29,13 @@ public class ProductStateServiceImpl implements ProductStateService {
     private final ProductStateRepository productStateRepository;
 
     // =============================================
-    // CUSTOMER-FOCUSED OPERATIONS
+    // ADMIN-FOCUSED OPERATIONS
     // =============================================
 
     @Override
-    public Optional<ProductStateDto> findProductStateByName(String productStateName) {
-        logger.debug("Finding product state by name: {}", productStateName);
-        return productStateRepository.findByProductStateName(productStateName)
+    public Optional<ProductStateDto> findProductStateById(Long productStateId) {
+        logger.debug("Finding product state by ID: {}", productStateId);
+        return productStateRepository.findById(productStateId)
                 .map(this::convertToDto);
     }
 
@@ -51,96 +50,10 @@ public class ProductStateServiceImpl implements ProductStateService {
     }
 
     // =============================================
-    // ADMIN-FOCUSED OPERATIONS
-    // =============================================
-
-    @Override
-    public Optional<ProductStateDto> findProductStateById(Long productStateId) {
-        logger.debug("Finding product state by ID: {}", productStateId);
-        return productStateRepository.findById(productStateId)
-                .map(this::convertToDto);
-    }
-
-    // =============================================
-    // CRUD OPERATIONS
-    // =============================================
-
-    @Override
-    @Transactional
-    public ProductStateDto createProductState(ProductStateDto productStateDto) {
-        logger.info("Creating new product state: {}", productStateDto.getProductStateName());
-        
-        // Validation
-        if (existsByName(productStateDto.getProductStateName())) {
-            throw new IllegalArgumentException("Product state name already exists: " + productStateDto.getProductStateName());
-        }
-        
-        ProductState productState = convertToEntity(productStateDto);
-        ProductState savedProductState = productStateRepository.save(productState);
-        
-        return convertToDto(savedProductState);
-    }
-
-    @Override
-    @Transactional
-    public ProductStateDto updateProductState(Long productStateId, ProductStateDto productStateDto) {
-        logger.info("Updating product state ID: {}", productStateId);
-        
-        ProductState existingProductState = productStateRepository.findById(productStateId)
-                .orElseThrow(() -> new IllegalArgumentException("Product state not found with ID: " + productStateId));
-        
-        // Validation - check if name exists for other records
-        if (!existingProductState.getProductStateName().equals(productStateDto.getProductStateName()) && 
-            existsByName(productStateDto.getProductStateName())) {
-            throw new IllegalArgumentException("Product state name already exists: " + productStateDto.getProductStateName());
-        }
-        
-        // Update fields
-        existingProductState.setProductStateName(productStateDto.getProductStateName());
-        existingProductState.setProductStateDisplayName(productStateDto.getProductStateDisplayName());
-        existingProductState.setProductStateRemark(productStateDto.getProductStateRemark());
-        existingProductState.setProductStateEnabled(productStateDto.getProductStateEnabled());
-        existingProductState.setModifiedDt(LocalDateTime.now());
-        
-        ProductState savedProductState = productStateRepository.save(existingProductState);
-        return convertToDto(savedProductState);
-    }
-
-    @Override
-    @Transactional
-    public void deleteProductStateById(Long productStateId) {
-        logger.info("Deleting product state ID: {}", productStateId);
-        
-        if (!productStateRepository.existsById(productStateId)) {
-            throw new IllegalArgumentException("Product state not found with ID: " + productStateId);
-        }
-        
-        productStateRepository.deleteById(productStateId);
-    }
-
-    // =============================================
-    // UTILITY OPERATIONS
-    // =============================================
-
-    @Override
-    public long getTotalProductStateCount() {
-        return productStateRepository.count();
-    }
-
-    @Override
-    public boolean existsByName(String productStateName) {
-        return productStateRepository.existsByProductStateName(productStateName);
-    }
-
-    // =============================================
     // HELPER METHODS
     // =============================================
 
     private ProductStateDto convertToDto(ProductState productState) {
         return ProductMapperUtil.toProductStateDto(productState);
-    }
-
-    private ProductState convertToEntity(ProductStateDto productStateDto) {
-        return ProductMapperUtil.toProductStateEntity(productStateDto);
     }
 }

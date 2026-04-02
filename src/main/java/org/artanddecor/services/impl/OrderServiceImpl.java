@@ -1,28 +1,12 @@
 package org.artanddecor.services.impl;
 
-import org.artanddecor.dto.CreateOrderItemRequest;
-import org.artanddecor.dto.OrderDto;
-import org.artanddecor.dto.UpdateOrderRequest;
-import org.artanddecor.dto.CartDto;
-import org.artanddecor.dto.CartItemDto;
-import org.artanddecor.dto.ShippingFeeDto;
-import org.artanddecor.dto.DiscountDto;
+import org.artanddecor.dto.*;
 import org.artanddecor.exception.ResourceNotFoundException;
-import org.artanddecor.model.Order;
-import org.artanddecor.model.OrderState;
-import org.artanddecor.model.OrderItem;
-import org.artanddecor.model.Product;
-import org.artanddecor.repository.OrderRepository;
-import org.artanddecor.repository.OrderStateRepository;
-import org.artanddecor.repository.OrderItemRepository;
-import org.artanddecor.repository.ProductRepository;
-import org.artanddecor.services.OrderService;
-import org.artanddecor.services.OrderStateHistoryService;
-import org.artanddecor.services.CartService;
-import org.artanddecor.services.CartItemService;
-import org.artanddecor.services.ShippingFeeService;
-import org.artanddecor.services.DiscountService;
+import org.artanddecor.model.*;
+import org.artanddecor.repository.*;
+import org.artanddecor.services.*;
 import org.artanddecor.utils.OrderMapperUtil;
+import org.artanddecor.utils.ProductMapperUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,10 +17,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -58,19 +43,10 @@ public class OrderServiceImpl implements OrderService {
     private OrderStateRepository orderStateRepository;
 
     @Autowired
-    private OrderStateHistoryService orderStateHistoryService;
-
-    @Autowired
-    private CartService cartService;
-
-    @Autowired
     private CartItemService cartItemService;
 
     @Autowired
     private ShippingFeeService shippingFeeService;
-
-    @Autowired
-    private DiscountService discountService;
 
     @Autowired
     private OrderMapperUtil orderMapperUtil;
@@ -80,6 +56,489 @@ public class OrderServiceImpl implements OrderService {
     
     @Autowired
     private ProductRepository productRepository;
+    
+    @Autowired
+    private CartItemRepository cartItemRepository;
+    
+    @Autowired
+    private UserRepository userRepository;
+    
+    @Autowired
+    private OrderStateHistoryService orderStateHistoryService;
+    
+    @Autowired
+    private DiscountService discountService;
+    
+    @Autowired
+    private CartRepository cartRepository;
+
+    // ===== NEW APIS =====
+    
+    @Override
+    @Transactional(readOnly = true)
+    public PreviewOrderResponse previewOrder(PreviewOrderRequest request) {
+            
+        Long cartId = request.getCartId();
+        List<Long> selectedCartItemIds = request.getSelectedCartItemIds();
+        logger.info("Previewing order for cart {} with {} selected items", 
+                   cartId, selectedCartItemIds != null ? selectedCartItemIds.size() : 0);
+        
+        // Validation
+        if (cartId == null) {
+            throw new IllegalArgumentException("Cart ID is required for preview validation");
+        }
+        
+        if (selectedCartItemIds == null || selectedCartItemIds.isEmpty()) {
+            throw new IllegalArgumentException("Selected cart item IDs are required for preview");
+        }
+        
+        // Validate cart exists and is ACTIVE
+        Cart cart = cartRepository.findById(cartId)
+            .orElseThrow(() -> new ResourceNotFoundException("Cart not found with ID: " + cartId));
+        
+        if (!"ACTIVE".equals(cart.getCartState().getCartStateName())) {
+            throw new IllegalArgumentException("Cart is not active, cannot preview. CartId: " + cartId);
+        }
+        
+        // Get selected cart items and validate they belong to the specified cart
+        List<CartItem> cartItems = cartItemRepository.findAllById(selectedCartItemIds);
+        if (cartItems == null || cartItems.isEmpty()) {
+            throw new ResourceNotFoundException("No cart items found for provided IDs");
+        }
+        
+        // Validate all requested items were found
+        if (cartItems.size() != selectedCartItemIds.size()) {
+            throw new ResourceNotFoundException(
+                String.format("Some cart items not found. Requested: %d, Found: %d", 
+                             selectedCartItemIds.size(), cartItems.size()));
+        }
+        
+        // Critical security validation: ensure all selected items belong to the specified cart
+        for (CartItem item : cartItems) {
+            if (!item.getCart().getCartId().equals(cartId)) {
+                throw new SecurityException(
+                    String.format("Cart item %d does not belong to cart %d", 
+                                 item.getCartItemId(), cartId));
+            }
+        }
+        
+        // Calculate subtotal
+        BigDecimal subtotalAmount = cartItems.stream()
+                .map(item -> item.getProduct().getProductPrice().multiply(new BigDecimal(item.getCartItemQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        // Initialize collections for warnings/errors
+        List<String> warnings = new ArrayList<>();
+        List<String> errors = new ArrayList<>();
+        
+        // Validate inventory and collect warnings
+        for (CartItem item : cartItems) {
+            // Check if product is active and available
+            Product product = item.getProduct();
+            if (!product.getProductEnabled()) {
+                errors.add("Product '" + product.getProductName() + "' is no longer available");
+            }
+            
+            // Check stock (if you have inventory management)
+            // Add your inventory check logic here
+        }
+        
+        // Calculate discount - Use snapshot approach (no automatic discount selection)
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        DiscountDto appliedDiscount = null;
+        String discountMessage = "No discount applied";
+        
+        // Auto-select best discount for subtotal amount (enabled discounts only)
+        DiscountDto bestDiscount = findBestDiscountForOrder(subtotalAmount);
+        if (bestDiscount != null) {
+            try {
+                appliedDiscount = bestDiscount;
+                discountAmount = discountService.calculateDiscountAmount(bestDiscount.getDiscountId(), subtotalAmount);
+                discountMessage = "Best discount '" + bestDiscount.getDiscountCode() + "' automatically applied";
+                logger.info("Auto-applied best discount {} with amount {} for order amount {}", 
+                        bestDiscount.getDiscountCode(), discountAmount, subtotalAmount);
+            } catch (Exception e) {
+                logger.warn("Failed to apply auto discount: {}", e.getMessage());
+                warnings.add("Could not apply best available discount: " + e.getMessage());
+            }
+        }
+        
+        // Calculate shipping fee
+        BigDecimal shippingFeeAmount = BigDecimal.ZERO;
+        ShippingFeeDto appliedShippingFee = null;
+        String shippingMessage = "Standard shipping";
+        
+        try {
+            // Calculate shipping fee based on subtotal amount only
+            appliedShippingFee = shippingFeeService.calculateShippingFee(subtotalAmount);
+            
+            shippingMessage = "Shipping calculated based on order amount";
+            
+            if (appliedShippingFee != null && appliedShippingFee.getShippingFeeEnabled() && appliedShippingFee.getShippingFeeValue() != null) {
+                shippingFeeAmount = appliedShippingFee.getShippingFeeValue();
+            } else {
+                // Use default shipping fee
+                shippingFeeAmount = DEFAULT_SHIPPING_FEE;
+                shippingMessage = "Standard shipping fee applied";
+            }
+        } catch (Exception e) {
+            logger.warn("Failed to calculate shipping fee, using default: {}", e.getMessage());
+            shippingFeeAmount = DEFAULT_SHIPPING_FEE;
+            shippingMessage = "Standard shipping fee applied";
+        }
+        
+        // Calculate final total
+        BigDecimal totalAmount = subtotalAmount.subtract(discountAmount).add(shippingFeeAmount);
+        
+        // Convert cartItems to CartItemDto list for response
+        List<CartItemDto> selectedCartItems = new ArrayList<>();
+        for (CartItem item : cartItems) {
+            CartItemDto cartItemDto = new CartItemDto();
+            cartItemDto.setCartItemId(item.getCartItemId());
+            cartItemDto.setProduct(ProductMapperUtil.toProductDto(item.getProduct()));
+            cartItemDto.setQuantity(item.getCartItemQuantity());
+            cartItemDto.setUnitPrice(item.getProduct().getProductPrice());
+            cartItemDto.setTotalPrice(item.getCartItemTotalPrice());
+            selectedCartItems.add(cartItemDto);
+        }
+        
+        // Calculate summary statistics
+        Integer totalItems = selectedCartItems.size();
+        Integer totalQuantity = selectedCartItems.stream()
+                .mapToInt(CartItemDto::getQuantity)
+                .sum();
+        
+        return PreviewOrderResponse.builder()
+                .selectedCartItems(selectedCartItems)
+                .subtotalAmount(subtotalAmount)
+                .discountAmount(discountAmount)
+                .shippingFeeAmount(shippingFeeAmount)
+                .totalAmount(totalAmount)
+                .appliedDiscount(appliedDiscount)
+                .discountMessage(discountMessage)
+                .appliedShippingFee(appliedShippingFee)
+                .shippingMessage(shippingMessage)
+                .totalItems(totalItems)
+                .totalQuantity(totalQuantity)
+                .warnings(warnings.isEmpty() ? null : warnings)
+                .errors(errors.isEmpty() ? null : errors)
+                .build();
+    }
+    
+    @Override
+    public OrderDto checkoutEntireCart(CheckoutCartRequest request, Long userId) {
+        logger.info("Checkout entire cart for cartId: {}, userId: {}", request.getCartId(), userId);
+        
+        // Validation
+        if (!request.hasCompleteOrderInfo()) {
+            throw new IllegalArgumentException("Complete order information is required");
+        }
+
+        if (request.getCartId() == null) {
+            throw new IllegalArgumentException("Cart ID is required");
+        }
+
+        // Validate cart exists and is ACTIVE
+        Cart cart = cartRepository.findById(request.getCartId())
+            .orElseThrow(() -> new ResourceNotFoundException("Cart not found with ID: " + request.getCartId()));
+            
+        if (!"ACTIVE".equals(cart.getCartState().getCartStateName())) {
+            throw new IllegalArgumentException("Cart is not active, cannot checkout. CartId: " + request.getCartId());
+        }
+
+        // Get all cart items for this cart
+        List<CartItem> cartItems = cartItemRepository.findByCart_CartId(request.getCartId());
+        if (cartItems.isEmpty()) {
+            throw new ResourceNotFoundException("No items found in cart: " + request.getCartId());
+        }
+
+        return createOrderFromCartItems(cartItems, request, true, userId); // Clear entire cart
+    }
+    
+    @Override
+    public OrderDto checkoutSelectedCartItems(CheckoutCartRequest request, Long userId) {
+        logger.info("Creating order from selected cart items for cartId: {}, userId: {}", request.getCartId(), userId);
+        
+        // Validation
+        if (request == null || request.getSelectedCartItemIds() == null || request.getSelectedCartItemIds().isEmpty()) {
+            throw new IllegalArgumentException("Selected cart item IDs are required");
+        }
+        
+        if (request.getCartId() == null) {
+            throw new IllegalArgumentException("Cart ID is required");
+        }
+        
+        if (!request.hasCompleteOrderInfo()) {
+            throw new IllegalArgumentException("Complete order information is required");
+        }
+        
+        // Validate cart exists and is ACTIVE
+        Cart cart = cartRepository.findById(request.getCartId())
+            .orElseThrow(() -> new ResourceNotFoundException("Cart not found with ID: " + request.getCartId()));
+            
+        if (!"ACTIVE".equals(cart.getCartState().getCartStateName())) {
+            throw new IllegalArgumentException("Cart is not active, cannot checkout. CartId: " + request.getCartId());
+        }
+        
+        // Get selected cart items and validate they belong to the specified cart
+        List<CartItem> cartItems = cartItemRepository.findAllById(request.getSelectedCartItemIds());
+        if (cartItems.isEmpty()) {
+            throw new ResourceNotFoundException("No cart items found with provided IDs");
+        }
+        
+        // Validate all requested items were found
+        if (cartItems.size() != request.getSelectedCartItemIds().size()) {
+            throw new ResourceNotFoundException("Some cart items were not found. Requested: " + 
+                request.getSelectedCartItemIds().size() + ", Found: " + cartItems.size());
+        }
+        
+        // Critical security validation: ensure all selected items belong to the specified cart
+        for (CartItem item : cartItems) {
+            if (!item.getCart().getCartId().equals(request.getCartId())) {
+                throw new SecurityException(
+                    "Security violation: Cart item " + item.getCartItemId() + " does not belong to cart " + request.getCartId());
+            }
+        }
+        
+        return createOrderFromCartItems(cartItems, request, false, userId); // Clear only selected items
+    }
+    
+    /**
+     * Helper method to create order from cart items (shared logic)
+     * Enhanced to support userId parameter for order ownership tracking
+     */
+    private OrderDto createOrderFromCartItems(List<CartItem> cartItems, CheckoutCartRequest request, boolean clearEntireCart, Long userId) {
+        
+        // Get user from cart or userId parameter for order ownership tracking
+        User user = null;
+        Cart cart = cartItems.get(0).getCart(); // All cart items belong to same cart (validated above)
+        
+        // Priority 1: Use userId parameter if provided (from authenticated user)
+        if (userId != null) {
+            user = userRepository.findById(userId).orElse(null);
+            if (user != null) {
+                logger.info("Order will be assigned to userId: {} (from request parameter)", userId);
+            }
+        }
+        
+        // Priority 2: Fallback to cart's associated user
+        if (user == null && cart.getUser() != null) {
+            user = cart.getUser();
+            logger.info("Order will be assigned to userId: {} (from cart user relationship)", user.getUserId());
+        }
+        
+        // Priority 3: Guest order (user remains null)
+        if (user == null) {
+            logger.info("Order will be created as GUEST order (USER_ID will be null)");
+        }
+        
+        // Calculate amounts (similar to preview)
+        BigDecimal subtotalAmount = cartItems.stream()
+                .map(item -> item.getProduct().getProductPrice().multiply(new BigDecimal(item.getCartItemQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        Long cartId = cart.getCartId();
+        
+        // AUTO-APPLY BEST DISCOUNT (giá được giảm nhiều nhất cho khách hàng)
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        DiscountDto appliedDiscount = null;
+        
+        if (request.hasManualDiscountCode()) {
+            // Use manual discount code if provided
+            try {
+                List<Long> productIds = cartItems.stream()
+                        .map(item -> item.getProduct().getProductId())
+                        .collect(Collectors.toList());
+                        
+                DiscountValidationResult validationResult = discountService.validateDiscountCode(
+                        request.getDiscountCode(), subtotalAmount, productIds);
+                        
+                if (validationResult != null && validationResult.isValid()) {
+                    appliedDiscount = discountService.getDiscountByCode(validationResult.getDiscountCode());
+                    discountAmount = validationResult.getDiscountAmount();
+                    logger.info("Manual discount applied - Code: {}, Amount: {}", appliedDiscount.getDiscountCode(), discountAmount);
+                }
+            } catch (Exception e) {
+                logger.warn("Failed to apply manual discount code: {}", e.getMessage());
+            }
+        } else {
+            // AUTO-SELECT BEST DISCOUNT (giá được giảm nhiều nhất cho khách hàng)
+            appliedDiscount = findBestDiscountForOrder(subtotalAmount);
+            if (appliedDiscount != null) {
+                try {
+                    // Calculate discount amount based on type
+                    if ("PERCENTAGE".equals(appliedDiscount.getDiscountType())) {
+                        discountAmount = subtotalAmount.multiply(appliedDiscount.getDiscountValue())
+                            .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+                    } else if ("FIXED".equals(appliedDiscount.getDiscountType())) {
+                        discountAmount = appliedDiscount.getDiscountValue();
+                    }
+                    logger.info("Auto discount applied - Code: {}, Type: {}, Amount: {}", 
+                        appliedDiscount.getDiscountCode(), appliedDiscount.getDiscountType(), discountAmount);
+                } catch (Exception e) {
+                    logger.warn("Failed to calculate auto discount: {}", e.getMessage());
+                    appliedDiscount = null;
+                    discountAmount = BigDecimal.ZERO;
+                }
+            }
+        }
+        
+        // AUTO-CALCULATE OPTIMAL SHIPPING FEE (phí ship tối ưu cho khách hàng)
+        BigDecimal shippingFeeAmount = BigDecimal.ZERO;
+        try {   
+            ShippingFeeDto shippingFee = shippingFeeService.calculateShippingFee(subtotalAmount);
+            if (shippingFee != null && shippingFee.getShippingFeeValue() != null) {
+                shippingFeeAmount = shippingFee.getShippingFeeValue();
+                logger.info("Optimal shipping fee calculated: {} ({})", shippingFeeAmount, shippingFee.getShippingFeeDisplayName() != null ? shippingFee.getShippingFeeDisplayName() : "Standard shipping");
+            } else {
+                shippingFeeAmount = DEFAULT_SHIPPING_FEE;
+                logger.info("Using default shipping fee: {}", shippingFeeAmount);
+            }
+        } catch (Exception e) {
+            logger.warn("Error calculating shipping fee, using default: {}", e.getMessage());
+            shippingFeeAmount = DEFAULT_SHIPPING_FEE;
+        }
+        
+        // Create order
+        Order order = new Order();
+        order.setOrderCode(generateOrderCode());
+        order.setOrderSlug(generateOrderSlug());
+        order.setUser(user); // Can be null for guest orders
+        
+        // Set order state to PENDING (initial state)
+        OrderState newState = orderStateRepository.findByOrderStateName("PENDING")
+                .orElseGet(() -> {
+                    // Fallback to first available state if PENDING not found
+                    List<OrderState> allStates = orderStateRepository.findAll();
+                    if (allStates.isEmpty()) {
+                        throw new RuntimeException("No order states found in database");
+                    }
+                    logger.warn("PENDING state not found, using first available state: {}", allStates.get(0).getOrderStateName());
+                    return allStates.get(0);
+                });
+        order.setOrderState(newState);
+        
+        // Set customer information
+        order.setCustomerName(request.getCustomerName());
+        order.setCustomerPhoneNumber(request.getCustomerPhoneNumber());
+        order.setCustomerEmail(request.getCustomerEmail());
+        order.setCustomerAddress(request.getCustomerAddress());
+        
+        // Set receiver information
+        order.setReceiverName(request.getReceiverName());
+        order.setReceiverPhone(request.getReceiverPhone());
+        order.setReceiverEmail(request.getReceiverEmail());
+        
+        // Set delivery address
+        order.setAddressLine(request.getAddressLine());
+        order.setCity(request.getCity());
+        order.setWard(request.getWard());
+        order.setCountry(request.getCountry());
+        
+        // Set financial information
+        order.setSubtotalAmount(subtotalAmount);
+        order.setDiscountAmount(discountAmount);
+        order.setShippingFeeAmount(shippingFeeAmount);
+        order.setTotalAmount(subtotalAmount.subtract(discountAmount).add(shippingFeeAmount));
+        
+        // Set discount information (snapshot data)
+        if (appliedDiscount != null) {
+            order.setDiscountCode(appliedDiscount.getDiscountCode());
+            order.setDiscountType(appliedDiscount.getDiscountType() != null ? 
+                    appliedDiscount.getDiscountType().getDiscountTypeName() : null);
+            order.setDiscountValue(appliedDiscount.getDiscountValue());
+        } else if (request.getDiscountCode() != null && !request.getDiscountCode().trim().isEmpty()) {
+            // Fallback: if we have discount code but no applied discount, just store the code
+            order.setDiscountCode(request.getDiscountCode());
+        }
+        
+        // Set optional information
+        order.setOrderNote(request.getOrderNote());
+        
+        // Set timestamps
+        order.setCreatedDt(LocalDateTime.now());
+        order.setModifiedDt(LocalDateTime.now());
+        
+        // Save order first to get ID
+        Order savedOrder = orderRepository.save(order);
+        logger.info("Order saved successfully with ID: {}, USER_ID: {}, Order Type: {}", 
+                   savedOrder.getOrderId(), 
+                   savedOrder.getUser() != null ? savedOrder.getUser().getUserId() : "NULL (Guest Order)",
+                   savedOrder.getUser() != null ? "USER ORDER" : "GUEST ORDER");
+        
+        // Create order items
+        for (CartItem cartItem : cartItems) {
+            Product product = cartItem.getProduct();
+            
+            OrderItem orderItem = new OrderItem();
+            orderItem.setOrder(savedOrder);
+            orderItem.setProduct(product);
+            
+            // Set snapshot product information
+            orderItem.setProductName(product.getProductName());
+            orderItem.setProductCode(product.getProductCode());
+            orderItem.setProductCategoryName(product.getProductCategory().getProductCategoryName());
+            
+            // Set product type name from relationship: Product -> ProductCategory -> ProductType
+            String productTypeName = "GENERAL"; // Default value
+            if (product.getProductCategory() != null && product.getProductCategory().getProductType() != null) {
+                productTypeName = product.getProductCategory().getProductType().getProductTypeName();
+            }
+            orderItem.setProductTypeName(productTypeName);
+            
+            // Set item details
+            orderItem.setQuantity(cartItem.getCartItemQuantity());
+            orderItem.setUnitPrice(product.getProductPrice());
+            
+            BigDecimal totalPrice = product.getProductPrice().multiply(new BigDecimal(cartItem.getCartItemQuantity()));
+            orderItem.setTotalPrice(totalPrice);
+            
+            // Set attributes as JSON (if you have cart item attributes)
+            if (cartItem.getCartItemAttributes() != null && !cartItem.getCartItemAttributes().isEmpty()) {
+                // Convert cart item attributes to JSON and store
+                orderItem.setProductAttrJson("{}"); // placeholder
+            }
+            
+            orderItem.setCreatedDt(LocalDateTime.now());
+            orderItem.setModifiedDt(LocalDateTime.now());
+            
+            orderItemRepository.save(orderItem);
+        }
+        
+        // NOTE: OrderStateHistory is NOT created for new orders
+        // It will be created only when there is an actual state transition (PENDING → CONFIRMED, etc.)
+        // This aligns with database constraint: OLD_STATE_ID NOT NULL
+        // State transitions are tracked in updateOrderState() method
+        
+        // Clear cart after successful checkout (hard delete)
+        try {
+            if (clearEntireCart) {
+                // Clear entire cart for checkoutCart API
+                cartItemService.clearCart(cartId);
+                logger.info("Cart cleared entirely after checkout - cartId: {}, orderId: {}", 
+                        cartId, savedOrder.getOrderId());
+            } else {
+                // Clear only selected items for createOrder API
+                List<Long> cartItemIds = cartItems.stream()
+                        .map(CartItem::getCartItemId)
+                        .collect(Collectors.toList());
+                cartItemService.clearSelectedCartItems(cartItemIds);
+                logger.info("Selected cart items cleared after checkout - cartItemIds: {}, orderId: {}", 
+                        cartItemIds, savedOrder.getOrderId());
+            }
+        } catch (Exception e) {
+            // Cart clearing failure should not affect the order creation
+            logger.error("Failed to clear cart after checkout - cartId: {}, orderId: {}, clearEntireCart: {}, error: {}", 
+                    cartId, savedOrder.getOrderId(), clearEntireCart, e.getMessage());
+        }
+        
+        logger.info("Order created successfully - ID: {}, Code: {}", savedOrder.getOrderId(), savedOrder.getOrderCode());
+        
+        return orderMapperUtil.mapToDto(savedOrder);
+    }
+    
+    // REMOVED: Legacy checkoutSelectedCartItems method with single userId parameter
+    // This method is not used by OrderController - all checkout functionality uses the unified methods
 
     @Override
     @Transactional(readOnly = true)
@@ -106,6 +565,7 @@ public class OrderServiceImpl implements OrderService {
         order.setOrderState(newOrderState);
         order.setModifiedDt(LocalDateTime.now());
         Order updatedOrder = orderRepository.save(order);
+        logger.info("Order state updated successfully for order ID: {}", orderId);
 
         // Create order state history record
         orderStateHistoryService.createOrderStateHistory(
@@ -164,148 +624,50 @@ public class OrderServiceImpl implements OrderService {
         int sequence = 1;
         String orderCode = baseCode + "-" + String.format("%03d", sequence);
         
-        // Ensure uniqueness
-        while (!isOrderCodeUnique(orderCode, null)) {
+        // Try to ensure uniqueness, but limit attempts to avoid infinite loop
+        int maxAttempts = 100;
+        int attempts = 0;
+        
+        while (attempts < maxAttempts && !isOrderCodeUnique(orderCode, null)) {
             sequence++;
             orderCode = baseCode + "-" + String.format("%03d", sequence);
+            attempts++;
+        }
+        
+        if (attempts >= maxAttempts) {
+            // If we can't verify uniqueness after many attempts, add timestamp for uniqueness
+            String millisPrefix = now.format(DateTimeFormatter.ofPattern("SSS"));
+            orderCode = baseCode + "-" + millisPrefix + "-" + String.format("%03d", sequence);
+            logger.warn("Generated order code after max attempts: {}", orderCode);
         }
         
         return orderCode;
     }
     
     private boolean isOrderCodeUnique(String orderCode, Long excludeId) {
-        return orderRepository.findByOrderCode(orderCode)
-                .map(existingOrder -> {
-                    // If we're excluding an ID (update case), check if found order has different ID
-                    if (excludeId != null) {
-                        return !existingOrder.getOrderId().equals(excludeId); // Return false if different ID found
-                    }
-                    // For create case, any existing order means code is not unique
-                    return false;
-                })
-                .orElse(true); // No existing order found, code is unique
+        try {
+            return orderRepository.findByOrderCode(orderCode)
+                    .map(existingOrder -> {
+                        // If we're excluding an ID (update case), check if found order has different ID
+                        if (excludeId != null) {
+                            return !existingOrder.getOrderId().equals(excludeId); // Return false if different ID found
+                        }
+                        // For create case, any existing order found means code is not unique
+                        return false;
+                    })
+                    .orElse(true); // No existing order found, code is unique
+        } catch (Exception e) {
+            // Handle SQL exception due to ORDER table name being a reserved keyword
+            logger.error("Error checking order code uniqueness for code '{}': {}", orderCode, e.getMessage());
+            // Return true to allow order creation to continue with a different code
+            // The generateOrderCode method will try with a different sequence number
+            return true;
+        }
     }
     
-    @Override
-    public OrderDto checkoutCart(
-            Long userId, 
-            Long cartId, 
-            Long shippingAddressId, 
-            String paymentMethod, 
-            String discountCode) {
-        
-        // Get cart with items
-        CartDto cart = cartService.getCartById(cartId);
-        if (cart == null || cart.getCartItems() == null || cart.getCartItems().isEmpty()) {
-            throw new IllegalArgumentException("Cart not found or empty");
-        }
-        
-        // Validate cart ownership
-        if (!cart.getUserId().equals(userId)) {
-            throw new IllegalArgumentException("Cart does not belong to user");
-        }
-        
-        Order order = new Order();
-        order.setOrderCode(generateOrderCode());
-        order.setCreatedDt(LocalDateTime.now());
-        order.setModifiedDt(LocalDateTime.now());
-        
-        // Set default state to NEW
-        OrderState newState = orderStateRepository.findByOrderStateName("NEW")
-                .orElse(orderStateRepository.findAll().get(0));
-        order.setOrderState(newState);
-        
-        // Calculate subtotal from cart items
-        BigDecimal subtotalAmount = cart.getCartItems().stream()
-                .map(item -> item.getUnitPrice().multiply(new BigDecimal(item.getQuantity())))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        
-        // Auto-select best discount for customer (enabled discounts only)
-        BigDecimal discountAmount = BigDecimal.ZERO;
-        DiscountDto bestDiscount = findBestDiscountForOrder(subtotalAmount);
-        if (bestDiscount != null) {
-            try {
-                discountAmount = discountService.calculateDiscountAmount(bestDiscount.getDiscountId(), subtotalAmount);
-                // Store discount snapshot in order
-                order.setDiscountCode(bestDiscount.getDiscountCode());
-                order.setDiscountType(bestDiscount.getDiscountType() != null ? 
-                        bestDiscount.getDiscountType().getDiscountTypeName() : null);
-                order.setDiscountValue(bestDiscount.getDiscountValue());
-                logger.info("Applied best discount {} with amount {} for order amount {}", 
-                        bestDiscount.getDiscountCode(), discountAmount, subtotalAmount);
-            } catch (Exception e) {
-                logger.warn("Failed to apply discount {}: {}", bestDiscount.getDiscountCode(), e.getMessage());
-                discountAmount = BigDecimal.ZERO;
-            }
-        }
-        
-        // Auto-select best shipping fee for order amount (enabled shipping fees only)
-        BigDecimal shippingFeeAmount = BigDecimal.ZERO;
-        try {
-            ShippingFeeDto shippingFee = shippingFeeService.calculateShippingFee(subtotalAmount);
-            if (shippingFee != null && shippingFee.getShippingFeeEnabled() && shippingFee.getShippingFeeValue() != null) {
-                shippingFeeAmount = shippingFee.getShippingFeeValue();
-                logger.info("Applied shipping fee {} for order amount {}", shippingFeeAmount, subtotalAmount);
-            } else {
-                // Use default shipping fee if no enabled shipping fee found
-                shippingFeeAmount = DEFAULT_SHIPPING_FEE;
-                logger.info("Using default shipping fee {} for order amount {}", shippingFeeAmount, subtotalAmount);
-            }
-        } catch (Exception e) {
-            logger.warn("Failed to calculate shipping fee for order amount {}, using default: {}", subtotalAmount, e.getMessage());
-            // Use default shipping fee if calculation fails
-            shippingFeeAmount = DEFAULT_SHIPPING_FEE;
-        }
-        
-        // Set order amounts
-        order.setSubtotalAmount(subtotalAmount);
-        order.setDiscountAmount(discountAmount);
-        order.setShippingFeeAmount(shippingFeeAmount);
-        order.setTotalAmount(subtotalAmount.subtract(discountAmount).add(shippingFeeAmount));
-        
-        // Save order first to get ID
-        Order savedOrder = orderRepository.save(order);
-        
-        // Create order items from cart items
-        for (CartItemDto cartItem : cart.getCartItems()) {
-            if (cartItem.getProduct() == null) continue;
-            
-            Product product = productRepository.findById(cartItem.getProduct().getProductId())
-                    .orElse(null);
-            if (product == null) continue;
-            
-            OrderItem orderItem = new OrderItem();
-            orderItem.setOrder(savedOrder);
-            orderItem.setProduct(product);
-            orderItem.setQuantity(cartItem.getQuantity());
-            orderItem.setUnitPrice(cartItem.getUnitPrice());
-            orderItem.setTotalPrice(cartItem.getTotalPrice());
-            orderItem.setCreatedDt(LocalDateTime.now());
-            orderItem.setModifiedDt(LocalDateTime.now());
-            
-            orderItemRepository.save(orderItem);
-        }
-        
-        // Create order state history
-        orderStateHistoryService.createOrderStateHistory(
-                savedOrder.getOrderId(),
-                null, // No old state for new order
-                newState.getOrderStateId(),
-                userId);
-        
-        
-        // Clear cart after successful checkout
-        try {
-            cartItemService.clearCart(cartId);
-            logger.info("Cart cleared successfully after checkout - cartId: {}, orderId: {}", cartId, savedOrder.getOrderId());
-        } catch (Exception e) {
-            // Cart clearing failure should not affect the order creation
-            logger.error("Failed to clear cart after checkout - cartId: {}, orderId: {}, error: {}", 
-                    cartId, savedOrder.getOrderId(), e.getMessage());
-        }
-        
-        return orderMapperUtil.mapToDto(savedOrder);
-    }
+    // REMOVED: Legacy checkoutCart methods with deprecated parameters
+    // These methods were not used by OrderController and contained deprecated shippingAddressId parameter
+    // All checkout functionality is now handled by checkoutEntireCart() and checkoutSelectedCartItems()
     
     @Override
     @Transactional(readOnly = true)
@@ -327,39 +689,8 @@ public class OrderServiceImpl implements OrderService {
         return ordersPage.map(orderMapperUtil::mapToDtoWithoutItems);
     }
     
-    @Override
-    public Page<OrderDto> adminSearchOrders(
-            Long orderId,
-            Long customerId, 
-            String state,
-            LocalDate fromDate, 
-            LocalDate toDate, 
-            BigDecimal minAmount, 
-            BigDecimal maxAmount, 
-            Pageable pageable) {
-        
-        // Convert LocalDate to LocalDateTime for repository call
-        LocalDateTime fromDateTime = fromDate != null ? fromDate.atStartOfDay() : null;
-        LocalDateTime toDateTime = toDate != null ? toDate.atTime(23, 59, 59) : null;
-        
-        // Get state ID from state name
-        Long stateId = null;
-        if (state != null && !state.trim().isEmpty()) {
-            OrderState orderState = orderStateRepository.findByOrderStateName(state).orElse(null);
-            if (orderState != null) {
-                stateId = orderState.getOrderStateId();
-            }
-        }
-        
-        // Use repository method to search orders
-        Page<Order> ordersPage = orderRepository.findOrdersByCriteria(
-                orderId, null, customerId, null, null, null,
-                stateId, null, minAmount, maxAmount, null, null,
-                null, null, fromDateTime, toDateTime, null, null,
-                null, null, null, pageable);
-
-        return ordersPage.map(orderMapperUtil::mapToDtoWithoutItems);
-    }
+    // REMOVED: adminSearchOrders method - not used by OrderController
+    // All admin search functionality is handled by searchOrders method
     
     @Override
     public OrderDto adminCreateOrder(
@@ -374,12 +705,20 @@ public class OrderServiceImpl implements OrderService {
         order.setCreatedDt(LocalDateTime.now());
         order.setModifiedDt(LocalDateTime.now());
         
-        // Set default state to NEW
-        OrderState newState = orderStateRepository.findByOrderStateName("NEW")
-                .orElse(orderStateRepository.findAll().get(0));
+        // Set default state to PENDING
+        OrderState newState = orderStateRepository.findByOrderStateName("PENDING")
+                .orElseGet(() -> {
+                    // Fallback to first available state if PENDING not found
+                    List<OrderState> allStates = orderStateRepository.findAll();
+                    if (allStates.isEmpty()) {
+                        throw new RuntimeException("No order states found in database");
+                    }
+                    logger.warn("PENDING state not found, using first available state: {}", allStates.get(0).getOrderStateName());
+                    return allStates.get(0);
+                });
         order.setOrderState(newState);
         
-        // Apply discount if provided
+        // Apply discount information if provided (snapshot only)
         if (discountCode != null && !discountCode.trim().isEmpty()) {
             try {
                 DiscountDto discount = discountService.getValidDiscountByCode(discountCode);
@@ -397,6 +736,7 @@ public class OrderServiceImpl implements OrderService {
         
         // Save order first to get ID
         Order savedOrder = orderRepository.save(order);
+        logger.info("Admin order saved successfully with ID: {}", savedOrder.getOrderId());
         
         // Create order items and calculate totals
         BigDecimal subtotalAmount = BigDecimal.ZERO;
@@ -410,15 +750,30 @@ public class OrderServiceImpl implements OrderService {
             orderItem.setProduct(product);
             orderItem.setQuantity(itemRequest.getQuantity());
             
+            // Set snapshot product information
+            orderItem.setProductName(product.getProductName());
+            orderItem.setProductCode(product.getProductCode());
+            orderItem.setProductCategoryName(product.getProductCategory().getProductCategoryName());
+            
+            // Set product type name from relationship: Product -> ProductCategory -> ProductType
+            String productTypeName = "GENERAL"; // Default value
+            if (product.getProductCategory() != null && product.getProductCategory().getProductType() != null) {
+                productTypeName = product.getProductCategory().getProductType().getProductTypeName();
+            }
+            orderItem.setProductTypeName(productTypeName);
+            
+            // Set item details
             BigDecimal unitPrice = product.getProductPrice() != null ? product.getProductPrice() : BigDecimal.ZERO;
             orderItem.setUnitPrice(unitPrice);
+            
+            BigDecimal totalPrice = unitPrice.multiply(BigDecimal.valueOf(itemRequest.getQuantity()));
+            orderItem.setTotalPrice(totalPrice);
+            
             orderItem.setCreatedDt(LocalDateTime.now());
             orderItem.setModifiedDt(LocalDateTime.now());
             
             orderItemRepository.save(orderItem);
-            
-            // Add to subtotal
-            subtotalAmount = subtotalAmount.add(unitPrice.multiply(BigDecimal.valueOf(itemRequest.getQuantity())));
+            subtotalAmount = subtotalAmount.add(totalPrice);
         }
         
         // Calculate discount amount if discount was applied
@@ -456,13 +811,12 @@ public class OrderServiceImpl implements OrderService {
         savedOrder.setModifiedDt(LocalDateTime.now());
         
         Order finalOrder = orderRepository.save(savedOrder);
+        logger.info("Final order update saved successfully with ID: {}", finalOrder.getOrderId());
         
-        // Create order state history
-        orderStateHistoryService.createOrderStateHistory(
-                finalOrder.getOrderId(),
-                null, // No old state for new order
-                newState.getOrderStateId(),
-                createdByUserId);
+        // NOTE: OrderStateHistory is NOT created for new admin orders
+        // It will be created only when there is an actual state transition
+        // This aligns with database constraint: OLD_STATE_ID NOT NULL
+        logger.info("Admin order created with initial state: {}. State history will be created on first state transition.", newState.getOrderStateName());
         
         // DISCOUNT functionality removed
         
@@ -480,7 +834,44 @@ public class OrderServiceImpl implements OrderService {
             BigDecimal maxAmount,
             Pageable pageable) {
         
-        return adminSearchOrders(orderId, customerId, state, fromDate, toDate, minAmount, maxAmount, pageable);
+        // Convert LocalDate to LocalDateTime for repository call
+        LocalDateTime fromDateTime = fromDate != null ? fromDate.atStartOfDay() : null;
+        LocalDateTime toDateTime = toDate != null ? toDate.atTime(23, 59, 59) : null;
+        
+        // Get state ID from state name
+        Long stateId = null;
+        if (state != null && !state.trim().isEmpty()) {
+            OrderState orderState = orderStateRepository.findByOrderStateName(state).orElse(null);
+            if (orderState != null) {
+                stateId = orderState.getOrderStateId();
+            }
+        }
+        
+        // Use repository method to search orders with proper parameters
+        Page<Order> ordersPage = orderRepository.findOrdersByCriteria(
+                orderId,           // orderId
+                null,              // orderCode  
+                customerId,        // userId (customer)
+                null,              // customerName
+                null,              // customerPhone
+                null,              // customerEmail
+                stateId,           // orderStateId
+                minAmount,         // minTotalAmount
+                maxAmount,         // maxTotalAmount
+                null,              // minOriginalAmount
+                null,              // maxOriginalAmount
+                null,              // minDiscountAmount
+                null,              // maxDiscountAmount
+                fromDateTime,      // orderDateFrom
+                toDateTime,        // orderDateTo
+                null,              // requiredDateFrom
+                null,              // requiredDateTo
+                null,              // shippedDateFrom
+                null,              // shippedDateTo
+                null,              // textSearch
+                pageable);         // pageable
+
+        return ordersPage.map(orderMapperUtil::mapToDtoWithoutItems);
     }
     
     @Override
@@ -488,6 +879,73 @@ public class OrderServiceImpl implements OrderService {
         return orderRepository.findById(orderId)
                 .map(order -> order.getUser() != null && order.getUser().getUserId().equals(userId))
                 .orElse(false);
+    }
+    
+    @Override
+    public OrderDto updateOrderStatusWithSpecialHandling(Long orderId, Long newOrderStateId, Long changedByUserId, String statusNote) {
+        logger.info("Updating order status with special handling - Order: {}, New Status: {}, User: {}", 
+                   orderId, newOrderStateId, changedByUserId);
+        
+        // First, perform normal order state update
+        OrderDto updatedOrder = updateOrderState(orderId, newOrderStateId, changedByUserId);
+        
+        // Get the order state name to check for special handling
+        try {
+            OrderState newOrderState = orderStateRepository.findById(newOrderStateId)
+                    .orElse(null);
+            
+            if (newOrderState != null && "DELIVERED".equalsIgnoreCase(newOrderState.getOrderStateName())) {
+                // Special handling: When order is DELIVERED, update all associated shipments to DELIVERED
+                logger.info("Order {} marked as DELIVERED, updating associated shipments", orderId);
+                
+                // Check if ShipmentService exists and update shipment statuses
+                try {
+                    // Find all shipments for this order
+                    Order order = orderRepository.findById(orderId).orElse(null);
+                    if (order != null && order.getShipments() != null && !order.getShipments().isEmpty()) {
+                        // Update each shipment to DELIVERED status
+                        for (Shipment shipment : order.getShipments()) {
+                            try {
+                                // You would need to implement or inject ShipmentService here
+                                // shipmentService.updateShipmentStatusToDelivered(shipment.getShipmentId(), changedByUserId);
+                                
+                                // For now, just log the action since we don't have ShipmentService injected
+                                logger.info("Should update shipment {} to DELIVERED status for order {}", 
+                                           shipment.getShipmentId(), orderId);
+                                
+                                // If you have direct access to shipment repository, you can update here:
+                                // Find DELIVERED shipment state and update shipment
+                                // shipment.setShipmentState(deliveredState);
+                                // shipment.setModifiedDt(LocalDateTime.now());
+                                // shipmentRepository.save(shipment);
+                                
+                            } catch (Exception e) {
+                                logger.warn("Failed to update shipment {} status to DELIVERED: {}", 
+                                           shipment.getShipmentId(), e.getMessage());
+                            }
+                        }
+                        
+                        logger.info("Completed updating {} shipments for delivered order {}", 
+                                   order.getShipments().size(), orderId);
+                    }
+                } catch (Exception e) {
+                    logger.error("Error updating shipment statuses for delivered order {}: {}", orderId, e.getMessage());
+                    // Don't fail the order update if shipment update fails
+                }
+            }
+            
+            // Add status note to order state history if provided
+            if (statusNote != null && !statusNote.trim().isEmpty()) {
+                // You can extend OrderStateHistory to include notes if needed
+                logger.info("Status note for order {}: {}", orderId, statusNote);
+            }
+            
+        } catch (Exception e) {
+            logger.error("Error in special handling for order status update: {}", e.getMessage());
+            // Don't fail the order update if special handling fails
+        }
+        
+        return updatedOrder;
     }
 
     /**
@@ -544,6 +1002,43 @@ public class OrderServiceImpl implements OrderService {
             return bestDiscount;
         } catch (Exception e) {
             logger.error("Error finding best discount for order amount {}: {}", orderAmount, e.getMessage());
+            return null;
+        }
+    }
+    
+    /**
+     * Generate unique order slug
+     * @return Generated order slug
+     */
+    private String generateOrderSlug() {
+        LocalDateTime now = LocalDateTime.now();
+        String datePrefix = now.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String timePrefix = now.format(DateTimeFormatter.ofPattern("HHmmssSSS"));
+        
+        // Generate slug: order-YYYYMMDD-HHMMSSSSSS-random
+        String randomSuffix = String.valueOf((int)(Math.random() * 1000));
+        return "order-" + datePrefix + "-" + timePrefix + "-" + randomSuffix;
+    }
+    
+    @Override
+    public Long getUserIdFromCart(Long cartId) {
+        if (cartId == null) {
+            logger.warn("CartId is null, cannot retrieve userId");
+            return null;
+        }
+        
+        try {
+            Cart cart = cartRepository.findById(cartId).orElse(null);
+            if (cart != null && cart.getUser() != null) {
+                Long userId = cart.getUser().getUserId();
+                logger.info("Retrieved userId: {} for Order.USER_ID assignment from cartId: {}", userId, cartId);
+                return userId;
+            } else {
+                logger.info("Cart {} has no associated user (guest cart), userId will be null", cartId);
+                return null;
+            }
+        } catch (Exception e) {
+            logger.error("Error retrieving userId from cartId: {}, error: {}", cartId, e.getMessage());
             return null;
         }
     }

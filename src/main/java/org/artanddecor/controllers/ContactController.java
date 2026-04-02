@@ -11,9 +11,14 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.artanddecor.dto.BaseResponseDto;
 import org.artanddecor.dto.ContactDto;
+import org.artanddecor.dto.ContactRequest;
 import org.artanddecor.services.ContactService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -78,12 +83,12 @@ public class ContactController {
     }
     
     /**
-     * Get contacts with criteria-based filtering and search 
+     * Get contacts with criteria-based filtering and search with pagination
      * Public access for searching/browsing contacts
      */
     @Operation(
-        summary = "Search contacts with criteria", 
-        description = "Filter and search contacts by name, enabled status, and text search across multiple fields. If no parameters provided, returns all contacts."
+        summary = "Search contacts with criteria and pagination", 
+        description = "Filter and search contacts by name, enabled status, and text search across multiple fields with pagination support. If no parameters provided, returns all contacts."
     )
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Contacts retrieved successfully",
@@ -92,21 +97,22 @@ public class ContactController {
             content = @Content(schema = @Schema(implementation = BaseResponseDto.class)))
     })
     @GetMapping
-    public ResponseEntity<BaseResponseDto<List<ContactDto>>> getContactsByCriteria(
+    public ResponseEntity<BaseResponseDto<Page<ContactDto>>> getContactsByCriteria(
         @Parameter(description = "Filter by exact contact name", example = "Art Store Hanoi")
         @RequestParam(name = "contactName", required = false) String contactName,
         @Parameter(description = "Filter by enabled status (true/false)")
         @RequestParam(name = "contactEnabled", required = false) Boolean contactEnabled,
         @Parameter(description = "Search text in name, slug, address, email, phone, fanpage, remark fields", example = "hanoi")
-        @RequestParam(name = "textSearch", required = false) String textSearch) {
+        @RequestParam(name = "textSearch", required = false) String textSearch,
+        @PageableDefault(page = 0, size = 10, sort = "contactName", direction = Sort.Direction.ASC) Pageable pageable) {
         
         logger.info("Searching contacts with criteria - name: {}, enabled: {}, textSearch: {}", 
                    contactName, contactEnabled, textSearch);
         
         try {
-            List<ContactDto> results = contactService.findContactsByCriteria(contactName, contactEnabled, textSearch);
+            Page<ContactDto> results = contactService.findContactsByCriteria(contactName, contactEnabled, textSearch, pageable);
             return ResponseEntity.ok(BaseResponseDto.success(
-                    String.format("Found %d matching contact(s)", results.size()),
+                    String.format("Found %d matching contact(s) on page %d", results.getTotalElements(), results.getNumber()),
                     results));
         } catch (Exception e) {
             logger.error("Error searching contacts: {}", e.getMessage(), e);
@@ -182,10 +188,10 @@ public class ContactController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BaseResponseDto<ContactDto>> createContact(
         @Parameter(description = "Contact information to create", required = true)
-        @Valid @RequestBody ContactDto contactDto) {
-        logger.info("Creating new contact: {}", contactDto.getContactName());
+        @Valid @RequestBody ContactRequest contactRequest) {
+        logger.info("Creating new contact: {}", contactRequest.getContactName());
         try {
-            ContactDto created = contactService.createContact(contactDto);
+            ContactDto created = contactService.createContact(contactRequest);
             return ResponseEntity.status(HttpStatus.CREATED).body(BaseResponseDto.success(
                     "Contact created successfully",
                     created));
@@ -225,11 +231,11 @@ public class ContactController {
         @Parameter(description = "Contact ID to update", example = "1")
         @PathVariable Long contactId,
         @Parameter(description = "Updated contact information", required = true)
-        @Valid @RequestBody ContactDto contactDto) {
+        @Valid @RequestBody ContactRequest contactRequest) {
         
         logger.info("Updating contact with ID: {}", contactId);
         try {
-            ContactDto updated = contactService.updateContact(contactId, contactDto);
+            ContactDto updated = contactService.updateContact(contactId, contactRequest);
             return ResponseEntity.ok(BaseResponseDto.success(
                     "Contact updated successfully",
                     updated));

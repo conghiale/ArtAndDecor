@@ -2,10 +2,7 @@ package org.artanddecor.services;
 
 import org.artanddecor.dto.CartItemDto;
 import org.artanddecor.dto.CartItemRequestDto;
-import org.springframework.data.domain.Page;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -14,19 +11,9 @@ import java.util.List;
  */
 public interface CartItemService {
 
-    /**
-     * Get cart item by ID
-     * @param cartItemId Cart item ID
-     * @return CartItemDto
-     */
-    CartItemDto getCartItemById(Long cartItemId);
 
-    /**
-     * Get active cart items by user
-     * @param userId User ID
-     * @return List of active cart items
-     */
-    List<CartItemDto> getActiveCartItemsByUser(Long userId);
+
+
 
     /**
      * Add product to cart with optional attributes
@@ -62,6 +49,12 @@ public interface CartItemService {
     void clearCart(Long cartId);
 
     /**
+     * Clear selected cart items by IDs
+     * @param cartItemIds List of cart item IDs to delete
+     */
+    void clearSelectedCartItems(List<Long> cartItemIds);
+
+    /**
      * Get cart items count with filters - priority lookup by cartId, userId, or sessionId
      * @param cartId Cart ID (highest priority)
      * @param userId User ID (medium priority, optional)
@@ -79,10 +72,5 @@ public interface CartItemService {
      */
     List<CartItemDto> getCartItemsByCartId(Long cartId, Long cartItemStateId);
 
-    /**
-     * Get active cart items by cart ID (for CUSTOMER role)
-     * @param cartId Cart ID
-     * @return List of active CartItemDto
-     */
-    List<CartItemDto> getActiveCartItemsByCartId(Long cartId);
+
 }

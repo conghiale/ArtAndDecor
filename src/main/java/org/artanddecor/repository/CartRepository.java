@@ -16,17 +16,10 @@ import java.util.Optional;
 
 /**
  * Repository interface for Cart entity
- * Handles CRUD operations for shopping carts
+ * Minimal interface for cart operations
  */
-@Repository
+@Repository  
 public interface CartRepository extends JpaRepository<Cart, Long> {
-
-    /**
-     * Find cart by slug
-     * @param cartSlug Cart slug
-     * @return Optional Cart
-     */
-    Optional<Cart> findByCartSlug(String cartSlug);
 
     /**
      * Check if cart exists by slug
@@ -36,18 +29,47 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
     boolean existsByCartSlug(String cartSlug);
 
     /**
-     * Find carts by user
-     * @param user User entity
-     * @return List of carts
+     * Find active cart by user
+     * @param userId User ID
+     * @return Optional Cart
      */
-    List<Cart> findByUser(User user);
+    @Query("SELECT c FROM Cart c WHERE c.user.userId = :userId AND c.cartState.cartStateName = 'ACTIVE' AND c.cartEnabled = true")
+    Optional<Cart> findActiveCartByUser(@Param("userId") Long userId);
 
     /**
-     * Find carts by user ID
-     * @param userId User ID
-     * @return List of carts
+     * Find active cart by session
+     * @param sessionId Session ID
+     * @return Optional Cart
      */
-    List<Cart> findByUser_UserId(Long userId);
+    @Query("SELECT c FROM Cart c WHERE c.sessionId = :sessionId AND c.cartState.cartStateName = 'ACTIVE' AND c.cartEnabled = true")
+    Optional<Cart> findActiveCartBySession(@Param("sessionId") String sessionId);
+
+    /**
+     * Find carts by various criteria with flexible filtering
+     * @param cartId Filter by cart ID (optional)
+     * @param userId Filter by user ID (optional)
+     * @param sessionId Filter by session ID (optional)
+     * @param cartStateId Filter by cart state ID (optional)
+     * @param cartSlug Filter by cart slug (optional)
+     * @param cartEnabled Filter by enabled status (optional)
+     * @param pageable Pagination parameters
+     * @return Page of carts matching criteria
+     */
+    @Query("SELECT c FROM Cart c LEFT JOIN c.cartState cs LEFT JOIN c.user u " +
+           "WHERE (:cartId IS NULL OR c.cartId = :cartId) " +
+           "AND (:userId IS NULL OR u.userId = :userId) " +
+           "AND (:sessionId IS NULL OR c.sessionId = :sessionId) " +
+           "AND (:cartStateId IS NULL OR cs.cartStateId = :cartStateId) " +
+           "AND (:cartSlug IS NULL OR c.cartSlug = :cartSlug) " +
+           "AND (:cartEnabled IS NULL OR c.cartEnabled = :cartEnabled)")
+    Page<Cart> findCartsByCriteria(
+        @Param("cartId") Long cartId,
+        @Param("userId") Long userId,
+        @Param("sessionId") String sessionId,
+        @Param("cartStateId") Long cartStateId,
+        @Param("cartSlug") String cartSlug,
+        @Param("cartEnabled") Boolean cartEnabled,
+        Pageable pageable);
 
     /**
      * Find carts by session ID
@@ -74,22 +96,6 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
     Optional<Cart> findByUserIdAndCartStateName(@Param("userId") Long userId, @Param("cartStateName") String cartStateName);
 
     /**
-     * Find active cart by user
-     * @param userId User ID
-     * @return Optional Cart
-     */
-    @Query("SELECT c FROM Cart c WHERE c.user.userId = :userId AND c.cartState.cartStateName = 'ACTIVE' AND c.cartEnabled = true")
-    Optional<Cart> findActiveCartByUser(@Param("userId") Long userId);
-
-    /**
-     * Find active cart by session
-     * @param sessionId Session ID
-     * @return Optional Cart
-     */
-    @Query("SELECT c FROM Cart c WHERE c.sessionId = :sessionId AND c.cartState.cartStateName = 'ACTIVE' AND c.cartEnabled = true")
-    Optional<Cart> findActiveCartBySession(@Param("sessionId") String sessionId);
-
-    /**
      * Find carts by cart state with pagination
      * @param cartState Cart state entity
      * @param pageable Pagination parameters
@@ -113,7 +119,7 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
      * @return Page of carts
      */
     @Query("SELECT c FROM Cart c WHERE c.createdDt >= :startDate AND c.createdDt <= :endDate")
-    Page<Cart> findByDateRange(@Param("startDate") LocalDateTime startDate, 
+    Page<Cart> findByDateRange(@Param("startDate") LocalDateTime startDate,
                               @Param("endDate") LocalDateTime endDate, 
                               Pageable pageable);
 
@@ -162,31 +168,4 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
            "FROM Cart c LEFT JOIN CartItem ci ON c.cartId = ci.cart.cartId " +
            "GROUP BY c.cartId")
     Page<Object[]> findCartsWithItemCount(Pageable pageable);
-
-    /**
-     * Find carts by various criteria with flexible filtering
-     * @param cartId Filter by cart ID (optional)
-     * @param userId Filter by user ID (optional)  
-     * @param sessionId Filter by session ID (optional)
-     * @param cartStateId Filter by cart state ID (optional)
-     * @param cartSlug Filter by cart slug (optional)
-     * @param cartEnabled Filter by enabled status (optional)
-     * @param pageable Pagination parameters
-     * @return Page of carts matching criteria
-     */
-    @Query("SELECT c FROM Cart c LEFT JOIN c.user u LEFT JOIN c.cartState cs " +
-           "WHERE (:cartId IS NULL OR c.cartId = :cartId) " +
-           "AND (:userId IS NULL OR u.userId = :userId) " +
-           "AND (:sessionId IS NULL OR c.sessionId = :sessionId) " +
-           "AND (:cartStateId IS NULL OR cs.cartStateId = :cartStateId) " +
-           "AND (:cartSlug IS NULL OR c.cartSlug = :cartSlug) " +
-           "AND (:cartEnabled IS NULL OR c.cartEnabled = :cartEnabled)")
-    Page<Cart> findCartsByCriteria(
-        @Param("cartId") Long cartId,
-        @Param("userId") Long userId,
-        @Param("sessionId") String sessionId,
-        @Param("cartStateId") Long cartStateId,
-        @Param("cartSlug") String cartSlug,
-        @Param("cartEnabled") Boolean cartEnabled,
-        Pageable pageable);
 }

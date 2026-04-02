@@ -95,7 +95,7 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/carts/current").permitAll()
                         .requestMatchers(HttpMethod.POST, "/carts/items").permitAll()
                         .requestMatchers(HttpMethod.GET, "/carts/items/count").permitAll()
-                        .requestMatchers(HttpMethod.PUT, "/carts/items/*/remove").permitAll()
+                        .requestMatchers(HttpMethod.DELETE, "/carts/items/*").permitAll()
                         .requestMatchers(HttpMethod.PUT, "/carts/items/*").permitAll()
                         .requestMatchers(HttpMethod.GET, "/carts/items").permitAll()
                         .requestMatchers(HttpMethod.GET, "/carts/states", "/carts/item-states").permitAll()
@@ -119,12 +119,18 @@ public class SecurityConfiguration {
                         .requestMatchers("/images/**").hasAnyRole("ADMIN", "MANAGER")
 
                         // Order endpoints - restructured according to new API requirements
-                        // Order creation - permitAll (accessible by ADMIN and GUEST users)
+                        // Order preview and creation - permitAll (accessible by both authenticated and guest users)
+                        .requestMatchers(HttpMethod.POST, "/orders/preview").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/orders/create").permitAll()
                         .requestMatchers(HttpMethod.POST, "/orders/checkout").permitAll()
                         
-                        // Customer order operations - CUSTOMER role required
-                        .requestMatchers(HttpMethod.GET, "/orders/my-orders", "/orders/my-orders/**").hasRole("CUSTOMER")
-                        .requestMatchers(HttpMethod.POST, "/orders/my-orders/*/cancel").hasRole("CUSTOMER")
+                        // Admin-only order operations  
+                        .requestMatchers(HttpMethod.GET, "/orders/*").hasRole("ADMIN") // GET /orders/{orderId} - Admin only
+                        .requestMatchers(HttpMethod.PATCH, "/orders/*/status").hasAnyRole("ADMIN", "MANAGER")
+                        
+                        // Customer order operations - permitAll (no authentication required)
+                        .requestMatchers(HttpMethod.GET, "/orders/my-orders", "/orders/my-orders/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/orders/my-orders/*/cancel").permitAll()
                         
                         // Order read operations - permitAll (accessible by both ADMIN and CUSTOMER)
                         .requestMatchers(HttpMethod.GET, "/orders").permitAll()
@@ -186,6 +192,22 @@ public class SecurityConfiguration {
 
                         // Health endpoints
                         .requestMatchers("/actuator/**", "/health").permitAll()
+
+                        // Blog endpoints - structured by functionality and access control
+                        // Public blog read access (customer-facing)
+                        .requestMatchers(HttpMethod.GET, "/blogs/types").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/blogs/categories").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/blogs").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/blogs/slug/**").permitAll()
+                        
+                        // Admin-only blog operations
+                        .requestMatchers(HttpMethod.GET, "/blogs/types/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/blogs/categories/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/blogs/{blogId:[\\d+]}").hasRole("ADMIN")
+                        
+                        .requestMatchers(HttpMethod.POST, "/blogs/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/blogs/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/blogs/**").hasRole("ADMIN")
 
                         // All other requests need authentication
                         .anyRequest().authenticated()

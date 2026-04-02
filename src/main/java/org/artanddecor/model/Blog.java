@@ -48,6 +48,13 @@ public class Blog {
     @JoinColumn(name = "SEO_META_ID", referencedColumnName = "SEO_META_ID", insertable = false, updatable = false)
     private SeoMeta seoMeta;
 
+    @Column(name = "IMAGE_ID")
+    private Long imageId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "IMAGE_ID", referencedColumnName = "IMAGE_ID", insertable = false, updatable = false)
+    private Image image;
+
     @Column(name = "CREATED_DT", nullable = false, updatable = false)
     private LocalDateTime createdDt;
 

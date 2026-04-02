@@ -1,6 +1,9 @@
 package org.artanddecor.services;
 
 import org.artanddecor.dto.ContactDto;
+import org.artanddecor.dto.ContactRequest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import java.util.List;
 import java.util.Optional;
 
@@ -25,13 +28,14 @@ public interface ContactService {
     Optional<ContactDto> findContactById(Long contactId);
     
     /**
-     * Find contacts by criteria (with filters)
+     * Find contacts by criteria (with filters) - paginated
      * @param contactName Filter by contact name (exact match)
      * @param contactEnabled Filter by enabled status  
      * @param textSearch Search text in multiple fields
-     * @return List of matching ContactDto objects
+     * @param pageable Pagination parameters
+     * @return Page of matching ContactDto objects
      */
-    List<ContactDto> findContactsByCriteria(String contactName, Boolean contactEnabled, String textSearch);
+    Page<ContactDto> findContactsByCriteria(String contactName, Boolean contactEnabled, String textSearch, Pageable pageable);
     
     /**
      * Get all contact names for dropdown/combobox
@@ -43,20 +47,20 @@ public interface ContactService {
     
     /**
      * Create new contact
-     * @param contactDto the contact DTO with data
+     * @param contactRequest the contact request data
      * @return created ContactDto with ID
      * @throws IllegalArgumentException if validation fails or contact already exists
      */
-    ContactDto createContact(ContactDto contactDto);
+    ContactDto createContact(ContactRequest contactRequest);
     
     /**
      * Update existing contact
      * @param contactId the contact ID to update
-     * @param contactDto the contact DTO with updated data
+     * @param contactRequest the contact request data with updated values
      * @return updated ContactDto
      * @throws IllegalArgumentException if contact not found or validation fails
      */
-    ContactDto updateContact(Long contactId, ContactDto contactDto);
+    ContactDto updateContact(Long contactId, ContactRequest contactRequest);
     
     /**
      * Update contact status (enable/disable)

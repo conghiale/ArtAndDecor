@@ -1,11 +1,10 @@
 package org.artanddecor.services;
 
 import org.artanddecor.dto.ProductAttrDto;
-import org.artanddecor.dto.ProductAttributeDto;
+import org.artanddecor.dto.ProductAttrRequestDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
-import java.util.List;
 import java.util.Optional;
 
 /**
@@ -15,13 +14,13 @@ import java.util.Optional;
 public interface ProductAttrService {
 
     // =============================================
-    // CUSTOMER-FOCUSED OPERATIONS (name > ID priority)
+    // ADMIN-FOCUSED OPERATIONS
     // =============================================
 
     /**
-     * Find product attribute by name for customer view
+     * Find product attribute by ID for admin management
      */
-    Optional<ProductAttrDto> findProductAttrByName(String productAttrName);
+    Optional<ProductAttrDto> findProductAttrById(Long productAttrId);
 
     /**
      * Get product attributes by multiple criteria with pagination (all parameters optional)
@@ -33,58 +32,16 @@ public interface ProductAttrService {
     Page<ProductAttrDto> getProductAttrsByCriteria(String textSearch, Boolean enabled, Pageable pageable);
 
     // =============================================
-    // ADMIN-FOCUSED OPERATIONS (ID > name priority)
-    // =============================================
-
-    /**
-     * Find product attribute by ID for admin management
-     */
-    Optional<ProductAttrDto> findProductAttrById(Long productAttrId);
-
-    // =============================================
     // CRUD OPERATIONS
     // =============================================
 
     /**
-     * Create new product attribute
+     * Create new product attribute using request DTO
      */
-    ProductAttrDto createProductAttr(ProductAttrDto productAttrDto);
+    ProductAttrDto createProductAttr(ProductAttrRequestDto requestDto);
 
     /**
-     * Update existing product attribute
+     * Update existing product attribute using request DTO
      */
-    ProductAttrDto updateProductAttr(Long productAttrId, ProductAttrDto productAttrDto);
-
-    /**
-     * Delete product attribute by ID
-     */
-    void deleteProductAttrById(Long productAttrId);
-
-    // =============================================
-    // PRODUCT ATTRIBUTE ASSOCIATION OPERATIONS
-    // =============================================
-
-    /**
-     * Update product attribute association by PRODUCT_ATTRIBUTE_ID
-     */
-    ProductAttributeDto updateProductAttribute(Long productAttributeId, ProductAttributeDto productAttributeDto);
-
-    // =============================================
-    // UTILITY OPERATIONS
-    // =============================================
-
-    /**
-     * Get total count of product attributes
-     */
-    long getTotalProductAttrCount();
-
-    /**
-     * Get all product attribute names (for dropdown/combobox)
-     */
-    List<String> getAllProductAttrNames();
-
-    /**
-     * Check if name exists (for validation)
-     */
-    boolean existsByName(String productAttrName);
+    ProductAttrDto updateProductAttr(Long productAttrId, ProductAttrRequestDto requestDto);
 }

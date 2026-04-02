@@ -1,6 +1,7 @@
 package org.artanddecor.services;
 
 import org.artanddecor.dto.ProductAttributeDto;
+import org.artanddecor.dto.ProductAttributeRequestDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -14,35 +15,6 @@ import java.util.Optional;
 public interface ProductAttributeService {
     
     // =============================================
-    // CRUD OPERATIONS  
-    // =============================================
-    
-    /**
-     * Create new product attribute association
-     */
-    ProductAttributeDto createProductAttribute(Long productId, Long productAttrId, String attributeValue, Integer quantity);
-    
-    /**
-     * Update existing product attribute by ID
-     */
-    ProductAttributeDto updateProductAttribute(Long productAttributeId, ProductAttributeDto productAttributeDto);
-    
-    /**
-     * Update product attribute quantity
-     */
-    ProductAttributeDto updateProductAttributeQuantity(Long productAttributeId, Integer newQuantity);
-    
-    /**
-     * Delete product attribute by ID
-     */
-    void deleteProductAttribute(Long productAttributeId);
-    
-    /**
-     * Delete product attribute by combination
-     */
-    void deleteProductAttribute(Long productId, Long productAttrId, String attributeValue);
-    
-    // =============================================
     // FIND OPERATIONS
     // =============================================
     
@@ -52,42 +24,32 @@ public interface ProductAttributeService {
     Optional<ProductAttributeDto> findProductAttributeById(Long productAttributeId);
     
     /**
-     * Find product attributes by product ID
-     */
-    List<ProductAttributeDto> findProductAttributesByProductId(Long productId);
-    
-    /**
-     * Find product attributes by attribute ID  
-     */
-    List<ProductAttributeDto> findProductAttributesByAttrId(Long productAttrId);
-    
-    /**
-     * Find specific product attribute by product, attribute and value
-     */
-    Optional<ProductAttributeDto> findProductAttributeByCombo(Long productId, Long productAttrId, String attributeValue);
-    
-    /**
      * Get product attributes with filtering and pagination
      */
     Page<ProductAttributeDto> getProductAttributesByCriteria(
             Long productId, Long productAttrId, Boolean enabled, String attributeValue, Pageable pageable);
     
     // =============================================
-    // UTILITY OPERATIONS
+    // CRUD OPERATIONS  
     // =============================================
     
     /**
-     * Check if product attribute combination exists
+     * Create new product attribute association using DTO
      */
-    boolean existsByCombo(Long productId, Long productAttrId, String attributeValue);
+    ProductAttributeDto createProductAttribute(ProductAttributeRequestDto requestDto);
     
     /**
-     * Count product attributes by product ID
+     * Update existing product attribute by ID using DTO
      */
-    long countByProductId(Long productId);
+    ProductAttributeDto updateProductAttribute(Long productAttributeId, ProductAttributeRequestDto requestDto);
     
     /**
-     * Get total product attributes count
+     * Update product attribute quantity only
      */
-    long getTotalCount();
+    ProductAttributeDto updateProductAttributeQuantity(Long productAttributeId, Integer quantity);
+    
+    /**
+     * Delete product attribute by ID
+     */
+    void deleteProductAttribute(Long productAttributeId);
 }

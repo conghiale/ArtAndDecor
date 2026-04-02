@@ -63,22 +63,6 @@ public class CartServiceImpl implements CartService {
     }
 
     /**
-     * Get cart by slug
-     * @param cartSlug Cart slug
-     * @return CartDto
-     */
-    @Override
-    @Transactional(readOnly = true)
-    public CartDto getCartBySlug(String cartSlug) {
-        logger.info("Fetching cart with slug: {}", cartSlug);
-
-        Cart cart = cartRepository.findByCartSlug(cartSlug)
-            .orElseThrow(() -> new ResourceNotFoundException("Cart not found with slug: " + cartSlug));
-
-        return cartMapper.toDto(cart);
-    }
-
-    /**
      * Get active cart by user
      * @param userId User ID
      * @return CartDto

@@ -38,11 +38,8 @@ public class OrderDto {
     private Long orderStateId;
     private String orderStateName;
     
-    // Discount reference for easy API usage
-    private Long discountId;
-    private String discountCode;
-    
     // Discount information snapshot (lưu thông tin discount tại thời điểm đặt hàng)
+    private String discountCode;
     private String discountType;
     private BigDecimal discountValue;
     
@@ -122,9 +119,7 @@ public class OrderDto {
     // NESTED DTOs (complete related entity data)
     // =============================================
     private UserDto user;
-    private CartDto cart;
     private OrderStateDto orderState;
-    private DiscountDto discount;
     
     // Related data
     private List<OrderItemDto> orderItems;
@@ -211,7 +206,7 @@ public class OrderDto {
     
     /**
      * Generate customer name from user or session
-     * Should use USER.USER_NAME if USER_ID exists, otherwise CART.SESSION_ID
+     * Should use USER.USER_NAME if USER_ID exists, otherwise use customerName field
      */
     public String getEffectiveCustomerName() {
         if (customerName != null && !customerName.trim().isEmpty()) {
@@ -220,10 +215,7 @@ public class OrderDto {
         if (user != null && user.getUserName() != null) {
             return user.getUserName();
         }
-        if (cart != null && cart.getSessionId() != null) {
-            return "Guest-" + cart.getSessionId();
-        }
-        return "Unknown Customer";
+        return "Guest Customer";
     }
     
     /**

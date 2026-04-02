@@ -1,7 +1,6 @@
 package org.artanddecor.services;
 
-import org.artanddecor.dto.CreateOrderItemRequest;
-import org.artanddecor.dto.OrderDto;
+import org.artanddecor.dto.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -16,27 +15,37 @@ import java.util.List;
 public interface OrderService {
 
     /**
+     * Preview order before checkout - NEW API
+     * Calculates shipping and discount based on order subtotal amount only
+     * @param request Preview order request with selected cart item IDs
+     * @return Preview order response with all calculations
+     */
+    PreviewOrderResponse previewOrder(PreviewOrderRequest request);
+
+    /**
+     * Checkout entire cart to create order - FOR API /checkout
+     * Uses cartId from CheckoutCartRequest for cart validation and processing
+     * @param request Checkout request with complete order details and cartId
+     * @param userId User ID for order ownership tracking (from cart → user relationship)
+     * @return Created order
+     */
+    OrderDto checkoutEntireCart(CheckoutCartRequest request, Long userId);
+
+    /**
+     * Checkout selected cart items to create order - FOR API /create  
+     * Uses cartId and selectedCartItemIds from CheckoutCartRequest
+     * @param request Checkout request with selected items, order details and cartId
+     * @param userId User ID for order ownership tracking (from cart → user relationship)
+     * @return Created order
+     */
+    OrderDto checkoutSelectedCartItems(CheckoutCartRequest request, Long userId);
+
+    /**
      * Get order by ID (API 6)
      * @param orderId Order ID
      * @return OrderDto if found
      */
     OrderDto getOrderById(Long orderId);
-
-    /**
-     * Checkout cart to create order (API 1) - DISCOUNT removed
-     * @param userId User ID
-     * @param cartId Cart ID
-     * @param shippingAddressId Shipping address ID
-     * @param paymentMethod Payment method
-     * @param discountCode Discount code (set to null, kept for backward compatibility)
-     * @return Created order
-     */
-    OrderDto checkoutCart(
-            Long userId,
-            Long cartId,
-            Long shippingAddressId,
-            String paymentMethod,
-            String discountCode);
 
     /**
      * Get customer's orders with filters (API 2)
@@ -92,27 +101,8 @@ public interface OrderService {
             BigDecimal maxAmount,
             Pageable pageable);
 
-    /**
-     * Admin search orders with filters (API 5) - Legacy method, delegates to searchOrders
-     * @param orderId Filter by order ID (optional)
-     * @param customerId Filter by customer ID (optional)
-     * @param state Filter by state (optional)
-     * @param fromDate Filter from date (optional)
-     * @param toDate Filter to date (optional)
-     * @param minAmount Filter by minimum amount (optional)
-     * @param maxAmount Filter by maximum amount (optional)
-     * @param pageable Pagination information
-     * @return Page of orders matching criteria
-     */
-    Page<OrderDto> adminSearchOrders(
-            Long orderId,
-            Long customerId,
-            String state,
-            LocalDate fromDate,
-            LocalDate toDate,
-            BigDecimal minAmount,
-            BigDecimal maxAmount,
-            Pageable pageable);
+    // REMOVED: adminSearchOrders method - consolidated with searchOrders
+    // All search functionality is handled by searchOrders method
 
     /**
      * Admin create order (API 6) - DISCOUNT removed
@@ -147,6 +137,17 @@ public interface OrderService {
      * @return Updated order
      */
     OrderDto updateOrderState(Long orderId, Long newOrderStateId, Long changedByUserId);
+    
+    /**
+     * Update order status with special handling for DELIVERED status
+     * When order status is DELIVERED, automatically update associated shipment status to DELIVERED
+     * @param orderId Order ID
+     * @param newOrderStateId New order state ID
+     * @param changedByUserId User who made the change
+     * @param statusNote Optional note for status change
+     * @return Updated order
+     */
+    OrderDto updateOrderStatusWithSpecialHandling(Long orderId, Long newOrderStateId, Long changedByUserId, String statusNote);
 
     /**
      * Check if order belongs to user (for security)
@@ -155,4 +156,12 @@ public interface OrderService {
      * @return true if order belongs to user
      */
     boolean isOrderOwner(Long orderId, Long userId);
+    
+    /**
+     * Get userId from cartId for order ownership tracking
+     * Business flow: cartId → Cart → User → userId (for login users) or sessionId (for guest users)
+     * @param cartId Cart ID
+     * @return User ID from cart relationship, or null for guest carts
+     */
+    Long getUserIdFromCart(Long cartId);
 }

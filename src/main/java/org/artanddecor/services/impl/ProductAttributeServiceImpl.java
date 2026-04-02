@@ -2,6 +2,7 @@ package org.artanddecor.services.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.artanddecor.dto.ProductAttributeDto;
+import org.artanddecor.dto.ProductAttributeRequestDto;
 import org.artanddecor.model.Product;
 import org.artanddecor.model.ProductAttr;
 import org.artanddecor.model.ProductAttribute;
@@ -17,9 +18,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 /**
  * ProductAttributeService Implementation 
@@ -37,61 +36,101 @@ public class ProductAttributeServiceImpl implements ProductAttributeService {
     private final ProductAttrRepository productAttrRepository;
 
     // =============================================
+    // FIND OPERATIONS
+    // =============================================
+    
+    @Override
+    public Optional<ProductAttributeDto> findProductAttributeById(Long productAttributeId) {
+        logger.debug("Finding product attribute by ID: {}", productAttributeId);
+        return productAttributeRepository.findById(productAttributeId)
+                .map(ProductMapperUtil::toProductAttributeDto);
+    }
+    
+    @Override
+    public Page<ProductAttributeDto> getProductAttributesByCriteria(
+            Long productId, Long productAttrId, Boolean enabled, String attributeValue, Pageable pageable) {
+        logger.debug("Getting product attributes with criteria");
+        
+        Page<ProductAttribute> productAttributePage = productAttributeRepository.findProductAttributesByCriteriaPaginated(
+                productId, productAttrId, enabled, attributeValue, pageable);
+        
+        return productAttributePage.map(ProductMapperUtil::toProductAttributeDto);
+    }
+
+    // =============================================
     // CRUD OPERATIONS  
     // =============================================
     
     @Override
     @Transactional
-    public ProductAttributeDto createProductAttribute(Long productId, Long productAttrId, String attributeValue, Integer quantity) {
-        logger.info("Creating product attribute: productId={}, attrId={}, value={}, quantity={}", 
-                   productId, productAttrId, attributeValue, quantity);
+    public ProductAttributeDto createProductAttribute(ProductAttributeRequestDto requestDto) {
+        logger.info("Creating product attribute from DTO: productId={}, attrId={}, value={}, quantity={}", 
+                   requestDto.getProductId(), requestDto.getProductAttrId(), 
+                   requestDto.getProductAttributeValue(), requestDto.getProductAttributeQuantity());
         
         // Validate product exists
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new IllegalArgumentException("Product not found with ID: " + productId));
+        Product product = productRepository.findById(requestDto.getProductId())
+                .orElseThrow(() -> new IllegalArgumentException("Product not found with ID: " + requestDto.getProductId()));
         
         // Validate product attribute exists
-        ProductAttr productAttr = productAttrRepository.findById(productAttrId)
-                .orElseThrow(() -> new IllegalArgumentException("Product attribute not found with ID: " + productAttrId));
+        ProductAttr productAttr = productAttrRepository.findById(requestDto.getProductAttrId())
+                .orElseThrow(() -> new IllegalArgumentException("Product attribute not found with ID: " + requestDto.getProductAttrId()));
         
-        // Check if combination already exists
-        if (existsByCombo(productId, productAttrId, attributeValue)) {
+        // Check if combination already exists using repository query
+        if (productAttributeRepository.findByProductId(requestDto.getProductId())
+                .stream()
+                .anyMatch(pa -> pa.getProductAttr().getProductAttrId().equals(requestDto.getProductAttrId()) && 
+                               pa.getProductAttributeValue().equals(requestDto.getProductAttributeValue()))) {
             throw new IllegalArgumentException(
                 String.format("Product attribute combination already exists: product=%d, attr=%d, value=%s", 
-                             productId, productAttrId, attributeValue));
+                             requestDto.getProductId(), requestDto.getProductAttrId(), requestDto.getProductAttributeValue()));
         }
         
         // Create new product attribute association
         ProductAttribute productAttribute = new ProductAttribute();
         productAttribute.setProduct(product);
         productAttribute.setProductAttr(productAttr);
-        productAttribute.setProductAttributeValue(attributeValue);
-        productAttribute.setProductAttributeQuantity(quantity != null ? quantity : 0);
-        productAttribute.setProductAttributeEnabled(true);
+        productAttribute.setProductAttributeValue(requestDto.getProductAttributeValue());
+        productAttribute.setProductAttributeQuantity(requestDto.getProductAttributeQuantity() != null ? requestDto.getProductAttributeQuantity() : 0);
+        productAttribute.setProductAttributeEnabled(requestDto.getProductAttributeEnabled() != null ? requestDto.getProductAttributeEnabled() : true);
         
         ProductAttribute savedProductAttribute = productAttributeRepository.save(productAttribute);
         logger.info("Product attribute created successfully with ID: {}", savedProductAttribute.getProductAttributeId());
         
         return ProductMapperUtil.toProductAttributeDto(savedProductAttribute);
     }
-    
+
     @Override
     @Transactional
-    public ProductAttributeDto updateProductAttribute(Long productAttributeId, ProductAttributeDto productAttributeDto) {
-        logger.info("Updating product attribute ID: {}", productAttributeId);
+    public ProductAttributeDto updateProductAttribute(Long productAttributeId, ProductAttributeRequestDto requestDto) {
+        logger.info("Updating product attribute ID: {} from request DTO", productAttributeId);
         
         ProductAttribute existingProductAttribute = productAttributeRepository.findById(productAttributeId)
                 .orElseThrow(() -> new IllegalArgumentException("Product attribute not found with ID: " + productAttributeId));
         
+        // Validate and update product if changed
+        if (requestDto.getProductId() != null && !requestDto.getProductId().equals(existingProductAttribute.getProduct().getProductId())) {
+            Product newProduct = productRepository.findById(requestDto.getProductId())
+                    .orElseThrow(() -> new IllegalArgumentException("Product not found with ID: " + requestDto.getProductId()));
+            existingProductAttribute.setProduct(newProduct);
+        }
+        
+        // Validate and update product attr if changed
+        if (requestDto.getProductAttrId() != null && !requestDto.getProductAttrId().equals(existingProductAttribute.getProductAttr().getProductAttrId())) {
+            ProductAttr newProductAttr = productAttrRepository.findById(requestDto.getProductAttrId())
+                    .orElseThrow(() -> new IllegalArgumentException("Product attribute not found with ID: " + requestDto.getProductAttrId()));
+            existingProductAttribute.setProductAttr(newProductAttr);
+        }
+        
         // Update fields
-        if (productAttributeDto.getProductAttributeValue() != null) {
-            existingProductAttribute.setProductAttributeValue(productAttributeDto.getProductAttributeValue());
+        if (requestDto.getProductAttributeValue() != null) {
+            existingProductAttribute.setProductAttributeValue(requestDto.getProductAttributeValue());
         }
-        if (productAttributeDto.getProductAttributeQuantity() != null) {
-            existingProductAttribute.setProductAttributeQuantity(productAttributeDto.getProductAttributeQuantity());
+        if (requestDto.getProductAttributeQuantity() != null) {
+            existingProductAttribute.setProductAttributeQuantity(requestDto.getProductAttributeQuantity());
         }
-        if (productAttributeDto.getProductAttributeEnabled() != null) {
-            existingProductAttribute.setProductAttributeEnabled(productAttributeDto.getProductAttributeEnabled());
+        if (requestDto.getProductAttributeEnabled() != null) {
+            existingProductAttribute.setProductAttributeEnabled(requestDto.getProductAttributeEnabled());
         }
         
         ProductAttribute updatedProductAttribute = productAttributeRepository.save(existingProductAttribute);
@@ -102,13 +141,13 @@ public class ProductAttributeServiceImpl implements ProductAttributeService {
     
     @Override
     @Transactional
-    public ProductAttributeDto updateProductAttributeQuantity(Long productAttributeId, Integer newQuantity) {
-        logger.info("Updating product attribute quantity: ID={}, newQuantity={}", productAttributeId, newQuantity);
+    public ProductAttributeDto updateProductAttributeQuantity(Long productAttributeId, Integer quantity) {
+        logger.info("Updating product attribute quantity: ID={}, newQuantity={}", productAttributeId, quantity);
         
         ProductAttribute productAttribute = productAttributeRepository.findById(productAttributeId)
                 .orElseThrow(() -> new IllegalArgumentException("Product attribute not found with ID: " + productAttributeId));
         
-        productAttribute.setProductAttributeQuantity(newQuantity != null ? newQuantity : 0);
+        productAttribute.setProductAttributeQuantity(quantity != null ? quantity : 0);
         
         ProductAttribute updatedProductAttribute = productAttributeRepository.save(productAttribute);
         logger.info("Product attribute quantity updated successfully");
@@ -127,105 +166,5 @@ public class ProductAttributeServiceImpl implements ProductAttributeService {
         
         productAttributeRepository.deleteById(productAttributeId);
         logger.info("Product attribute deleted successfully");
-    }
-    
-    @Override
-    @Transactional
-    public void deleteProductAttribute(Long productId, Long productAttrId, String attributeValue) {
-        logger.info("Deleting product attribute by combination: productId={}, attrId={}, value={}", 
-                   productId, productAttrId, attributeValue);
-        
-        Optional<ProductAttribute> productAttribute = findProductAttributeEntityByCombo(productId, productAttrId, attributeValue);
-        if (productAttribute.isEmpty()) {
-            throw new IllegalArgumentException(
-                String.format("Product attribute not found: product=%d, attr=%d, value=%s", 
-                             productId, productAttrId, attributeValue));
-        }
-        
-        productAttributeRepository.delete(productAttribute.get());
-        logger.info("Product attribute deleted successfully");
-    }
-
-    // =============================================
-    // FIND OPERATIONS
-    // =============================================
-    
-    @Override
-    public Optional<ProductAttributeDto> findProductAttributeById(Long productAttributeId) {
-        logger.debug("Finding product attribute by ID: {}", productAttributeId);
-        return productAttributeRepository.findById(productAttributeId)
-                .map(ProductMapperUtil::toProductAttributeDto);
-    }
-    
-    @Override
-    public List<ProductAttributeDto> findProductAttributesByProductId(Long productId) {
-        logger.debug("Finding product attributes by product ID: {}", productId);
-        return productAttributeRepository.findByProductId(productId)
-                .stream()
-                .map(ProductMapperUtil::toProductAttributeDto)
-                .collect(Collectors.toList());
-    }
-    
-    @Override
-    public List<ProductAttributeDto> findProductAttributesByAttrId(Long productAttrId) {
-        logger.debug("Finding product attributes by attr ID: {}", productAttrId);
-        return productAttributeRepository.findByProductAttrId(productAttrId)
-                .stream()
-                .map(ProductMapperUtil::toProductAttributeDto)
-                .collect(Collectors.toList());
-    }
-    
-    @Override
-    public Optional<ProductAttributeDto> findProductAttributeByCombo(Long productId, Long productAttrId, String attributeValue) {
-        logger.debug("Finding product attribute by combo: productId={}, attrId={}, value={}", 
-                    productId, productAttrId, attributeValue);
-        return findProductAttributeEntityByCombo(productId, productAttrId, attributeValue)
-                .map(ProductMapperUtil::toProductAttributeDto);
-    }
-    
-    @Override
-    public Page<ProductAttributeDto> getProductAttributesByCriteria(
-            Long productId, Long productAttrId, Boolean enabled, String attributeValue, Pageable pageable) {
-        logger.debug("Getting product attributes with criteria");
-        
-        Page<ProductAttribute> productAttributePage = productAttributeRepository.findProductAttributesByCriteriaPaginated(
-                productId, productAttrId, enabled, attributeValue, pageable);
-        
-        return productAttributePage.map(ProductMapperUtil::toProductAttributeDto);
-    }
-
-    // =============================================
-    // UTILITY OPERATIONS
-    // =============================================
-    
-    @Override
-    public boolean existsByCombo(Long productId, Long productAttrId, String attributeValue) {
-        logger.debug("Checking if product attribute exists by combo: productId={}, attrId={}, value={}", 
-                    productId, productAttrId, attributeValue);
-        return findProductAttributeEntityByCombo(productId, productAttrId, attributeValue).isPresent();
-    }
-    
-    @Override
-    public long countByProductId(Long productId) {
-        logger.debug("Counting product attributes by product ID: {}", productId);
-        return productAttributeRepository.countByProductId(productId);
-    }
-    
-    @Override
-    public long getTotalCount() {
-        logger.debug("Getting total product attributes count");
-        return productAttributeRepository.count();
-    }
-    
-    // =============================================
-    // HELPER METHODS
-    // =============================================
-    
-    private Optional<ProductAttribute> findProductAttributeEntityByCombo(Long productId, Long productAttrId, String attributeValue) {
-        return productAttributeRepository.findByProductId(productId)
-                .stream()
-                .filter(pa -> pa.getProductAttr().getProductAttrId().equals(productAttrId) && 
-                             pa.getProductAttributeValue().equals(attributeValue))
-                .findFirst();
     }
 }

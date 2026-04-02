@@ -52,21 +52,200 @@ public class OrderController {
     // ===== CUSTOMER ORDER APIs =====
 
     /**
-     * API 1: Checkout Cart → Create Order
-     * Role: permitAll - Both ADMIN and GUEST can create orders
-     * Business Flow: Cart validation → Product inventory check → Auto-select best shipping & discount → Order creation → Cart clearing
+     * NEW API: Preview Order Checkout
+     * Role: permitAll - Preview order without authentication for guest users
+     * Business Flow: Client sends cartId + selected cart item IDs → Validate cart exists → Validate items belong to cart → Calculate shipping & discount → Return preview without creating order
+     * SECURITY: cartId required to ensure all selected items belong to the same cart and prevent unauthorized access
      */
-    @PostMapping("/checkout")
-    // permitAll - Both ADMIN and GUEST users can checkout
+    @PostMapping("/preview")
     @Operation(
-        summary = "Checkout cart to create order",
-        description = "Customer checkout their shopping cart to create a new order. This process validates cart items, calculates shipping, and creates the order with all necessary details.",
+        summary = "Preview order checkout calculation for selected cart items",
+        description = "Preview order totals, shipping, and discount for specific cart items from a validated cart. Includes security validation to ensure all selected items belong to the specified cart.",
+        tags = {"Customer Order Management"}
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200", 
+            description = "Order preview calculated successfully for selected items",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = BaseResponseDto.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400", 
+            description = "Invalid request - Cart not found, selected items not found, or items don't belong to specified cart"
+        ),
+        @ApiResponse(
+            responseCode = "403", 
+            description = "Security violation - Selected items don't belong to specified cart"
+        )
+    })
+    public ResponseEntity<BaseResponseDto<PreviewOrderResponse>> previewOrder(
+            @Parameter(
+                description = "Preview request containing cart ID and selected cart item IDs for validation and preview",
+                required = true,
+                example = "{\"cartId\": 123, \"selectedCartItemIds\": [1, 2, 3]}"
+            )
+            @Valid @RequestBody PreviewOrderRequest request) {
+        
+        try {
+            logger.info("Preview order request for cart {} with {} selected items", 
+                       request.getCartId(),
+                       request.getSelectedCartItemIds() != null ? request.getSelectedCartItemIds().size() : 0);
+            
+            PreviewOrderResponse preview = orderService.previewOrder(request);
+            
+            return ResponseEntity.ok(BaseResponseDto.success("Order preview calculated successfully", preview));
+        } catch (SecurityException e) {
+            logger.error("Security violation in order preview: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(BaseResponseDto.badRequest("Security violation: " + e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Error previewing order: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest()
+                    .body(BaseResponseDto.badRequest("Failed to preview order: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * NEW API: Create Order from Selected Cart Items
+     * Role: permitAll - Both authenticated users and guest users can create orders
+     * Business Flow: Validate selection → Create order with customer/receiver info → Remove cart items
+     * IMPORTANT: userId parameter ensures Order.USER_ID is properly set for order ownership tracking
+     */
+    @PostMapping("/create")
+    @Operation(
+        summary = "Create order from selected cart items",
+        description = "Create a new order using selected cart items with complete order information. The userId parameter ensures the Order record has proper USER_ID set to identify order ownership.",
         tags = {"Customer Order Management"}
     )
     @ApiResponses(value = {
         @ApiResponse(
             responseCode = "201", 
-            description = "Order created successfully from cart",
+            description = "Order created successfully from selected cart items",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = BaseResponseDto.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400", 
+            description = "Invalid request - Missing required information or cart items not found"
+        )
+    })
+    public ResponseEntity<BaseResponseDto<OrderDto>> createOrderFromSelectedItems(
+            @Parameter(
+                description = "Order creation request with selected cart items and complete order details (cartId required)",
+                required = true
+            )
+            @Valid @RequestBody CheckoutCartRequest request) {
+        
+        try {
+            logger.info("Creating order from selected cart items for cartId: {}", request.getCartId());
+            
+            // Get userId from cartId for Order.USER_ID assignment
+            Long userId = orderService.getUserIdFromCart(request.getCartId());
+            logger.info("Retrieved userId: {} for Order.USER_ID assignment", userId != null ? userId : "NULL (Guest Order)");
+
+            // Create order using CheckoutCartRequest with userId for ownership tracking
+            OrderDto createdOrder = orderService.checkoutSelectedCartItems(request, userId);
+
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(BaseResponseDto.success("Order created successfully from selected cart items", createdOrder));
+        } catch (Exception e) {
+            logger.error("Failed to create order from selected cart items: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest()
+                    .body(BaseResponseDto.badRequest("Failed to create order: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * NEW API: Update Order Status
+     * Role: ADMIN - Update order status with special handling for DELIVERED status
+     * Business Flow: Update order status → Create history → Handle special cases (DELIVERED affects shipment)
+     */
+    @PatchMapping("/{orderId}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+        summary = "Update order status",
+        description = "Update order status with automatic shipment status handling. When order status is set to DELIVERED, associated shipments are automatically marked as DELIVERED. Only ADMIN role can update order status.",
+        tags = {"Admin Order Management"}
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200", 
+            description = "Order status updated successfully",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = BaseResponseDto.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400", 
+            description = "Invalid request - Order or status not found"
+        ),
+        @ApiResponse(
+            responseCode = "401", 
+            description = "Authentication required"
+        ),
+        @ApiResponse(
+            responseCode = "403", 
+            description = "Access denied - ADMIN role required"
+        )
+    })
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<BaseResponseDto<OrderDto>> updateOrderStatus(
+            @Parameter(description = "Order ID", required = true, example = "123")
+            @PathVariable Long orderId,
+            
+            @Parameter(
+                description = "Status update request with new order status",
+                required = true,
+                example = "{\"newOrderStateId\": 4, \"statusNote\": \"Order delivered successfully\"}"
+            )
+            @Valid @RequestBody UpdateOrderStatusRequest request,
+            
+            @Parameter(description = "User ID of admin making the change", required = true, example = "123")
+            @RequestParam Long userId) {
+        
+        try {
+            logger.info("Update order status request - Order: {}, New Status: {}, User: {}", 
+                       orderId, request.getNewOrderStateId(), userId);
+            
+            // Set the user who made the change if not provided
+            if (request.getChangedByUserId() == null) {
+                request.setChangedByUserId(userId);
+            }
+            
+            OrderDto updatedOrder = orderService.updateOrderStatusWithSpecialHandling(
+                    orderId, request.getNewOrderStateId(), request.getChangedByUserId(), request.getStatusNote());
+            
+            return ResponseEntity.ok(BaseResponseDto.success("Order status updated successfully", updatedOrder));
+        } catch (Exception e) {
+            logger.error("Error updating order status: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest()
+                    .body(BaseResponseDto.badRequest("Failed to update order status: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * API 1: Checkout Cart → Create Order
+     * Role: permitAll - Both ADMIN and GUEST can create orders
+     * Business Flow: Cart validation → Product inventory check → Auto-select best shipping & discount → Order creation → Cart clearing
+     * CHECKOUT ENTIRE CART - All items in user's cart will be processed
+     */
+    @PostMapping("/checkout")
+    // permitAll - Both ADMIN and GUEST users can checkout
+    @Operation(
+        summary = "Checkout entire cart to create order",
+        description = "Customer checkout their entire cart to create a new order. This process validates all cart items, calculates shipping, and creates the order with complete customer details. ALL ITEMS in the cart will be processed.",
+        tags = {"Customer Order Management"}
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "201", 
+            description = "Order created successfully from entire cart",
             content = @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = BaseResponseDto.class)
@@ -81,42 +260,37 @@ public class OrderController {
             )
         ),
         @ApiResponse(
-            responseCode = "401", 
-            description = "Authentication required - Valid JWT token required"
-        ),
-        @ApiResponse(
-            responseCode = "403", 
-            description = "Access denied - CUSTOMER role required"
+            responseCode = "400", 
+            description = "Invalid request - UserId or sessionId required for guest users"
         )
     })
-    @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<BaseResponseDto<OrderDto>> checkoutCart(
             @Parameter(
-                description = "Checkout request containing cart ID, shipping address, and payment method",
+                description = "Checkout request with complete order details (cartId required for cart validation)",
                 required = true,
-                example = "{\"cartId\": 123, \"shippingAddressId\": 456, \"paymentMethod\": \"CREDIT_CARD\"}"
+                example = "{\"customerName\": \"John Doe\", \"paymentMethodId\": 1, \"cartId\": 456}"
             )
-            @Valid @RequestBody CheckoutCartRequest request,
-            Authentication authentication) {
+            @Valid @RequestBody CheckoutCartRequest request) {
         
         try {
-            UserDto user = (UserDto) authentication.getPrincipal();
-            Long userId = user.getUserId();
+            logger.info("Checkout entire cart request for cartId: {}", request.getCartId());
             
-            logger.info("Checkout cart request from user: {}, cartId: {}", userId, request.getCartId());
-            
-            OrderDto newOrder = orderService.checkoutCart(
-                    userId,
-                    request.getCartId(),
-                    request.getShippingAddressId(),
-                    request.getPaymentMethod(),
-                    null // discountCode removed
-            );
-            
+            // Get userId from cartId for Order.USER_ID assignment
+            Long userId = orderService.getUserIdFromCart(request.getCartId());
+            logger.info("Retrieved userId: {} for Order.USER_ID assignment", userId != null ? userId : "NULL (Guest Order)");
+
+            // Use checkoutEntireCart method - processes ALL cart items
+            OrderDto createdOrder = orderService.checkoutEntireCart(request, userId);
+
             return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(BaseResponseDto.success("Order created successfully", newOrder));
+                    .body(BaseResponseDto.success("Order created successfully from entire cart", createdOrder));
+
+        } catch (IllegalArgumentException e) {
+            logger.warn("Invalid checkout request: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(BaseResponseDto.badRequest("Invalid request: " + e.getMessage()));
         } catch (Exception e) {
-            logger.error("Error creating order from cart: {}", e.getMessage(), e);
+            logger.error("Failed to create order: {}", e.getMessage(), e);
             return ResponseEntity.badRequest()
                     .body(BaseResponseDto.badRequest("Failed to create order: " + e.getMessage()));
         }
@@ -124,10 +298,9 @@ public class OrderController {
 
     /**
      * API 2: Get My Orders
-     * Role: CUSTOMER - Customer views their own order history with filtering and pagination
+     * Role: permitAll - Customer views their own order history with filtering and pagination
      */
     @GetMapping("/my-orders")
-    @PreAuthorize("hasRole('CUSTOMER')")
     @Operation(
         summary = "Get customer's order history",
         description = "Customer retrieves their own orders with optional filtering by order state and date range. Supports pagination for large result sets.",
@@ -141,17 +314,8 @@ public class OrderController {
                 mediaType = "application/json",
                 schema = @Schema(implementation = BaseResponseDto.class)
             )
-        ),
-        @ApiResponse(
-            responseCode = "401",
-            description = "Authentication required - Valid JWT token required"
-        ),
-        @ApiResponse(
-            responseCode = "403",
-            description = "Access denied - CUSTOMER role required"
         )
     })
-    @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<BaseResponseDto<Page<OrderDto>>> getMyOrders(
             @Parameter(description = "Filter by order state name (optional)", example = "PENDING")
             @RequestParam(required = false) String state,
@@ -162,13 +326,12 @@ public class OrderController {
             @Parameter(description = "Filter orders to this date (optional). Format: YYYY-MM-DD", example = "2026-03-08")
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             
-            @PageableDefault(page = 0, size = 10, sort = "createdDt", direction = Sort.Direction.DESC) Pageable pageable,
-            Authentication authentication) {
+            @Parameter(description = "User ID for logged-in users (required for security)", example = "123")
+            @RequestParam Long userId,
+            
+            @PageableDefault(page = 0, size = 10, sort = "createdDt", direction = Sort.Direction.DESC) Pageable pageable) {
         
         try {
-            UserDto user = (UserDto) authentication.getPrincipal();
-            Long userId = user.getUserId();
-            
             logger.info("Get my orders request from user: {}", userId);
             
             Page<OrderDto> orders = orderService.getMyOrders(userId, state, fromDate, toDate, pageable);
@@ -183,25 +346,22 @@ public class OrderController {
 
     /**
      * API 3: Get My Order Detail
-     * Role: CUSTOMER - Customer views specific order details
+     * Role: permitAll - Customer views specific order details
      */
     @GetMapping("/my-orders/{orderId}")
-    @PreAuthorize("hasRole('CUSTOMER')")
     @Operation(
         summary = "Get customer's specific order details",
         description = "Customer retrieves detailed information about a specific order including order items and order history.",
         tags = {"Customer Order Management"}
     )
-    @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<BaseResponseDto<OrderDto>> getMyOrderDetail(
             @Parameter(description = "Order ID", required = true, example = "123")
             @PathVariable Long orderId,
-            Authentication authentication) {
+            
+            @Parameter(description = "User ID for logged-in users (required for security)", example = "123")
+            @RequestParam Long userId) {
         
         try {
-            UserDto user = (UserDto) authentication.getPrincipal();
-            Long userId = user.getUserId();
-            
             logger.info("Get my order detail request from user: {}, orderId: {}", userId, orderId);
             
             OrderDto order = orderService.getMyOrderDetail(userId, orderId);
@@ -216,25 +376,22 @@ public class OrderController {
 
     /**
      * API 4: Cancel My Order
-     * Role: CUSTOMER - Customer cancels their own pending order
+     * Role: permitAll - Customer cancels their own pending order
      */
     @PostMapping("/my-orders/{orderId}/cancel")
-    @PreAuthorize("hasRole('CUSTOMER')")
     @Operation(
         summary = "Cancel customer's order",
         description = "Customer cancels their own order if it's in a cancellable state (PENDING, PROCESSING). Updates order state and creates history record.",
         tags = {"Customer Order Management"}
     )
-    @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<BaseResponseDto<OrderDto>> cancelMyOrder(
             @Parameter(description = "Order ID to cancel", required = true, example = "123")
             @PathVariable Long orderId,
-            Authentication authentication) {
+            
+            @Parameter(description = "User ID for logged-in users (required for security)", example = "123")
+            @RequestParam Long userId) {
         
         try {
-            UserDto user = (UserDto) authentication.getPrincipal();
-            Long userId = user.getUserId();
-            
             logger.info("Cancel my order request from user: {}, orderId: {}", userId, orderId);
             
             OrderDto cancelledOrder = orderService.cancelMyOrder(userId, orderId);
@@ -248,6 +405,62 @@ public class OrderController {
     }
 
     // ===== ORDER MANAGEMENT APIs =====
+
+    /**
+     * API: Get Order by ID (Admin)
+     * Role: ADMIN - Get complete order information with all related data
+     * Business Analysis: Admin needs full access to any order details for management
+     */
+    @GetMapping("/{orderId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+        summary = "Get order by ID (Admin)",
+        description = "Admin retrieves complete order information by ID including all order items, customer details, and order history. Full access to any order in the system.",
+        tags = {"Admin Order Management"}
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Order retrieved successfully",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = BaseResponseDto.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401", 
+            description = "Authentication required"
+        ),
+        @ApiResponse(
+            responseCode = "403", 
+            description = "Access denied - ADMIN role required"
+        ),
+        @ApiResponse(
+            responseCode = "404", 
+            description = "Order not found"
+        )
+    })
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<BaseResponseDto<OrderDto>> getOrderById(
+            @Parameter(description = "Order ID", required = true, example = "123")
+            @PathVariable Long orderId) {
+        
+        try {
+            logger.info("Admin get order by ID request: {}", orderId);
+            
+            OrderDto order = orderService.getOrderById(orderId);
+            
+            return ResponseEntity.ok(BaseResponseDto.success("Order retrieved successfully", order));
+        } catch (IllegalArgumentException e) {
+            logger.warn("Order not found: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(BaseResponseDto.notFound("Order not found with ID: " + orderId));
+        } catch (Exception e) {
+            logger.error("Error getting order by ID: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest()
+                    .body(BaseResponseDto.badRequest("Failed to get order: " + e.getMessage()));
+        }
+    }
 
     /**
      * API 5: Get Orders (Admin/Manager)

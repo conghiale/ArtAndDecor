@@ -45,6 +45,7 @@ public class CartItemRequestDto {
 
     /**
      * Check if cart identification is provided
+     * Note: Cart identification is optional for add operations - new guest cart will be created if not provided
      * @return true if at least one cart identifier is present
      */
     public boolean hasCartIdentification() {
@@ -70,11 +71,11 @@ public class CartItemRequestDto {
 
     /**
      * Validate that the request has valid data for add operations
+     * Note: Cart identification is optional - if not provided, a new guest cart will be created
      * @return true if valid for add, false otherwise
      */
     public boolean isValidForAdd() {
-        return hasCartIdentification() &&
-               productId != null && productId > 0 &&
+        return productId != null && productId > 0 &&
                quantity != null && quantity > 0 && quantity <= 999;
     }
 
@@ -84,68 +85,5 @@ public class CartItemRequestDto {
      */
     public boolean isValidForUpdate() {
         return quantity != null && quantity >= 0 && quantity <= 999;
-    }
-
-    /**
-     * Create request for simple add without attributes
-     * @param cartId Cart ID
-     * @param productId Product ID
-     * @param quantity Quantity
-     * @return CartItemRequestDto without attributes
-     */
-    public static CartItemRequestDto createSimpleAdd(Long cartId, Long productId, Integer quantity) {
-        return CartItemRequestDto.builder()
-                .cartId(cartId)
-                .productId(productId)
-                .quantity(quantity)
-                .build();
-    }
-
-    /**
-     * Create request for add with attributes
-     * @param cartId Cart ID
-     * @param productId Product ID
-     * @param quantity Quantity
-     * @param attributeIds Selected attribute IDs
-     * @return CartItemRequestDto with attributes
-     */
-    public static CartItemRequestDto createWithAttributes(
-            Long cartId, Long productId, Integer quantity, List<Long> attributeIds) {
-        return CartItemRequestDto.builder()
-                .cartId(cartId)
-                .productId(productId)
-                .quantity(quantity)
-                .selectedAttributeIds(attributeIds)
-                .build();
-    }
-
-    /**
-     * Create request for user-based add
-     * @param userId User ID
-     * @param productId Product ID
-     * @param quantity Quantity
-     * @return CartItemRequestDto for user
-     */
-    public static CartItemRequestDto createForUser(Long userId, Long productId, Integer quantity) {
-        return CartItemRequestDto.builder()
-                .userId(userId)
-                .productId(productId)
-                .quantity(quantity)
-                .build();
-    }
-
-    /**
-     * Create request for guest session add
-     * @param sessionId Session ID
-     * @param productId Product ID
-     * @param quantity Quantity
-     * @return CartItemRequestDto for guest
-     */
-    public static CartItemRequestDto createForGuest(String sessionId, Long productId, Integer quantity) {
-        return CartItemRequestDto.builder()
-                .sessionId(sessionId)
-                .productId(productId)
-                .quantity(quantity)
-                .build();
     }
 }

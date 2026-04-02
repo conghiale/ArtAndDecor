@@ -1,6 +1,7 @@
 package org.artanddecor.utils;
 
 import org.artanddecor.dto.SeoMetaDto; 
+import org.artanddecor.dto.SeoMetaRequestDto;
 import org.artanddecor.model.SeoMeta;
 
 /**
@@ -85,5 +86,30 @@ public class SeoMetaMapperUtil {
         existingSeoMeta.setSeoMetaSchemaType(seoMetaDto.getSeoMetaSchemaType());
         existingSeoMeta.setSeoMetaCustomJson(seoMetaDto.getSeoMetaCustomJson());
         existingSeoMeta.setSeoMetaEnabled(seoMetaDto.getSeoMetaEnabled());
+    }
+
+    /**
+     * Convert SeoMetaRequestDto to SeoMeta entity for creation
+     * @param seoMetaRequestDto SeoMetaRequestDto
+     * @return SeoMeta entity
+     */
+    public static SeoMeta toSeoMetaEntityFromRequest(SeoMetaRequestDto seoMetaRequestDto) {
+        if (seoMetaRequestDto == null) {
+            return null;
+        }
+        
+        SeoMeta seoMeta = new SeoMeta();
+        seoMeta.setSeoMetaTitle(seoMetaRequestDto.getSeoMetaTitle());
+        seoMeta.setSeoMetaDescription(seoMetaRequestDto.getSeoMetaDescription());
+        seoMeta.setSeoMetaKeywords(seoMetaRequestDto.getSeoMetaKeywords());
+        seoMeta.setSeoMetaIndex(seoMetaRequestDto.getSeoMetaIndex() != null ? seoMetaRequestDto.getSeoMetaIndex() : true);
+        seoMeta.setSeoMetaFollow(seoMetaRequestDto.getSeoMetaFollow() != null ? seoMetaRequestDto.getSeoMetaFollow() : true);
+        seoMeta.setSeoMetaCanonicalUrl(seoMetaRequestDto.getSeoMetaCanonicalUrl());
+        seoMeta.setSeoMetaImageName(null); // SeoMetaRequestDto doesn't have seoMetaImageName field
+        seoMeta.setSeoMetaSchemaType(seoMetaRequestDto.getSeoMetaSchemaType());
+        seoMeta.setSeoMetaCustomJson(seoMetaRequestDto.getSeoMetaCustomJson());
+        seoMeta.setSeoMetaEnabled(seoMetaRequestDto.getSeoMetaEnabled() != null ? seoMetaRequestDto.getSeoMetaEnabled() : true);
+        
+        return seoMeta;
     }
 }

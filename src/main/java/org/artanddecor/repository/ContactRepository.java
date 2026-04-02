@@ -1,6 +1,8 @@
 package org.artanddecor.repository;
 
 import org.artanddecor.model.Contact;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -24,11 +26,12 @@ public interface ContactRepository extends JpaRepository<Contact, Long> {
     Optional<Contact> findByContactSlug(String contactSlug);
 
     /**
-     * Find contacts by multiple criteria
+     * Find contacts by multiple criteria with pagination
      * @param contactName Filter by contact name (exact match)
      * @param contactEnabled Filter by enabled status
      * @param textSearch Search text in name, slug, address, email, phone, fanpage, remark
-     * @return List of matching contacts
+     * @param pageable Pagination parameters
+     * @return Page of matching contacts
      */
     @Query("SELECT c FROM Contact c WHERE " +
            "(:contactName IS NULL OR c.contactName = :contactName) AND " +
@@ -41,10 +44,11 @@ public interface ContactRepository extends JpaRepository<Contact, Long> {
            " LOWER(c.contactPhone) LIKE LOWER(CONCAT('%', :textSearch, '%')) OR " +
            " LOWER(c.contactFanpage) LIKE LOWER(CONCAT('%', :textSearch, '%')) OR " +
            " LOWER(c.contactRemark) LIKE LOWER(CONCAT('%', :textSearch, '%')))")
-    List<Contact> findContactsByCriteria(
+    Page<Contact> findContactsByCriteria(
         @Param("contactName") String contactName,
         @Param("contactEnabled") Boolean contactEnabled,
-        @Param("textSearch") String textSearch);
+        @Param("textSearch") String textSearch,
+        Pageable pageable);
     
     /**
      * Get all distinct contact names for dropdown/combobox

@@ -1,9 +1,6 @@
 package org.artanddecor.repository;
 
-import org.artanddecor.model.Cart;
 import org.artanddecor.model.CartItem;
-import org.artanddecor.model.CartItemState;
-import org.artanddecor.model.Product;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -19,17 +16,10 @@ import java.util.Optional;
 
 /**
  * Repository interface for CartItem entity
- * Handles CRUD operations for cart items
+ * Minimal interface for cart item operations
  */
 @Repository
 public interface CartItemRepository extends JpaRepository<CartItem, Long> {
-
-    /**
-     * Find cart items by cart
-     * @param cart Cart entity
-     * @return List of cart items
-     */
-    List<CartItem> findByCart(Cart cart);
 
     /**
      * Find cart items by cart ID
@@ -39,12 +29,18 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long> {
     List<CartItem> findByCart_CartId(Long cartId);
 
     /**
-     * Find cart item by cart and product
-     * @param cart Cart entity
-     * @param product Product entity
-     * @return Optional CartItem
+     * Find all cart items by user ID (for entire cart checkout)
+     * @param userId User ID
+     * @return List of cart items for the user's cart
      */
-    Optional<CartItem> findByCartAndProduct(Cart cart, Product product);
+    List<CartItem> findByCart_User_UserId(Long userId);
+
+    /**
+     * Find all cart items by session ID (for guest user entire cart checkout)
+     * @param sessionId Session ID
+     * @return List of cart items for the session's cart
+     */
+    List<CartItem> findByCart_SessionId(String sessionId);
 
     /**
      * Find cart item by cart ID and product ID
@@ -56,88 +52,44 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long> {
     Optional<CartItem> findByCartIdAndProductId(@Param("cartId") Long cartId, @Param("productId") Long productId);
 
     /**
-     * Find cart items by product
-     * @param product Product entity
+     * Find cart items by cart ID and cart item state ID
+     * @param cartId Cart ID
+     * @param cartItemStateId Cart item state ID
      * @return List of cart items
      */
-    List<CartItem> findByProduct(Product product);
+    @Query("SELECT ci FROM CartItem ci WHERE ci.cart.cartId = :cartId AND ci.cartItemState.cartItemStateId = :cartItemStateId")
+    List<CartItem> findByCartIdAndCartItemStateId(@Param("cartId") Long cartId, @Param("cartItemStateId") Long cartItemStateId);
 
     /**
-     * Find cart items by product ID
-     * @param productId Product ID
-     * @return List of cart items
+     * Count cart items by cart ID and state ID
+     * @param cartId Cart ID
+     * @param cartItemStateId Cart item state ID
+     * @return Cart items count
      */
-    List<CartItem> findByProduct_ProductId(Long productId);
+    @Query("SELECT COUNT(ci) FROM CartItem ci WHERE ci.cart.cartId = :cartId AND ci.cartItemState.cartItemStateId = :cartItemStateId")
+    Long countCartItems(@Param("cartId") Long cartId, @Param("cartItemStateId") Long cartItemStateId);
 
     /**
-     * Find cart items by cart item state
-     * @param cartItemState Cart item state entity
-     * @return List of cart items
+     * Delete cart items by cart ID
+     * @param cartId Cart ID
      */
-    List<CartItem> findByCartItemState(CartItemState cartItemState);
+    @Modifying
+    @Query("DELETE FROM CartItem ci WHERE ci.cart.cartId = :cartId")
+    void deleteByCartId(@Param("cartId") Long cartId);
 
     /**
-     * Find cart items by cart item state name
-     * @param cartItemStateName Cart item state name
-     * @return List of cart items
+     * Get total quantity of active cart items
+     * @param cartId Cart ID
+     * @return Total quantity
      */
-    @Query("SELECT ci FROM CartItem ci WHERE ci.cartItemState.cartItemStateName = :cartItemStateName")
-    List<CartItem> findByCartItemStateName(@Param("cartItemStateName") String cartItemStateName);
+    @Query("SELECT COALESCE(SUM(ci.cartItemQuantity), 0) FROM CartItem ci " +
+           "WHERE ci.cart.cartId = :cartId AND ci.cartItemState.cartItemStateName = 'ACTIVE'")
+    Integer getActiveCartItemsTotalQuantity(@Param("cartId") Long cartId);
 
-    /**
-     * Find cart items by user ID
-     * @param userId User ID
-     * @param pageable Pagination parameters
-     * @return Page of cart items
-     */
-    @Query("SELECT ci FROM CartItem ci WHERE ci.cart.user.userId = :userId")
-    Page<CartItem> findByUserId(@Param("userId") Long userId, Pageable pageable);
-
-    /**
-     * Find active cart items by user
-     * @param userId User ID
-     * @return List of active cart items
-     */
-    @Query("SELECT ci FROM CartItem ci WHERE ci.cart.user.userId = :userId " +
-           "AND ci.cart.cartState.cartStateName = 'ACTIVE' " +
-           "AND ci.cartItemState.cartItemStateName = 'ACTIVE'")
-    List<CartItem> findActiveCartItemsByUser(@Param("userId") Long userId);
-
-    /**
-     * Find cart items by price range
-     * @param minPrice Minimum price
-     * @param maxPrice Maximum price
-     * @param pageable Pagination parameters
-     * @return Page of cart items
-     */
-    @Query("SELECT ci FROM CartItem ci WHERE ci.cartItemTotalPrice >= :minPrice AND ci.cartItemTotalPrice <= :maxPrice")
-    Page<CartItem> findByPriceRange(@Param("minPrice") BigDecimal minPrice, 
-                                   @Param("maxPrice") BigDecimal maxPrice, 
-                                   Pageable pageable);
-
-    /**
-     * Find cart items by quantity range
-     * @param minQuantity Minimum quantity
-     * @param maxQuantity Maximum quantity
-     * @param pageable Pagination parameters
-     * @return Page of cart items
-     */
-    @Query("SELECT ci FROM CartItem ci WHERE ci.cartItemQuantity >= :minQuantity AND ci.cartItemQuantity <= :maxQuantity")
-    Page<CartItem> findByQuantityRange(@Param("minQuantity") Integer minQuantity, 
-                                      @Param("maxQuantity") Integer maxQuantity, 
-                                      Pageable pageable);
-
-    /**
-     * Find cart items by date range
-     * @param startDate Start date
-     * @param endDate End date
-     * @param pageable Pagination parameters
-     * @return Page of cart items
-     */
     @Query("SELECT ci FROM CartItem ci WHERE ci.createdDt >= :startDate AND ci.createdDt <= :endDate")
-    Page<CartItem> findByDateRange(@Param("startDate") LocalDateTime startDate, 
-                                  @Param("endDate") LocalDateTime endDate, 
-                                  Pageable pageable);
+    Page<CartItem> findByDateRange(@Param("startDate") LocalDateTime startDate,
+                                   @Param("endDate") LocalDateTime endDate,
+                                   Pageable pageable);
 
     /**
      * Search cart items by product name or category
@@ -182,13 +134,6 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long> {
            "FROM CartItem ci " +
            "GROUP BY ci.product.productCategory.productCategoryId")
     List<Object[]> getCartItemStatisticsByCategory();
-
-    /**
-     * Delete cart items by cart ID
-     * @param cartId Cart ID
-     */
-    @Query("DELETE FROM CartItem ci WHERE ci.cart.cartId = :cartId")
-    void deleteByCartId(@Param("cartId") Long cartId);
 
     /**
      * Find cart items with product and category details
@@ -261,30 +206,15 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long> {
     List<CartItem> findActiveCartItemsByCartId(@Param("cartId") Long cartId);
 
     /**
-     * Find cart items by cart ID and cart item state ID
+     * Find cart items by cart ID and product ID with attributes loaded
+     * Used to find existing items with same product to check for attribute matches
      * @param cartId Cart ID
-     * @param cartItemStateId Cart item state ID
-     * @return List of cart items
+     * @param productId Product ID
+     * @return List of cart items with attributes
      */
-    @Query("SELECT ci FROM CartItem ci WHERE ci.cart.cartId = :cartId AND ci.cartItemState.cartItemStateId = :cartItemStateId")
-    List<CartItem> findByCartIdAndCartItemStateId(@Param("cartId") Long cartId, @Param("cartItemStateId") Long cartItemStateId);
-
-    /**
-     * Count cart items with optional state filter
-     * @param cartId Cart ID
-     * @param cartItemStateId Cart item state ID (optional)
-     * @return Count of cart items
-     */
-    @Query("SELECT COUNT(ci) FROM CartItem ci WHERE ci.cart.cartId = :cartId " +
-           "AND (:cartItemStateId IS NULL OR ci.cartItemState.cartItemStateId = :cartItemStateId)")
-    Long countCartItems(@Param("cartId") Long cartId, @Param("cartItemStateId") Long cartItemStateId);
-
-    /**
-     * Get total quantity of active cart items in a cart
-     * @param cartId Cart ID
-     * @return Total quantity of active items
-     */
-    @Query("SELECT COALESCE(SUM(ci.cartItemQuantity), 0) FROM CartItem ci " +
-           "WHERE ci.cart.cartId = :cartId AND ci.cartItemState.cartItemStateName = 'ACTIVE'")
-    Integer getActiveCartItemsTotalQuantity(@Param("cartId") Long cartId);
+    @Query("SELECT DISTINCT ci FROM CartItem ci " +
+           "LEFT JOIN FETCH ci.cartItemAttributes cia " +
+           "LEFT JOIN FETCH cia.productAttribute pa " +
+           "WHERE ci.cart.cartId = :cartId AND ci.product.productId = :productId")
+    List<CartItem> findByCartIdAndProductIdWithAttributes(@Param("cartId") Long cartId, @Param("productId") Long productId);
 }

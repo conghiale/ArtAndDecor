@@ -74,11 +74,6 @@ public class Discount {
     @Column(name = "MODIFIED_DT", nullable = false)
     private LocalDateTime modifiedDt;
 
-    // One-to-Many relationship with Orders
-    @OneToMany(mappedBy = "discount", fetch = FetchType.LAZY)
-    @ToString.Exclude
-    private List<Order> orders;
-
     @PrePersist
     protected void onCreate() {
         logger.debug("Creating new Discount: {}", discountCode);

@@ -312,10 +312,25 @@ public class OrderItemServiceImpl implements OrderItemService {
         OrderItem orderItem = new OrderItem();
         orderItem.setOrder(order);
         orderItem.setProduct(product);
+        
+        // Set snapshot product information
         orderItem.setProductName(product.getProductName());
         orderItem.setProductCode(product.getProductCode());
+        orderItem.setProductCategoryName(product.getProductCategory().getProductCategoryName());
+        
+        // Set product type name from relationship: Product -> ProductCategory -> ProductType
+        String productTypeName = "GENERAL"; // Default value
+        if (product.getProductCategory() != null && product.getProductCategory().getProductType() != null) {
+            productTypeName = product.getProductCategory().getProductType().getProductTypeName();
+        }
+        orderItem.setProductTypeName(productTypeName);
+        
         orderItem.setQuantity(quantity);
         orderItem.setUnitPrice(product.getProductPrice());
+        
+        BigDecimal totalPrice = product.getProductPrice().multiply(BigDecimal.valueOf(quantity));
+        orderItem.setTotalPrice(totalPrice);
+        
         orderItem.setCreatedDt(LocalDateTime.now());
         orderItem.setModifiedDt(LocalDateTime.now());
         

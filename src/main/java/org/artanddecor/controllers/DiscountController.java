@@ -46,7 +46,7 @@ import java.util.List;
  * Total: 6 REST endpoints for comprehensive discount system management
  */
 @RestController
-@RequestMapping("/api/discounts")
+@RequestMapping("/discounts")
 @RequiredArgsConstructor
 @Tag(name = "Discount Management", description = "REST APIs for managing discount campaigns and discount types")
 public class DiscountController {

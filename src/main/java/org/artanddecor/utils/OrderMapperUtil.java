@@ -64,12 +64,10 @@ public class OrderMapperUtil {
             dto.setOrderStateName(order.getOrderState().getOrderStateName());
         }
 
-        // DISCOUNT functionality removed - set null values
-        dto.setDiscount(null);
-        dto.setDiscountId(null);
-        dto.setDiscountCode(null);
-        dto.setDiscountType(null);
-        dto.setDiscountValue(null);
+        // Set discount snapshot values from Order entity fields
+        dto.setDiscountCode(order.getDiscountCode());
+        dto.setDiscountType(order.getDiscountType());
+        dto.setDiscountValue(order.getDiscountValue());
 
         // Map OrderItems if loaded
         if (order.getOrderItems() != null && !order.getOrderItems().isEmpty()) {
@@ -112,9 +110,10 @@ public class OrderMapperUtil {
         entity.setTotalAmount(orderDto.getTotalAmount());
         entity.setOrderNote(orderDto.getOrderNote());
         
-        // DISCOUNT fields removed but structure maintained for compatibility
-        entity.setDiscountType(null);
-        entity.setDiscountValue(null);
+        // Set discount snapshot values from DTO
+        entity.setDiscountCode(orderDto.getDiscountCode());
+        entity.setDiscountType(orderDto.getDiscountType());
+        entity.setDiscountValue(orderDto.getDiscountValue());
 
         return entity;
     }
@@ -160,12 +159,10 @@ public class OrderMapperUtil {
             dto.setOrderStateName(order.getOrderState().getOrderStateName());
         }
 
-        // DISCOUNT functionality removed - set null values
-        dto.setDiscount(null);
-        dto.setDiscountId(null);
-        dto.setDiscountCode(null);
-        dto.setDiscountType(null);
-        dto.setDiscountValue(null);
+        // Set discount snapshot values from Order entity fields
+        dto.setDiscountCode(order.getDiscountCode());
+        dto.setDiscountType(order.getDiscountType());
+        dto.setDiscountValue(order.getDiscountValue());
 
         // Skip OrderItems loading for performance
         dto.setOrderItems(null);

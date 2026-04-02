@@ -14,7 +14,7 @@ import java.util.List;
  * Represents customer orders
  */
 @Entity
-@Table(name = "ORDER")
+@Table(name = "ORDERS")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -33,16 +33,8 @@ public class Order {
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "CART_ID")
-    private Cart cart;
-
-    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "ORDER_STATE_ID", nullable = false)
     private OrderState orderState;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "DISCOUNT_ID")
-    private Discount discount;
 
     // Discount information snapshot (lưu trữ thông tin discount tại thời điểm đặt hàng)
     @Column(name = "DISCOUNT_CODE", length = 50)
@@ -154,6 +146,6 @@ public class Order {
      * @return true if discount is applied
      */
     public boolean hasDiscount() {
-        return discount != null;
+        return discountCode != null && !discountCode.trim().isEmpty();
     }
 }

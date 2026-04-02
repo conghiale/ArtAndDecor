@@ -1,6 +1,7 @@
 package org.artanddecor.services;
 
 import org.artanddecor.dto.SeoMetaDto;
+import org.artanddecor.dto.SeoMetaRequestDto;
 
 import java.util.Optional;
 
@@ -30,9 +31,19 @@ public interface SeoMetaService {
     SeoMetaDto createSeoMeta(SeoMetaDto seoMetaDto);
 
     /**
+     * Create new SEO meta from request DTO
+     */
+    SeoMetaDto createSeoMetaFromRequest(SeoMetaRequestDto seoMetaRequestDto);
+
+    /**
      * Update SEO meta by ID
      */
     SeoMetaDto updateSeoMeta(Long id, SeoMetaDto seoMetaDto);
+
+    /**
+     * Update SEO meta from request DTO
+     */
+    SeoMetaDto updateSeoMetaFromRequest(Long id, SeoMetaRequestDto seoMetaRequestDto);
 
     /**
      * Delete SEO meta by ID

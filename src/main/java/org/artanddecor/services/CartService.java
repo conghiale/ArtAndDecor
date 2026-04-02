@@ -17,13 +17,6 @@ public interface CartService {
     CartDto getCartById(Long cartId);
 
     /**
-     * Get cart by slug
-     * @param cartSlug Cart slug
-     * @return CartDto
-     */
-    CartDto getCartBySlug(String cartSlug);
-
-    /**
      * Get active cart by user
      * @param userId User ID
      * @return CartDto
@@ -31,27 +24,9 @@ public interface CartService {
     CartDto getActiveCartByUser(Long userId);
 
     /**
-     * Get carts by various criteria with flexible filtering
-     * @param cartId Filter by cart ID (optional)
-     * @param userId Filter by user ID (optional)
-     * @param sessionId Filter by session ID (optional)
-     * @param cartStateId Filter by cart state ID (optional)
-     * @param cartSlug Filter by cart slug (optional)
-     * @param cartEnabled Filter by enabled status (optional)
-     * @param page Page number
-     * @param size Page size
-     * @param sortBy Sort field
-     * @param sortDirection Sort direction
-     * @return Page of carts matching criteria
-     */
-    Page<CartDto> getCartsByCriteria(Long cartId, Long userId, String sessionId, 
-                                   Long cartStateId, String cartSlug, Boolean cartEnabled,
-                                   int page, int size, String sortBy, String sortDirection);
-
-    /**
      * Get current cart (for authenticated user or guest session)
      * @param userId User ID (optional, null for guest)
-     * @param sessionId Session ID (optional, generates new if null)
+     * @param sessionId Session ID (optional, generates new if null)  
      * @return Current active cart DTO
      */
     CartDto getCurrentCart(Long userId, String sessionId);
@@ -83,6 +58,24 @@ public interface CartService {
      * @return Merged user cart DTO
      */
     CartDto mergeGuestCartToUserCart(Long userId, String sessionId);
+
+    /**
+     * Get carts by various criteria with flexible filtering
+     * @param cartId Filter by cart ID (optional)
+     * @param userId Filter by user ID (optional)
+     * @param sessionId Filter by session ID (optional)
+     * @param cartStateId Filter by cart state ID (optional)
+     * @param cartSlug Filter by cart slug (optional)
+     * @param cartEnabled Filter by enabled status (optional)
+     * @param page Page number
+     * @param size Page size
+     * @param sortBy Sort field
+     * @param sortDirection Sort direction
+     * @return Page of carts matching criteria
+     */
+    Page<CartDto> getCartsByCriteria(Long cartId, Long userId, String sessionId, 
+                                   Long cartStateId, String cartSlug, Boolean cartEnabled,
+                                   int page, int size, String sortBy, String sortDirection);
 
     /**
      * Get or create cart with merge support

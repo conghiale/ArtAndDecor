@@ -9,21 +9,27 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
 
 /**
- * Product Attribute Request DTO for API create and update operations
- * Used within ProductRequestDto to handle product attributes during product creation/update
- * Contains only essential fields needed for creating/updating product attributes
+ * Request DTO for creating and updating product attribute association
+ * Used for both create and update operations of PRODUCT_ATTRIBUTE table
+ * Contains all fields needed for creating/updating product attribute associations
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Product attribute data for creating/updating product attributes during product operations")
+@Schema(description = "Request data for creating/updating product attribute association")
 public class ProductAttributeRequestDto {
+    
+    @NotNull(message = "Product ID is required")
+    @Min(value = 1, message = "Product ID must be positive")
+    @Schema(description = "Database product identifier", 
+            example = "1")
+    private Long productId;
     
     @NotNull(message = "Product attribute ID is required")
     @Min(value = 1, message = "Product attribute ID must be positive")
     @Schema(description = "Database product attribute identifier from PRODUCT_ATTR table (e.g., Size, Color, Material)", 
-            example = "1")
+            example = "2")
     private Long productAttrId;
     
     @NotBlank(message = "Product attribute value is required")

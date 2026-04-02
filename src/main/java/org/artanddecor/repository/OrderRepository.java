@@ -80,7 +80,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
      * @param pageable Pagination information
      * @return Page of orders matching criteria
      */
-    @Query("SELECT o FROM Order o LEFT JOIN o.orderState os LEFT JOIN o.discount d LEFT JOIN o.user u WHERE " +
+    @Query("SELECT o FROM Order o LEFT JOIN o.orderState os LEFT JOIN o.user u WHERE " +
            "(:orderId IS NULL OR o.orderId = :orderId) AND " +
            "(:orderCode IS NULL OR LOWER(o.orderCode) LIKE LOWER(CONCAT('%', :orderCode, '%'))) AND " +
            "(:userId IS NULL OR u.userId = :userId) AND " +
@@ -88,7 +88,6 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
            "(:customerPhone IS NULL OR LOWER(o.receiverPhone) LIKE LOWER(CONCAT('%', :customerPhone, '%'))) AND " +
            "(:customerEmail IS NULL OR LOWER(o.receiverEmail) LIKE LOWER(CONCAT('%', :customerEmail, '%'))) AND " +
            "(:orderStateId IS NULL OR os.orderStateId = :orderStateId) AND " +
-           "(:discountId IS NULL OR d.discountId = :discountId) AND " +
            "(:minTotalAmount IS NULL OR o.totalAmount >= :minTotalAmount) AND " +
            "(:maxTotalAmount IS NULL OR o.totalAmount <= :maxTotalAmount) AND " +
            "(:minOriginalAmount IS NULL OR o.subtotalAmount >= :minOriginalAmount) AND " +
@@ -118,7 +117,6 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
         @Param("customerPhone") String customerPhone,
         @Param("customerEmail") String customerEmail,
         @Param("orderStateId") Long orderStateId,
-        @Param("discountId") Long discountId,
         @Param("minTotalAmount") BigDecimal minTotalAmount,
         @Param("maxTotalAmount") BigDecimal maxTotalAmount,
         @Param("minOriginalAmount") BigDecimal minOriginalAmount,
@@ -133,6 +131,4 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
         @Param("shippedDateTo") LocalDateTime shippedDateTo,
         @Param("textSearch") String textSearch,
         Pageable pageable);
-
-
 }

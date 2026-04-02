@@ -44,5 +44,6 @@ public class BlogDto {
 
     private BlogCategoryDto blogCategory;
     private SeoMetaDto seoMeta;
+    private ImageDto image;
 
 }
