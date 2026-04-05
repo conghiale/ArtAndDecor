@@ -138,10 +138,11 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/orders/state-history").permitAll()
                         .requestMatchers(HttpMethod.GET, "/orders/items").permitAll()
 
-                        // Policy endpoints - public read by slug, admin for management
-                        .requestMatchers(HttpMethod.GET, "/policies/slug/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/policies/names", "/policies/stats/**").hasRole("ADMIN")
-                        .requestMatchers("/policies/**").hasRole("ADMIN")
+                        // Policy endpoints - public read access for all GET operations, admin for management
+                        .requestMatchers(HttpMethod.GET, "/policies/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/policies").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/policies/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/policies/**").hasRole("ADMIN")
 
                         // Review endpoints - public read access, authenticated for write/admin operations
                         .requestMatchers(HttpMethod.GET, "/reviews/**").permitAll()
@@ -208,6 +209,17 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.POST, "/blogs/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/blogs/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/blogs/**").hasRole("ADMIN")
+
+                        // Page endpoints - structured by functionality and access control
+                        // Public page read access (customer-facing)
+                        .requestMatchers(HttpMethod.GET, "/pages").permitAll() // Search pages with criteria
+                        .requestMatchers(HttpMethod.GET, "/pages/slug/**").permitAll() // Get page by slug
+                        
+                        // Admin-only page operations
+                        .requestMatchers(HttpMethod.GET, "/pages/{pageId:[\\d+]}").hasRole("ADMIN") // Get page by ID
+                        .requestMatchers(HttpMethod.POST, "/pages").hasRole("ADMIN") // Create new page
+                        .requestMatchers(HttpMethod.PUT, "/pages/**").hasRole("ADMIN") // Update page
+                        .requestMatchers(HttpMethod.PATCH, "/pages/**").hasRole("ADMIN") // Update page status
 
                         // All other requests need authentication
                         .anyRequest().authenticated()

@@ -1,6 +1,8 @@
 package org.artanddecor.repository;
 
 import org.artanddecor.model.Policy;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -38,11 +40,12 @@ public interface PolicyRepository extends JpaRepository<Policy, Long> {
     boolean existsByPolicyName(String policyName);
 
     /**
-     * Find policies by multiple criteria
+     * Find policies by multiple criteria with pagination
      * @param policyName Filter by policy name (exact match)
      * @param policyEnabled Filter by enabled status
      * @param textSearch Search text in name, slug, value, display name, remark
-     * @return List of matching policies
+     * @param pageable Pagination information
+     * @return Page of matching policies
      */
     @Query("SELECT p FROM Policy p WHERE " +
            "(:policyName IS NULL OR p.policyName = :policyName) AND " +
@@ -53,10 +56,11 @@ public interface PolicyRepository extends JpaRepository<Policy, Long> {
            " LOWER(p.policyValue) LIKE LOWER(CONCAT('%', :textSearch, '%')) OR " +
            " LOWER(p.policyDisplayName) LIKE LOWER(CONCAT('%', :textSearch, '%')) OR " +
            " LOWER(p.policyRemark) LIKE LOWER(CONCAT('%', :textSearch, '%')))")
-    List<Policy> findPoliciesByCriteria(
+    Page<Policy> findPoliciesByCriteria(
         @Param("policyName") String policyName,
         @Param("policyEnabled") Boolean policyEnabled,
-        @Param("textSearch") String textSearch);
+        @Param("textSearch") String textSearch,
+        Pageable pageable);
     
     /**
      * Get all distinct policy names for dropdown/combobox

@@ -10,6 +10,8 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.util.StringUtils;
@@ -156,7 +158,9 @@ public class MailConfiguration {
         }
         
         try {
-            Optional<PolicyDto> policyOpt = policyService.findPoliciesByCriteria(EMAIL_CONFIG_KEY, true, null)
+            Pageable pageable = PageRequest.of(0, 1); // Get first result only
+            Optional<PolicyDto> policyOpt = policyService.findPoliciesByCriteria(EMAIL_CONFIG_KEY, true, null, pageable)
+                    .getContent()
                     .stream()
                     .findFirst();
             

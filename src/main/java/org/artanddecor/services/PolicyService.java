@@ -1,6 +1,9 @@
 package org.artanddecor.services;
 
 import org.artanddecor.dto.PolicyDto;
+import org.artanddecor.dto.PolicyRequest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import java.util.List;
 import java.util.Optional;
 
@@ -25,13 +28,14 @@ public interface PolicyService {
     Optional<PolicyDto> findPolicyBySlug(String policySlug);
     
     /**
-     * Find policies by criteria (with filters)
+     * Find policies by criteria (with filters and pagination)
      * @param policyName Filter by policy name (exact match)
      * @param policyEnabled Filter by enabled status
      * @param textSearch Search text in multiple fields
-     * @return List of matching PolicyDto objects
+     * @param pageable Pagination information
+     * @return Page of matching PolicyDto objects
      */
-    List<PolicyDto> findPoliciesByCriteria(String policyName, Boolean policyEnabled, String textSearch);
+    Page<PolicyDto> findPoliciesByCriteria(String policyName, Boolean policyEnabled, String textSearch, Pageable pageable);
     
     /**
      * Get all policy names for dropdown/combobox
@@ -41,11 +45,11 @@ public interface PolicyService {
     
     /**
      * Create new policy
-     * @param policyDto the policy DTO with data
+     * @param policyRequest the policy request with data
      * @return created PolicyDto with ID
      * @throws IllegalArgumentException if validation fails or policy name already exists
      */
-    PolicyDto createPolicy(PolicyDto policyDto);
+    PolicyDto createPolicy(PolicyRequest policyRequest);
     
     /**
      * Update existing policy

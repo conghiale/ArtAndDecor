@@ -2,12 +2,15 @@ package org.artanddecor.services.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.artanddecor.dto.PolicyDto;
+import org.artanddecor.dto.PolicyRequest;
 import org.artanddecor.model.Policy;
 import org.artanddecor.repository.PolicyRepository;
 import org.artanddecor.services.PolicyService;
 import org.artanddecor.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,30 +47,30 @@ public class PolicyServiceImpl implements PolicyService {
     }
     
     @Override
-    public PolicyDto createPolicy(PolicyDto policyDto) {
-        logger.info("Creating new policy: {}", policyDto.getPolicyName());
+    public PolicyDto createPolicy(PolicyRequest policyRequest) {
+        logger.info("Creating new policy: {}", policyRequest.getPolicyName());
         
         // Check if policy name already exists
-        if (policyRepository.existsByPolicyName(policyDto.getPolicyName())) {
-            logger.warn("Policy name already exists: {}", policyDto.getPolicyName());
-            throw new IllegalArgumentException("Policy name already exists: " + policyDto.getPolicyName());
+        if (policyRepository.existsByPolicyName(policyRequest.getPolicyName())) {
+            logger.warn("Policy name already exists: {}", policyRequest.getPolicyName());
+            throw new IllegalArgumentException("Policy name already exists: " + policyRequest.getPolicyName());
         }
         
         // Auto-generate slug if not provided
-        String slug = policyDto.getPolicySlug();
+        String slug = policyRequest.getPolicySlug();
         if (slug == null || slug.isBlank()) {
-            slug = Utils.generateSlug(policyDto.getPolicyName());
+            slug = Utils.generateSlug(policyRequest.getPolicyName());
             logger.info("Auto-generated slug for policy: {}", slug);
         }
         
-        // Create entity
+        // Create entity from request
         Policy policy = new Policy();
-        policy.setPolicyName(policyDto.getPolicyName());
+        policy.setPolicyName(policyRequest.getPolicyName());
         policy.setPolicySlug(slug);
-        policy.setPolicyValue(policyDto.getPolicyValue());
-        policy.setPolicyDisplayName(policyDto.getPolicyDisplayName());
-        policy.setPolicyRemark(policyDto.getPolicyRemark());
-        policy.setPolicyEnabled(policyDto.getPolicyEnabled() != null ? policyDto.getPolicyEnabled() : true);
+        policy.setPolicyValue(policyRequest.getPolicyValue());
+        policy.setPolicyDisplayName(policyRequest.getPolicyDisplayName());
+        policy.setPolicyRemark(policyRequest.getPolicyRemark());
+        policy.setPolicyEnabled(policyRequest.getPolicyEnabled() != null ? policyRequest.getPolicyEnabled() : true);
         
         Policy saved = policyRepository.save(policy);
         logger.info("Policy created successfully with ID: {}", saved.getPolicyId());
@@ -162,13 +165,11 @@ public class PolicyServiceImpl implements PolicyService {
     
     @Override
     @Transactional(readOnly = true)
-    public List<PolicyDto> findPoliciesByCriteria(String policyName, Boolean policyEnabled, String textSearch) {
-        logger.debug("Finding policies by criteria - name: {}, enabled: {}, textSearch: {}", 
-                    policyName, policyEnabled, textSearch);
-        return policyRepository.findPoliciesByCriteria(policyName, policyEnabled, textSearch)
-                .stream()
-                .map(this::mapToDto)
-                .collect(Collectors.toList());
+    public Page<PolicyDto> findPoliciesByCriteria(String policyName, Boolean policyEnabled, String textSearch, Pageable pageable) {
+        logger.debug("Finding policies by criteria with pagination - name: {}, enabled: {}, textSearch: {}, page: {}", 
+                    policyName, policyEnabled, textSearch, pageable.getPageNumber());
+        return policyRepository.findPoliciesByCriteria(policyName, policyEnabled, textSearch, pageable)
+                .map(this::mapToDto);
     }
     
     @Override
