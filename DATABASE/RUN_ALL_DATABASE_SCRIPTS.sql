@@ -98,9 +98,9 @@ SELECT
 FROM `CART`
 UNION ALL
 SELECT 
-    'ORDER',
+    'ORDERS',
     COUNT(*)
-FROM `ORDER`;
+FROM `ORDERS`;
 
 -- =============================================
 -- COMPLETION MESSAGE

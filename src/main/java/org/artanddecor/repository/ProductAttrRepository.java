@@ -51,10 +51,4 @@ public interface ProductAttrRepository extends JpaRepository<ProductAttr, Long> 
         @Param("enabled") Boolean enabled,
         Pageable pageable
     );
-
-    /**
-     * Find all product attribute names
-     */
-    @Query("SELECT DISTINCT pa.productAttrName FROM ProductAttr pa WHERE pa.productAttrEnabled = true ORDER BY pa.productAttrName ASC")
-    List<String> findAllProductAttrNames();
 }

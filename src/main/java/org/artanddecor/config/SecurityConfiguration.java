@@ -71,12 +71,13 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/products/{productId:[\\d+]}/images").permitAll()
                         .requestMatchers(HttpMethod.GET, "/products/types/**", "/products/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/products/states", "/products/attrs").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/products/attributes/{attributeId:[\\d+]}").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/products/{productId:[\\d+]}").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/products/attrs/{productAttrId:[\\d+]}").permitAll()
                         
                         // Admin-only product read access (management operations)
+                        .requestMatchers(HttpMethod.GET, "/products/{productId:[\\d+]}").hasAnyRole("ADMIN", "MANAGER")
                         .requestMatchers(HttpMethod.GET, "/products/stats/**").hasAnyRole("ADMIN", "MANAGER")
                         .requestMatchers(HttpMethod.GET, "/products/attributes").hasAnyRole("ADMIN", "MANAGER")
+                        .requestMatchers(HttpMethod.GET, "/products/attributes/{attributeId:[\\d+]}").hasAnyRole("ADMIN", "MANAGER")
                         
                         // Product management operations (Admin/Manager only)
                         .requestMatchers(HttpMethod.POST, "/products").hasAnyRole("ADMIN", "MANAGER")
@@ -144,11 +145,14 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.PUT, "/policies/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/policies/**").hasRole("ADMIN")
 
-                        // Review endpoints - public read access, authenticated for write/admin operations
+                        // Review endpoints - public read access, customer can create reviews
                         .requestMatchers(HttpMethod.GET, "/reviews/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/reviews").authenticated()
-                        .requestMatchers(HttpMethod.PUT, "/reviews/**").authenticated()
-                        .requestMatchers(HttpMethod.DELETE, "/reviews/**").hasAnyRole("ADMIN", "MANAGER")
+                        .requestMatchers(HttpMethod.POST, "/reviews").permitAll() // Create review (Customer & Admin)
+                        .requestMatchers(HttpMethod.PUT, "/reviews/**").hasRole("ADMIN") // Update review (Admin only)
+                        .requestMatchers(HttpMethod.PATCH, "/reviews/*/status").hasRole("ADMIN") // Update visibility (Admin only)
+                        .requestMatchers(HttpMethod.DELETE, "/reviews/**").hasRole("ADMIN") // Delete review (Admin only)
+                        .requestMatchers(HttpMethod.POST, "/reviews/*/likes").permitAll() // Like review (Public)
+                        .requestMatchers(HttpMethod.DELETE, "/reviews/*/likes/user/*").permitAll() // Unlike review (Public)
 
                         // Shipment endpoints - only API endpoints that actually exist in ShipmentController
                         // Public read access for shipping configuration (customer needs to see shipping options)
@@ -220,6 +224,11 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.POST, "/pages").hasRole("ADMIN") // Create new page
                         .requestMatchers(HttpMethod.PUT, "/pages/**").hasRole("ADMIN") // Update page
                         .requestMatchers(HttpMethod.PATCH, "/pages/**").hasRole("ADMIN") // Update page status
+
+                        // Wishlist endpoints - public access for both authenticated and anonymous users
+                        .requestMatchers(HttpMethod.GET, "/wishlists").permitAll() // Get wishlist items with filtering
+                        .requestMatchers(HttpMethod.POST, "/wishlists").permitAll() // Add product to wishlist
+                        .requestMatchers(HttpMethod.DELETE, "/wishlists/**").permitAll() // Remove from wishlist
 
                         // All other requests need authentication
                         .anyRequest().authenticated()

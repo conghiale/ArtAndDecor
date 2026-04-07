@@ -14,6 +14,7 @@ import org.artanddecor.repository.CartStateRepository;
 import org.artanddecor.repository.UserRepository;
 import org.artanddecor.services.CartService;
 import org.artanddecor.utils.CartMapper;
+import org.artanddecor.utils.Utils;
 import org.artanddecor.exception.ResourceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,7 +27,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 /**
  * Cart Service Implementation
@@ -95,7 +95,7 @@ public class CartServiceImpl implements CartService {
         } else {
             // Guest user - handle session-based cart
             if (sessionId == null) {
-                sessionId = generateSessionId();
+                sessionId = Utils.generateSessionId();
                 logger.info("Generated new session ID: {}", sessionId);
             }
             return createOrGetActiveCartForSession(sessionId);
@@ -179,7 +179,7 @@ public class CartServiceImpl implements CartService {
      */
     @Override
     public String generateSessionId() {
-        return "session_" + UUID.randomUUID().toString().replace("-", "");
+        return Utils.generateSessionId();
     }
 
     /**

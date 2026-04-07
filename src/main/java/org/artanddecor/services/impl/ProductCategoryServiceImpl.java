@@ -53,6 +53,15 @@ public class ProductCategoryServiceImpl implements ProductCategoryService {
     }
 
     @Override
+    public List<ProductCategoryDto> getRootCategories() {
+        logger.debug("Getting all root categories");
+        List<ProductCategory> rootCategories = productCategoryRepository.findRootCategories();
+        return rootCategories.stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public Page<ProductCategoryDto> getProductCategoriesByCriteria(String textSearch, Boolean enabled, Boolean visible, 
                                                                  Long productTypeId, Long parentCategoryId, Boolean rootOnly, 
                                                                  Pageable pageable) {

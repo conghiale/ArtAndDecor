@@ -24,6 +24,12 @@ public interface ProductCategoryService {
     Optional<ProductCategoryDto> findProductCategoryById(Long productCategoryId);
 
     /**
+     * Get root categories (categories with no parent)
+     * Returns enabled root categories only, ordered by name
+     */
+    List<ProductCategoryDto> getRootCategories();
+
+    /**
      * Get product categories by multiple criteria with pagination (all parameters optional)
      * @param textSearch Text search in name, slug, displayName, remark (partial match, case-insensitive)
      * @param enabled Filter by enabled status

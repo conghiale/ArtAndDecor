@@ -418,6 +418,51 @@ INSERT INTO `PRODUCT_REVIEW_LIKE` (`REVIEW_ID`, `USER_ID`) VALUES
 (13, 5), (13, 6), (13, 3), (13, 2),
 (14, 4), (14, 5), (14, 6), (14, 3), (14, 2), (14, 1);
 
+-- INSERT SAMPLE WISHLIST DATA
+-- Wishlist for logged-in users (USER_ID not null, SESSION_ID null)
+INSERT INTO `WISHLIST` (`USER_ID`, `SESSION_ID`, `PRODUCT_ID`) VALUES
+-- Customer 1 (customer01) wishlist - 5 products
+(2, NULL, 1), -- Tranh phong cảnh hoàng hôn trên biển
+(2, NULL, 3), -- Tranh nghệ thuật trừu tượng hiện đại  
+(2, NULL, 5), -- Trang trí nội thất cao cấp
+(2, NULL, 9), -- Tượng Phật trang nghiêm
+(2, NULL, 11), -- Bút vẽ chuyên nghiệp
+
+-- Customer 2 (customer02) wishlist - 3 products
+(3, NULL, 2), -- Tranh núi non hùng vĩ
+(3, NULL, 6), -- Tranh trang trí treo tường
+(3, NULL, 13), -- Khung tranh gỗ tự nhiên
+
+-- Customer 3 (google_user01) wishlist - 4 products  
+(4, NULL, 1), -- Tranh phong cảnh hoàng hôn trên biển
+(4, NULL, 4), -- Tranh nghệ thuật hiện đại
+(4, NULL, 7), -- Chân dung người phụ nữ cổ điển
+(4, NULL, 15), -- Đèn trang trí nghệ thuật LED
+
+-- Customer 4 (facebook_user01) wishlist - 3 products
+(5, NULL, 3), -- Tranh nghệ thuật trừu tượng hiện đại
+(5, NULL, 8), -- Chân dung người đàn ông nghệ thuật  
+(5, NULL, 12), -- Giấy vẽ canvas cao cấp
+
+-- Customer 5 (customer03) wishlist - 2 products
+(6, NULL, 10), -- Tranh Chúa Giê-su tâm linh
+(6, NULL, 14); -- Khung tranh kim loại hiện đại
+
+-- Wishlist for anonymous users (SESSION_ID not null, USER_ID null)
+INSERT INTO `WISHLIST` (`USER_ID`, `SESSION_ID`, `PRODUCT_ID`) VALUES
+-- Anonymous session 1
+(NULL, 'session_4fd0459a143f46f4bf4bc57cdde992cb', 1),
+(NULL, 'session_4fd0459a143f46f4bf4bc57cdde992cb', 5),
+(NULL, 'session_4fd0459a143f46f4bf4bc57cdde992cb', 9),
+
+-- Anonymous session 2
+(NULL, 'session_a2f5b3a1546a480e932f5f83ce9321d1', 2),
+(NULL, 'session_a2f5b3a1546a480e932f5f83ce9321d1', 6),
+
+-- Anonymous session 3 (recently added items)
+(NULL, 'session_5f610ae951bc485fb473427c108a425b', 3),
+(NULL, 'session_5f610ae951bc485fb473427c108a425b', 11);
+
 -- INSERT SAMPLE CARTS
 INSERT INTO `CART` (`USER_ID`, `SESSION_ID`, `CART_SLUG`, `CART_STATE_ID`, `TOTAL_QUANTITY`, `CART_ENABLED`) VALUES
 (4, 'session_user4_20260118_001', 'cart-user4-20260118-001', 1, 2, TRUE),

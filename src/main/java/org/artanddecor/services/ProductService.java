@@ -118,31 +118,6 @@ public interface ProductService {
     long getTotalProductCount();
 
     /**
-     * Get all enabled products (for dropdown/combobox)
-     */
-    List<ProductDto> getAllEnabledProducts();
-
-    /**
-     * Get enabled products by category slug
-     */
-    List<ProductDto> getEnabledProductsByCategorySlug(String categorySlug);
-
-    /**
-     * Get enabled products by category slug with pagination
-     */
-    Page<ProductDto> getEnabledProductsByCategorySlug(String categorySlug, Pageable pageable);
-
-    /**
-     * Get enabled products by type slug
-     */
-    List<ProductDto> getEnabledProductsByTypeSlug(String typeSlug);
-
-    /**
-     * Get enabled products by type slug with pagination
-     */
-    Page<ProductDto> getEnabledProductsByTypeSlug(String typeSlug, Pageable pageable);
-
-    /**
      * Get featured products (enabled and featured = true) with pagination
      */
     Page<ProductDto> getFeaturedProducts(Pageable pageable);
@@ -156,16 +131,6 @@ public interface ProductService {
      * Get latest products (enabled products ordered by creation date)
      */
     Page<ProductDto> getLatestProducts(Pageable pageable);
-
-    /**
-     * Get products by category ID
-     */
-    List<ProductDto> getProductsByCategoryId(Long categoryId);
-
-    /**
-     * Get products by state ID
-     */
-    List<ProductDto> getProductsByStateId(Long stateId);
 
     /**
      * Get products in stock

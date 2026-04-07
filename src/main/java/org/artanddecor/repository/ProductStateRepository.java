@@ -51,10 +51,4 @@ public interface ProductStateRepository extends JpaRepository<ProductState, Long
         @Param("enabled") Boolean enabled,
         Pageable pageable
     );
-
-    /**
-     * Find all product state names
-     */
-    @Query("SELECT DISTINCT ps.productStateName FROM ProductState ps WHERE ps.productStateEnabled = true ORDER BY ps.productStateName ASC")
-    List<String> findAllProductStateNames();
 }

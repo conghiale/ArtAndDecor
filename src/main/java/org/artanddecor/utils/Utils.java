@@ -10,6 +10,7 @@ import java.security.NoSuchAlgorithmException;
 import java.text.Normalizer;
 import java.util.Collection;
 import java.util.Map;
+import java.util.UUID;
 import java.util.regex.Pattern;
 
 /**
@@ -267,6 +268,22 @@ public class Utils {
             logger.warn("Failed to parse long from '{}': {}", str, e.getMessage());
             return defaultValue;
         }
+    }
+
+    // =====================================================
+    // SESSION & ID GENERATION UTILITIES
+    // =====================================================
+
+    /**
+     * Generate unique session ID for anonymous users
+     * Used across multiple services (Cart, Wishlist, etc.) for consistency
+     * Format: UUID without hyphens (e.g., 550e8400e29b41d4a716446655440000)
+     * @return A new unique session ID
+     */
+    public static String generateSessionId() {
+        String sessionId = UUID.randomUUID().toString().replace("-", "");
+        logger.debug("Generated new session ID: {}...", sessionId.substring(0, 8));
+        return sessionId;
     }
 
     // =====================================================

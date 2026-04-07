@@ -2,7 +2,9 @@ package org.artanddecor.controllers;
 
 import org.artanddecor.dto.BaseResponseDto;
 import org.artanddecor.dto.ProductReviewLikeDto;
+import org.artanddecor.dto.ProductReviewLikeRequestDto;
 import org.artanddecor.dto.ReviewDto;
+import org.artanddecor.dto.ReviewRequestDto;
 import org.artanddecor.services.ProductReviewLikeService;
 import org.artanddecor.services.ReviewService;
 import org.slf4j.Logger;
@@ -23,6 +25,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import jakarta.validation.constraints.Min;
+import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Optional;
 
@@ -667,4 +670,280 @@ public class ReviewController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
-}
+    // =============================================
+    // REVIEW CRUD API ENDPOINTS (ADMIN ONLY)
+    // =============================================
+
+    /**
+     * Create new review (Customer & Admin)
+     */
+    @PostMapping
+    @Operation(
+        summary = "Create new product review",
+        description = "Create a new product review with the provided information. Accessible to both customers and administrators for creating authentic product reviews.",
+        security = {}
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "201", description = "Review created successfully",
+                    content = @Content(schema = @Schema(implementation = ReviewDto.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid input data or validation errors"),
+        @ApiResponse(responseCode = "404", description = "Product or user not found"),
+        @ApiResponse(responseCode = "500", description = "Internal server error occurred while creating review")
+    })
+    public ResponseEntity<BaseResponseDto<ReviewDto>> createReview(
+            @Parameter(description = "Review creation request data", required = true)
+            @Valid @RequestBody ReviewRequestDto requestDto) {
+        try {
+            logger.info("POST /api/reviews - Creating review for product {} by user {}", 
+                       requestDto.getProductId(), requestDto.getUserId());
+
+            ReviewDto createdReview = reviewService.createReview(requestDto);
+
+            BaseResponseDto<ReviewDto> response = BaseResponseDto.success(
+                "Review created successfully", createdReview);
+            
+            logger.info("Successfully created review with ID: {}", createdReview.getReviewId());
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+
+        } catch (IllegalArgumentException e) {
+            logger.error("Invalid input for review creation: {}", e.getMessage());
+            BaseResponseDto<ReviewDto> response = BaseResponseDto.badRequest(e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        } catch (Exception e) {
+            logger.error("Error creating review: {}", e.getMessage(), e);
+            BaseResponseDto<ReviewDto> response = BaseResponseDto.serverError(
+                "Failed to create review: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    /**
+     * Update existing review (Admin only)
+     */
+    @PutMapping("/{reviewId}")
+    @Operation(
+        summary = "Update existing review",
+        description = "Update an existing review with new information. Only administrators can update reviews. The review content, rating, and visibility can be modified.",
+        security = {@SecurityRequirement(name = "bearerAuth")}
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Review updated successfully",
+                    content = @Content(schema = @Schema(implementation = ReviewDto.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid input data or validation errors"),
+        @ApiResponse(responseCode = "401", description = "Authentication required"),
+        @ApiResponse(responseCode = "403", description = "Admin access required"),
+        @ApiResponse(responseCode = "404", description = "Review not found"),
+        @ApiResponse(responseCode = "500", description = "Internal server error occurred while updating review")
+    })
+    public ResponseEntity<BaseResponseDto<ReviewDto>> updateReview(
+            @Parameter(description = "Review identifier to update", example = "123", required = true)
+            @PathVariable Long reviewId,
+            @Parameter(description = "Review update request data", required = true)
+            @Valid @RequestBody ReviewRequestDto requestDto) {
+        try {
+            logger.info("PUT /api/reviews/{} - Updating review", reviewId);
+
+            ReviewDto updatedReview = reviewService.updateReview(reviewId, requestDto);
+
+            BaseResponseDto<ReviewDto> response = BaseResponseDto.success(
+                "Review updated successfully", updatedReview);
+            
+            logger.info("Successfully updated review with ID: {}", reviewId);
+            return ResponseEntity.ok(response);
+
+        } catch (IllegalArgumentException e) {
+            logger.error("Invalid input for review update: {}", e.getMessage());
+            BaseResponseDto<ReviewDto> response = BaseResponseDto.badRequest(e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        } catch (Exception e) {
+            logger.error("Error updating review {}: {}", reviewId, e.getMessage(), e);
+            BaseResponseDto<ReviewDto> response = BaseResponseDto.serverError(
+                "Failed to update review: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    /**
+     * Update review visibility status (Admin only)
+     */
+    @PatchMapping("/{reviewId}/status")
+    @Operation(
+        summary = "Update review visibility status",
+        description = "Update the visibility status (show/hide) of a review. Only administrators can control review visibility. Hidden reviews will not appear in public listings.",
+        security = {@SecurityRequirement(name = "bearerAuth")}
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Review status updated successfully",
+                    content = @Content(schema = @Schema(implementation = ReviewDto.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid status value"),
+        @ApiResponse(responseCode = "401", description = "Authentication required"),
+        @ApiResponse(responseCode = "403", description = "Admin access required"),
+        @ApiResponse(responseCode = "404", description = "Review not found"),
+        @ApiResponse(responseCode = "500", description = "Internal server error occurred while updating status")
+    })
+    public ResponseEntity<BaseResponseDto<ReviewDto>> updateReviewStatus(
+            @Parameter(description = "Review identifier to update", example = "123", required = true)
+            @PathVariable Long reviewId,
+            @Parameter(description = "Visibility status (true=visible, false=hidden)", example = "true", required = true)
+            @RequestParam boolean isVisible) {
+        try {
+            logger.info("PATCH /api/reviews/{}/status - Updating visibility to: {}", reviewId, isVisible);
+
+            ReviewDto updatedReview = reviewService.updateVisibilityStatus(reviewId, isVisible);
+
+            BaseResponseDto<ReviewDto> response = BaseResponseDto.success(
+                "Review status updated successfully", updatedReview);
+            
+            logger.info("Successfully updated status for review ID: {} to: {}", reviewId, isVisible);
+            return ResponseEntity.ok(response);
+
+        } catch (IllegalArgumentException e) {
+            logger.error("Invalid input for review status update: {}", e.getMessage());
+            BaseResponseDto<ReviewDto> response = BaseResponseDto.badRequest(e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        } catch (Exception e) {
+            logger.error("Error updating review status {}: {}", reviewId, e.getMessage(), e);
+            BaseResponseDto<ReviewDto> response = BaseResponseDto.serverError(
+                "Failed to update review status: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    /**
+     * Soft delete review (Admin only)
+     */
+    @DeleteMapping("/{reviewId}")
+    @Operation(
+        summary = "Delete review (soft delete)",
+        description = "Soft delete a review by marking it as deleted. Only administrators can delete reviews. Soft deleted reviews are not permanently removed from the database but are hidden from all listings.",
+        security = {@SecurityRequirement(name = "bearerAuth")}
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Review deleted successfully",
+                    content = @Content(schema = @Schema(implementation = ReviewDto.class))),
+        @ApiResponse(responseCode = "401", description = "Authentication required"),
+        @ApiResponse(responseCode = "403", description = "Admin access required"),
+        @ApiResponse(responseCode = "404", description = "Review not found"),
+        @ApiResponse(responseCode = "500", description = "Internal server error occurred while deleting review")
+    })
+    public ResponseEntity<BaseResponseDto<ReviewDto>> deleteReview(
+            @Parameter(description = "Review identifier to delete", example = "123", required = true)
+            @PathVariable Long reviewId) {
+        try {
+            logger.info("DELETE /api/reviews/{} - Soft deleting review", reviewId);
+
+            ReviewDto deletedReview = reviewService.softDeleteReview(reviewId);
+
+            BaseResponseDto<ReviewDto> response = BaseResponseDto.success(
+                "Review deleted successfully", deletedReview);
+            
+            logger.info("Successfully soft deleted review with ID: {}", reviewId);
+            return ResponseEntity.ok(response);
+
+        } catch (IllegalArgumentException e) {
+            logger.error("Review not found for deletion: {}", e.getMessage());
+            BaseResponseDto<ReviewDto> response = BaseResponseDto.badRequest(e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        } catch (Exception e) {
+            logger.error("Error deleting review {}: {}", reviewId, e.getMessage(), e);
+            BaseResponseDto<ReviewDto> response = BaseResponseDto.serverError(
+                "Failed to delete review: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    // =============================================
+    // PRODUCT REVIEW LIKE CRUD API ENDPOINTS (PUBLIC)
+    // =============================================
+
+    /**
+     * Create new product review like (Public access)
+     */
+    @PostMapping("/{reviewId}/likes")
+    @Operation(
+        summary = "Like a product review",
+        description = "Add a like to a specific product review. This endpoint is publicly accessible to allow both authenticated and anonymous users to like reviews. Each user can only like a review once.",
+        security = {}
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "201", description = "Review like created successfully",
+                    content = @Content(schema = @Schema(implementation = ProductReviewLikeDto.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid input data or user has already liked this review"),
+        @ApiResponse(responseCode = "404", description = "Review or user not found"),
+        @ApiResponse(responseCode = "500", description = "Internal server error occurred while creating like")
+    })
+    public ResponseEntity<BaseResponseDto<ProductReviewLikeDto>> createProductReviewLike(
+            @Parameter(description = "Review identifier to like", example = "123", required = true)
+            @PathVariable Long reviewId,
+            @Parameter(description = "Like creation request data", required = true)
+            @Valid @RequestBody ProductReviewLikeRequestDto requestDto) {
+        try {
+            logger.info("POST /api/reviews/{}/likes - Creating like by user {}", reviewId, requestDto.getUserId());
+
+            // Ensure the reviewId in path matches the one in request
+            if (!reviewId.equals(requestDto.getReviewId())) {
+                throw new IllegalArgumentException("Review ID in path does not match request data");
+            }
+
+            ProductReviewLikeDto createdLike = productReviewLikeService.createProductReviewLike(requestDto);
+
+            BaseResponseDto<ProductReviewLikeDto> response = BaseResponseDto.success(
+                "Review liked successfully", createdLike);
+            
+            logger.info("Successfully created like for review {} by user {}", reviewId, requestDto.getUserId());
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+
+        } catch (IllegalArgumentException e) {
+            logger.error("Invalid input for like creation: {}", e.getMessage());
+            BaseResponseDto<ProductReviewLikeDto> response = BaseResponseDto.badRequest(e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        } catch (Exception e) {
+            logger.error("Error creating like for review {}: {}", reviewId, e.getMessage(), e);
+            BaseResponseDto<ProductReviewLikeDto> response = BaseResponseDto.serverError(
+                "Failed to create like: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    /**
+     * Delete product review like (Public access)
+     */
+    @DeleteMapping("/{reviewId}/likes/user/{userId}")
+    @Operation(
+        summary = "Unlike a product review",
+        description = "Remove a like from a specific product review by a specific user. This endpoint is publicly accessible to allow both authenticated and anonymous users to unlike reviews.",
+        security = {}
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Review like deleted successfully"),
+        @ApiResponse(responseCode = "400", description = "Like not found for this user and review"),
+        @ApiResponse(responseCode = "404", description = "Review or user not found"),
+        @ApiResponse(responseCode = "500", description = "Internal server error occurred while deleting like")
+    })
+    public ResponseEntity<BaseResponseDto<String>> deleteProductReviewLike(
+            @Parameter(description = "Review identifier to unlike", example = "123", required = true)
+            @PathVariable Long reviewId,
+            @Parameter(description = "User identifier who is unliking", example = "456", required = true)
+            @PathVariable Long userId) {
+        try {
+            logger.info("DELETE /api/reviews/{}/likes/user/{} - Deleting like", reviewId, userId);
+
+            productReviewLikeService.deleteProductReviewLike(userId, reviewId);
+
+            BaseResponseDto<String> response = BaseResponseDto.success(
+                "Review unliked successfully", "Like removed");
+            
+            logger.info("Successfully deleted like for review {} by user {}", reviewId, userId);
+            return ResponseEntity.ok(response);
+
+        } catch (IllegalArgumentException e) {
+            logger.error("Invalid input for like deletion: {}", e.getMessage());
+            BaseResponseDto<String> response = BaseResponseDto.badRequest(e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        } catch (Exception e) {
+            logger.error("Error deleting like for review {}: {}", reviewId, e.getMessage(), e);
+            BaseResponseDto<String> response = BaseResponseDto.serverError(
+                "Failed to delete like: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }}

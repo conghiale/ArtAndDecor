@@ -19,8 +19,7 @@ import jakarta.validation.constraints.*;
 @AllArgsConstructor
 @Schema(description = "Request data for creating/updating product attribute association")
 public class ProductAttributeRequestDto {
-    
-    @NotNull(message = "Product ID is required")
+
     @Min(value = 1, message = "Product ID must be positive")
     @Schema(description = "Database product identifier", 
             example = "1")

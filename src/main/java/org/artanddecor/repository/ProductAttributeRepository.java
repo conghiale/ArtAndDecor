@@ -80,14 +80,4 @@ public interface ProductAttributeRepository extends JpaRepository<ProductAttribu
            "WHERE pa.product.productId = :productId " +
            "AND pa.productAttributeEnabled = true")
     Long countByProductId(@Param("productId") Long productId);
-
-    /**
-     * Delete by product ID and attribute ID
-     */
-    void deleteByProductProductIdAndProductAttrProductAttrId(Long productId, Long attrId);
-
-    /**
-     * Delete all attributes for product
-     */
-    void deleteByProductProductId(Long productId);
 }

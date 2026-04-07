@@ -71,9 +71,4 @@ public interface ProductImageRepository extends JpaRepository<ProductImage, Long
      * Delete by product ID and image ID
      */
     void deleteByProductProductIdAndImageImageId(Long productId, Long imageId);
-
-    /**
-     * Delete all images for product
-     */
-    void deleteByProductProductId(Long productId);
 }

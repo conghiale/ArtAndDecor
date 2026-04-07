@@ -281,47 +281,6 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public List<ProductDto> getAllEnabledProducts() {
-        logger.debug("Getting all enabled products");
-        return productRepository.findAllEnabledProducts()
-                .stream()
-                .map(this::convertToDto)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<ProductDto> getEnabledProductsByCategorySlug(String categorySlug) {
-        logger.debug("Getting enabled products by category slug: {}", categorySlug);
-        return productRepository.findEnabledProductsByCategorySlug(categorySlug)
-                .stream()
-                .map(this::convertToDto)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public Page<ProductDto> getEnabledProductsByCategorySlug(String categorySlug, Pageable pageable) {
-        logger.debug("Getting enabled products by category slug with pagination: {}", categorySlug);
-        Page<Product> productPage = productRepository.findEnabledProductsByCategorySlugPaginated(categorySlug, pageable);
-        return productPage.map(this::convertToDto);
-    }
-
-    @Override
-    public List<ProductDto> getEnabledProductsByTypeSlug(String typeSlug) {
-        logger.debug("Getting enabled products by type slug: {}", typeSlug);
-        return productRepository.findEnabledProductsByTypeSlug(typeSlug)
-                .stream()
-                .map(this::convertToDto)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public Page<ProductDto> getEnabledProductsByTypeSlug(String typeSlug, Pageable pageable) {
-        logger.debug("Getting enabled products by type slug with pagination: {}", typeSlug);
-        Page<Product> productPage = productRepository.findEnabledProductsByTypeSlugPaginated(typeSlug, pageable);
-        return productPage.map(this::convertToDto);
-    }
-
-    @Override
     public Page<ProductDto> getFeaturedProducts(Pageable pageable) {
         logger.debug("Getting featured products with pagination");
         
@@ -366,24 +325,6 @@ public class ProductServiceImpl implements ProductService {
         }
         
         return latestProducts;
-    }
-
-    @Override
-    public List<ProductDto> getProductsByCategoryId(Long categoryId) {
-        logger.debug("Getting products by category ID: {}", categoryId);
-        return productRepository.findByProductCategoryId(categoryId)
-                .stream()
-                .map(this::convertToDto)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<ProductDto> getProductsByStateId(Long stateId) {
-        logger.debug("Getting products by state ID: {}", stateId);
-        return productRepository.findByProductStateId(stateId)
-                .stream()
-                .map(this::convertToDto)
-                .collect(Collectors.toList());
     }
 
     @Override

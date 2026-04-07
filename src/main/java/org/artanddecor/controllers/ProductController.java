@@ -781,6 +781,30 @@ public class ProductController {
      =============================================*/
 
     /**
+     * Get root product categories (Customer-friendly endpoint)
+     */
+    @GetMapping("/categories/root")
+    @Operation(
+        summary = "Get root product categories",
+        description = "Retrieve all enabled root categories (categories without parent). Perfect for building main navigation menus and category hierarchies. Returns a simple list without pagination. No authentication required."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Root categories retrieved successfully",
+                    content = @Content(schema = @Schema(implementation = List.class))),
+        @ApiResponse(responseCode = "500", description = "Internal server error occurred while retrieving root categories")
+    })
+    public ResponseEntity<BaseResponseDto<List<ProductCategoryDto>>> getRootCategories() {
+        logger.info("Getting root product categories");
+        try {
+            List<ProductCategoryDto> rootCategories = productCategoryService.getRootCategories();
+            return ResponseEntity.ok(BaseResponseDto.success("Root categories retrieved successfully", rootCategories));
+        } catch (Exception e) {
+            logger.error("Error retrieving root categories: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to retrieve root categories: " + e.getMessage()));
+        }
+    }
+
+    /**
      * Get product category by ID
      */
     @GetMapping("/categories/{productCategoryId}")

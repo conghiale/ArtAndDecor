@@ -289,6 +289,28 @@ CREATE TABLE `PRODUCT_REVIEW_LIKE` (
 );
 
 -- =============================================
+-- WISHLIST SYSTEM TABLES
+-- =============================================
+
+-- Table: WISHLIST
+CREATE TABLE `WISHLIST` (
+    `WISHLIST_ID` BIGINT PRIMARY KEY AUTO_INCREMENT,
+    `USER_ID` BIGINT NULL,
+    `SESSION_ID` VARCHAR(100) NULL,
+    `PRODUCT_ID` BIGINT NOT NULL,
+    `CREATED_DT` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `UPDATED_AT` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (`USER_ID`) REFERENCES `USER`(`USER_ID`) ON DELETE CASCADE,
+    FOREIGN KEY (`PRODUCT_ID`) REFERENCES `PRODUCT`(`PRODUCT_ID`) ON DELETE CASCADE,
+    INDEX `idx_wishlist_user` (`USER_ID`),
+    INDEX `idx_wishlist_session` (`SESSION_ID`),
+    INDEX `idx_wishlist_product` (`PRODUCT_ID`),
+    UNIQUE KEY `idx_wishlist_user_product` (`USER_ID`, `PRODUCT_ID`),
+    UNIQUE KEY `idx_wishlist_session_product` (`SESSION_ID`, `PRODUCT_ID`),
+    INDEX `idx_wishlist_created` (`CREATED_DT`)
+);
+
+-- =============================================
 -- CART SYSTEM TABLES
 -- =============================================
 
