@@ -409,6 +409,7 @@ public class ProductMapperUtil {
                 .productAttributeId(productAttribute.getProductAttributeId())
                 .productAttributeValue(productAttribute.getProductAttributeValue())
                 .productAttributeQuantity(productAttribute.getProductAttributeQuantity())
+                .productAttributePrice(productAttribute.getProductAttributePrice())
                 .productAttributeEnabled(productAttribute.getProductAttributeEnabled())
                 .productAttr(toProductAttrDto(productAttribute.getProductAttr()))
                 .createdDt(productAttribute.getCreatedDt())

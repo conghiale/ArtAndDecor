@@ -72,12 +72,15 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/products/types/**", "/products/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/products/states", "/products/attrs").permitAll()
                         .requestMatchers(HttpMethod.GET, "/products/attrs/{productAttrId:[\\d+]}").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/products/attributes/{productAttributeId:[\\d+]}").permitAll() // Get single attribute by ID
+                        .requestMatchers(HttpMethod.GET, "/products/attributes/grouped").permitAll() // New API: Get grouped attributes
+                        .requestMatchers(HttpMethod.PATCH, "/products/attributes/update-prices").permitAll() // New API: Update prices by values
+                        .requestMatchers(HttpMethod.DELETE, "/products/attributes/batch-delete").permitAll() // New API: Delete by values or attr ID
                         
                         // Admin-only product read access (management operations)
                         .requestMatchers(HttpMethod.GET, "/products/{productId:[\\d+]}").hasAnyRole("ADMIN", "MANAGER")
                         .requestMatchers(HttpMethod.GET, "/products/stats/**").hasAnyRole("ADMIN", "MANAGER")
                         .requestMatchers(HttpMethod.GET, "/products/attributes").hasAnyRole("ADMIN", "MANAGER")
-                        .requestMatchers(HttpMethod.GET, "/products/attributes/{attributeId:[\\d+]}").hasAnyRole("ADMIN", "MANAGER")
                         
                         // Product management operations (Admin/Manager only)
                         .requestMatchers(HttpMethod.POST, "/products").hasAnyRole("ADMIN", "MANAGER")
@@ -88,7 +91,8 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.POST, "/products/attrs").hasAnyRole("ADMIN", "MANAGER")
                         
                         .requestMatchers(HttpMethod.PUT, "/products/**").hasAnyRole("ADMIN", "MANAGER")
-                        .requestMatchers(HttpMethod.PATCH, "/products/**").hasAnyRole("ADMIN", "MANAGER")
+                        .requestMatchers(HttpMethod.PATCH, "/products/attributes/{productAttributeId:[\\d+]}/quantity").hasAnyRole("ADMIN", "MANAGER")
+                        .requestMatchers(HttpMethod.PATCH, "/products/attributes/update-by-values").hasAnyRole("ADMIN", "MANAGER") // New API: Update attributes by values
                         .requestMatchers(HttpMethod.DELETE, "/products/**").hasAnyRole("ADMIN", "MANAGER")
 
                         // Cart endpoints - structured by functionality
@@ -175,6 +179,9 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/payments/methods").permitAll()
                         .requestMatchers(HttpMethod.GET, "/payments/states").permitAll()
                         .requestMatchers(HttpMethod.GET, "/payments").permitAll()
+                        
+                        // Public QR code generation (customer needs to generate QR codes for payment)
+                        .requestMatchers(HttpMethod.GET, "/payments/qr/generate").permitAll()
                         
                         // Admin-only payment management operations (exact API endpoints)
                         .requestMatchers(HttpMethod.POST, "/payments/methods").hasRole("ADMIN")

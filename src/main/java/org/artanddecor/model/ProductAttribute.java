@@ -41,6 +41,9 @@ public class ProductAttribute {
     @Column(name = "PRODUCT_ATTRIBUTE_QUANTITY", nullable = false)
     private Integer productAttributeQuantity = 0;
 
+    @Column(name = "PRODUCT_ATTRIBUTE_PRICE", nullable = true, precision = 15, scale = 2)
+    private java.math.BigDecimal productAttributePrice;
+
     @Column(name = "PRODUCT_ATTRIBUTE_ENABLED", nullable = false)
     private Boolean productAttributeEnabled = true;
 

@@ -83,7 +83,8 @@ public class CartMapper {
 
         // Set product info (complete ProductDto)
         if (cartItem.getProduct() != null) {
-            dto.setUnitPrice(cartItem.getProduct().getProductPrice());
+            // Use CartItem's calculateUnitPrice method which considers selected attributes
+            dto.setUnitPrice(cartItem.calculateUnitPrice());
             dto.setProduct(org.artanddecor.utils.ProductMapperUtil.toProductDto(cartItem.getProduct()));
         }
         
@@ -123,13 +124,13 @@ public class CartMapper {
             dto.setIsAvailable(cartItem.getProduct().getStockQuantity() > 0 && 
                               Boolean.TRUE.equals(cartItem.getProduct().getProductEnabled()));
             
-            // Check price difference between stored price and current product price
-            BigDecimal currentPrice = cartItem.getProduct().getProductPrice();
-            BigDecimal storedPrice = dto.getUnitPrice();
+            // Check price difference between current calculated price and stored total
+            BigDecimal currentCalculatedUnitPrice = cartItem.calculateUnitPrice();
+            BigDecimal storedUnitPrice = dto.getUnitPrice();
             
-            if (currentPrice != null && storedPrice != null) {
-                dto.setIsPriceChanged(!currentPrice.equals(storedPrice));
-                dto.setPriceDifference(currentPrice.subtract(storedPrice));
+            if (currentCalculatedUnitPrice != null && storedUnitPrice != null) {
+                dto.setIsPriceChanged(!currentCalculatedUnitPrice.equals(storedUnitPrice));
+                dto.setPriceDifference(currentCalculatedUnitPrice.subtract(storedUnitPrice));
             } else {
                 dto.setIsPriceChanged(false);
                 dto.setPriceDifference(BigDecimal.ZERO);

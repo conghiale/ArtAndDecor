@@ -122,9 +122,9 @@ public class OrderServiceImpl implements OrderService {
             }
         }
         
-        // Calculate subtotal
+        // Calculate subtotal using cart item's unit price logic (considers attributes)
         BigDecimal subtotalAmount = cartItems.stream()
-                .map(item -> item.getProduct().getProductPrice().multiply(new BigDecimal(item.getCartItemQuantity())))
+                .map(item -> item.calculateUnitPrice().multiply(new BigDecimal(item.getCartItemQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         
         // Initialize collections for warnings/errors
@@ -197,8 +197,12 @@ public class OrderServiceImpl implements OrderService {
             cartItemDto.setCartItemId(item.getCartItemId());
             cartItemDto.setProduct(ProductMapperUtil.toProductDto(item.getProduct()));
             cartItemDto.setQuantity(item.getCartItemQuantity());
-            cartItemDto.setUnitPrice(item.getProduct().getProductPrice());
-            cartItemDto.setTotalPrice(item.getCartItemTotalPrice());
+            
+            // Use calculated unit price based on selected attributes
+            BigDecimal unitPrice = item.calculateUnitPrice();
+            cartItemDto.setUnitPrice(unitPrice);
+            cartItemDto.setTotalPrice(unitPrice.multiply(new BigDecimal(item.getCartItemQuantity())));
+            
             selectedCartItems.add(cartItemDto);
         }
         
@@ -332,9 +336,9 @@ public class OrderServiceImpl implements OrderService {
             logger.info("Order will be created as GUEST order (USER_ID will be null)");
         }
         
-        // Calculate amounts (similar to preview)
+        // Calculate amounts using cart item's unit price logic (considers attributes)
         BigDecimal subtotalAmount = cartItems.stream()
-                .map(item -> item.getProduct().getProductPrice().multiply(new BigDecimal(item.getCartItemQuantity())))
+                .map(item -> item.calculateUnitPrice().multiply(new BigDecimal(item.getCartItemQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         
         Long cartId = cart.getCartId();
@@ -488,15 +492,68 @@ public class OrderServiceImpl implements OrderService {
             
             // Set item details
             orderItem.setQuantity(cartItem.getCartItemQuantity());
-            orderItem.setUnitPrice(product.getProductPrice());
             
-            BigDecimal totalPrice = product.getProductPrice().multiply(new BigDecimal(cartItem.getCartItemQuantity()));
+            // Use CartItem's calculateUnitPrice logic which considers selected attributes
+            BigDecimal unitPrice = cartItem.calculateUnitPrice();
+            orderItem.setUnitPrice(unitPrice);
+            
+            BigDecimal totalPrice = unitPrice.multiply(new BigDecimal(cartItem.getCartItemQuantity()));
             orderItem.setTotalPrice(totalPrice);
             
-            // Set attributes as JSON (if you have cart item attributes)
+            // Set attributes as JSON (snapshot of selected product attributes)
             if (cartItem.getCartItemAttributes() != null && !cartItem.getCartItemAttributes().isEmpty()) {
-                // Convert cart item attributes to JSON and store
-                orderItem.setProductAttrJson("{}"); // placeholder
+                try {
+                    // Build JSON array with selected attributes info for order snapshot
+                    StringBuilder jsonBuilder = new StringBuilder("[");
+                    boolean first = true;
+                    
+                    for (CartItemAttribute cartItemAttr : cartItem.getCartItemAttributes()) {
+                        if (cartItemAttr.getProductAttribute() != null) {
+                            if (!first) {
+                                jsonBuilder.append(",");
+                            }
+                            
+                            ProductAttribute productAttr = cartItemAttr.getProductAttribute();
+                            jsonBuilder.append("{");
+                            
+                            // Add attribute name
+                            if (productAttr.getProductAttr() != null && productAttr.getProductAttr().getProductAttrName() != null) {
+                                jsonBuilder.append("\"attributeName\":\"")
+                                          .append(escapeJsonString(productAttr.getProductAttr().getProductAttrName()))
+                                          .append("\",");
+                            }
+                            
+                            // Add attribute value
+                            if (productAttr.getProductAttributeValue() != null) {
+                                jsonBuilder.append("\"attributeValue\":\"")
+                                          .append(escapeJsonString(productAttr.getProductAttributeValue()))
+                                          .append("\",");
+                            }
+                            
+                            // Add attribute price (important for order snapshot)
+                            jsonBuilder.append("\"productAttributePrice\":");
+                            if (productAttr.getProductAttributePrice() != null) {
+                                jsonBuilder.append(productAttr.getProductAttributePrice());
+                            } else {
+                                jsonBuilder.append("null");
+                            }
+                            
+                            jsonBuilder.append("}");
+                            first = false;
+                        }
+                    }
+                    
+                    jsonBuilder.append("]");
+                    orderItem.setProductAttrJson(jsonBuilder.toString());
+                    
+                    logger.debug("Saved {} attributes as JSON for order item: {}", 
+                               cartItem.getCartItemAttributes().size(), jsonBuilder.toString());
+                } catch (Exception e) {
+                    logger.error("Failed to convert cart item attributes to JSON for order item: {}", e.getMessage());
+                    orderItem.setProductAttrJson("[]"); // Empty array as fallback
+                }
+            } else {
+                orderItem.setProductAttrJson("[]"); // Empty array for no attributes
             }
             
             orderItem.setCreatedDt(LocalDateTime.now());
@@ -1041,5 +1098,22 @@ public class OrderServiceImpl implements OrderService {
             logger.error("Error retrieving userId from cartId: {}, error: {}", cartId, e.getMessage());
             return null;
         }
+    }
+    
+    /**
+     * Helper method to escape special characters in JSON strings
+     * @param input Input string to escape
+     * @return Escaped string safe for JSON
+     */
+    private String escapeJsonString(String input) {
+        if (input == null) {
+            return "";
+        }
+        
+        return input.replace("\\", "\\\\")  // Escape backslashes first
+                   .replace("\"", "\\\"")   // Escape double quotes
+                   .replace("\n", "\\n")    // Escape newlines
+                   .replace("\r", "\\r")    // Escape carriage returns
+                   .replace("\t", "\\t");   // Escape tabs
     }
 }

@@ -696,6 +696,174 @@ public class ProductController {
         }
     }
 
+    /**
+     * Get grouped product attributes by value and price (Public access)
+     */
+    @GetMapping("/attributes/grouped")
+    @Operation(
+        summary = "Get grouped product attributes by value and price",
+        description = "Get product attributes grouped by unique combinations of attribute value and price. Multiple records with the same value and price return as one item with sample data from the group. Supports optional filtering by product ID, attribute ID, and enabled status."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Grouped product attributes retrieved successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid filter parameters"),
+        @ApiResponse(responseCode = "500", description = "Internal server error occurred while retrieving grouped attributes")
+    })
+    public ResponseEntity<BaseResponseDto<List<GroupedProductAttributeDto>>> getGroupedProductAttributes(
+            @Parameter(description = "Optional filter by product ID", example = "1")
+            @RequestParam(value = "productId", required = false) Long productId,
+            
+            @Parameter(description = "Optional filter by product attribute ID from PRODUCT_ATTR table", example = "2")
+            @RequestParam(value = "productAttrId", required = false) Long productAttrId,
+            
+            @Parameter(description = "Optional filter by enabled status", example = "true")
+            @RequestParam(value = "enabled", required = false) Boolean enabled) {
+        
+        logger.info("Getting grouped product attributes with filters - productId: {}, productAttrId: {}, enabled: {}", 
+                   productId, productAttrId, enabled);
+        
+        try {
+            List<GroupedProductAttributeDto> groupedAttributes = productAttributeService.getGroupedProductAttributes(
+                    productId, productAttrId, enabled);
+            return ResponseEntity.ok(BaseResponseDto.success("Grouped product attributes retrieved successfully", groupedAttributes));
+        } catch (Exception e) {
+            logger.error("Error getting grouped product attributes: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to get grouped attributes: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Update product attribute prices by values (Public access)
+     */
+    @PatchMapping("/attributes/update-prices")
+    @Operation(
+        summary = "Update product attribute prices by attribute values",
+        description = "Update the price for all product attributes that match the specified attribute values. All records with the same attribute value will be updated to the new price."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Product attribute prices updated successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid request parameters or validation errors"),
+        @ApiResponse(responseCode = "500", description = "Internal server error occurred while updating prices")
+    })
+    public ResponseEntity<BaseResponseDto<String>> updatePricesByAttributeValues(
+            @Parameter(description = "List of attribute values to update (e.g., ['30x40', '50x60'])", 
+                      example = "[\"30x40\", \"50x60\"]")
+            @RequestParam List<String> productAttributeValues,
+            
+            @Parameter(description = "New price to set for all matching attribute values", example = "500000")
+            @RequestParam BigDecimal productAttributePrice) {
+        
+        logger.info("Updating attribute prices: values={}, newPrice={}", productAttributeValues, productAttributePrice);
+        
+        try {
+            int updatedCount = productAttributeService.updatePricesByAttributeValues(productAttributeValues, productAttributePrice);
+            String message = String.format("Successfully updated %d product attribute records to price %s",
+                    updatedCount, productAttributePrice);
+            return ResponseEntity.ok(BaseResponseDto.success(message, message));
+        } catch (IllegalArgumentException e) {
+            logger.error("Validation error updating prices: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Error updating attribute prices: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to update prices: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Update product attributes by attribute values (Admin only)
+     */
+    @PatchMapping("/attributes/update-by-values")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
+    @Operation(
+        summary = "Update product attributes by attribute values",
+        description = "Update multiple product attributes that match the specified attribute values. Only provided fields will be updated - null fields are ignored. Useful for bulk operations on attributes with same values. Admin/Manager access required."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Product attributes updated successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid request parameters or validation errors"),
+        @ApiResponse(responseCode = "401", description = "Authentication required"),
+        @ApiResponse(responseCode = "403", description = "Access denied - ADMIN or MANAGER role required"),
+        @ApiResponse(responseCode = "500", description = "Internal server error occurred while updating attributes")
+    })
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<BaseResponseDto<String>> updateAttributesByValues(
+            @Parameter(description = "List of attribute values to update (e.g., ['Red', 'Blue'])", 
+                      example = "[\"Red\", \"Blue\"]")
+            @RequestParam List<String> productAttributeValues,
+            
+            @Parameter(description = "Product attribute data to update. Only non-null fields will be updated.")
+            @Valid @RequestBody ProductAttributeRequestDto requestDto) {
+        
+        logger.info("Updating attributes by values: values={}, updateData={}", productAttributeValues, requestDto);
+        
+        try {
+            int updatedCount = productAttributeService.updateByAttributeValues(productAttributeValues, requestDto);
+            String message = String.format("Successfully updated %d product attribute records", updatedCount);
+            return ResponseEntity.ok(BaseResponseDto.success(message, message));
+        } catch (IllegalArgumentException e) {
+            logger.error("Validation error updating attributes by values: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Error updating attributes by values: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to update attributes: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Delete product attributes by values or attribute ID (Public access) 
+     */
+    @DeleteMapping("/attributes/batch-delete")
+    @Operation(
+        summary = "Delete product attributes by values or attribute ID",
+        description = "Delete multiple product attributes by either attribute values or product attribute ID. Both parameters are optional, but at least one must be provided. If both are provided, deletion is done by values (attribute ID is ignored)."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Product attributes deleted successfully"),
+        @ApiResponse(responseCode = "400", description = "No valid parameters provided or validation errors"),
+        @ApiResponse(responseCode = "500", description = "Internal server error occurred while deleting attributes")
+    })
+    public ResponseEntity<BaseResponseDto<String>> batchDeleteProductAttributes(
+            @Parameter(description = "Optional list of attribute values to delete (e.g., ['Red', 'Blue'])", 
+                      example = "[\"Red\", \"Blue\"]")
+            @RequestParam(value = "productAttributeValues", required = false) List<String> productAttributeValues,
+            
+            @Parameter(description = "Optional product attribute ID to delete all associated records", 
+                      example = "2")
+            @RequestParam(value = "productAttrId", required = false) Long productAttrId) {
+        
+        logger.info("Batch deleting product attributes: values={}, attrId={}", productAttributeValues, productAttrId);
+        
+        try {
+            // Validate that at least one parameter is provided
+            if ((productAttributeValues == null || productAttributeValues.isEmpty()) && productAttrId == null) {
+                return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(
+                        "At least one parameter must be provided: productAttributeValues or productAttrId"));
+            }
+            
+            int deletedCount;
+            String message;
+            
+            // Prioritize deletion by values if provided
+            if (productAttributeValues != null && !productAttributeValues.isEmpty()) {
+                deletedCount = productAttributeService.deleteByAttributeValues(productAttributeValues);
+                message = String.format("Successfully deleted %d product attribute records by values: %s", 
+                        deletedCount, productAttributeValues);
+            } else {
+                deletedCount = productAttributeService.deleteByProductAttrId(productAttrId);
+                message = String.format("Successfully deleted %d product attribute records by attribute ID: %d", 
+                        deletedCount, productAttrId);
+            }
+            
+            return ResponseEntity.ok(BaseResponseDto.success(message, message));
+        } catch (IllegalArgumentException e) {
+            logger.error("Validation error batch deleting attributes: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Error batch deleting attributes: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to delete attributes: " + e.getMessage()));
+        }
+    }
+
     /*=============================================
      PRODUCT TYPE ENDPOINTS
      =============================================*/
@@ -781,26 +949,29 @@ public class ProductController {
      =============================================*/
 
     /**
-     * Get root product categories (Customer-friendly endpoint)
+     * Get product categories hierarchy (Customer-friendly endpoint)
      */
-    @GetMapping("/categories/root")
+    @GetMapping("/categories/hierarchy")
     @Operation(
-        summary = "Get root product categories",
-        description = "Retrieve all enabled root categories (categories without parent). Perfect for building main navigation menus and category hierarchies. Returns a simple list without pagination. No authentication required."
+        summary = "Get product categories hierarchy",
+        description = "Retrieve enabled categories organized in a hierarchical tree structure with parent-child relationships. Optionally filter by product type ID. Perfect for building navigation menus and category trees in client applications. Returns categories with nested children for easy rendering. No authentication required."
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Root categories retrieved successfully",
+        @ApiResponse(responseCode = "200", description = "Categories hierarchy retrieved successfully",
                     content = @Content(schema = @Schema(implementation = List.class))),
-        @ApiResponse(responseCode = "500", description = "Internal server error occurred while retrieving root categories")
+        @ApiResponse(responseCode = "500", description = "Internal server error occurred while retrieving categories hierarchy")
     })
-    public ResponseEntity<BaseResponseDto<List<ProductCategoryDto>>> getRootCategories() {
-        logger.info("Getting root product categories");
+    public ResponseEntity<BaseResponseDto<List<ProductCategoryDto>>> getCategoriesHierarchy(
+            @Parameter(description = "Filter by product type ID (optional). If provided, only categories of this type will be returned", 
+                      example = "1") 
+            @RequestParam(value = "typeId", required = false) Long typeId) {
+        logger.info("Getting product categories hierarchy with typeId: {}", typeId);
         try {
-            List<ProductCategoryDto> rootCategories = productCategoryService.getRootCategories();
-            return ResponseEntity.ok(BaseResponseDto.success("Root categories retrieved successfully", rootCategories));
+            List<ProductCategoryDto> categoriesHierarchy = productCategoryService.getCategoriesHierarchy(typeId);
+            return ResponseEntity.ok(BaseResponseDto.success("Categories hierarchy retrieved successfully", categoriesHierarchy));
         } catch (Exception e) {
-            logger.error("Error retrieving root categories: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to retrieve root categories: " + e.getMessage()));
+            logger.error("Error retrieving categories hierarchy: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to retrieve categories hierarchy: " + e.getMessage()));
         }
     }
 

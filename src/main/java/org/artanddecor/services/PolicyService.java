@@ -28,6 +28,13 @@ public interface PolicyService {
     Optional<PolicyDto> findPolicyBySlug(String policySlug);
     
     /**
+     * Get policy by name
+     * @param policyName the policy name
+     * @return Optional containing PolicyDto if found
+     */
+    Optional<PolicyDto> findPolicyByName(String policyName);
+    
+    /**
      * Find policies by criteria (with filters and pagination)
      * @param policyName Filter by policy name (exact match)
      * @param policyEnabled Filter by enabled status

@@ -47,6 +47,14 @@ public class PolicyServiceImpl implements PolicyService {
     }
     
     @Override
+    @Transactional(readOnly = true)
+    public Optional<PolicyDto> findPolicyByName(String policyName) {
+        logger.debug("Finding policy by name: {}", policyName);
+        return policyRepository.findByPolicyName(policyName)
+                .map(this::mapToDto);
+    }
+    
+    @Override
     public PolicyDto createPolicy(PolicyRequest policyRequest) {
         logger.info("Creating new policy: {}", policyRequest.getPolicyName());
         

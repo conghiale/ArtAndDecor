@@ -297,92 +297,92 @@ INSERT INTO `PRODUCT_IMAGE` (`PRODUCT_ID`, `IMAGE_ID`, `PRODUCT_IMAGE_PRIMARY`) 
 (12, 4, TRUE);
 
 -- INSERT SAMPLE PRODUCT ATTRIBUTES WITH QUANTITIES
-INSERT INTO `PRODUCT_ATTRIBUTE` (`PRODUCT_ID`, `PRODUCT_ATTR_ID`, `PRODUCT_ATTRIBUTE_VALUE`, `PRODUCT_ATTRIBUTE_QUANTITY`) VALUES
+INSERT INTO `PRODUCT_ATTRIBUTE` (`PRODUCT_ID`, `PRODUCT_ATTR_ID`, `PRODUCT_ATTRIBUTE_VALUE`, `PRODUCT_ATTRIBUTE_QUANTITY`, `PRODUCT_ATTRIBUTE_PRICE`) VALUES
 
 -- Product 1: Tranh phong cảnh hoàng hôn trên biển (Total: 50)
-(1, 1, '40x60cm', 25),        -- Size 40x60cm: 25 pieces
-(1, 1, '30x40cm', 25),        -- Size 30x40cm: 25 pieces  
-(1, 2, 'Warm colors', 30),    -- Warm color variant: 30 pieces
-(1, 2, 'Cool colors', 20),    -- Cool color variant: 20 pieces
-(1, 3, 'Canvas', 50),         -- Material Canvas: 50 pieces
+(1, 1, '40x60cm', 25, 1500000.00),        -- Size 40x60cm: 25 pieces, price 1.5M VND
+(1, 1, '30x40cm', 25, 1200000.00),        -- Size 30x40cm: 25 pieces, price 1.2M VND
+(1, 2, 'Warm colors', 30, 200000.00),     -- Warm color variant: 30 pieces, price 200K VND
+(1, 2, 'Cool colors', 20, 200000.00),     -- Cool color variant: 20 pieces, price 200K VND
+(1, 3, 'Canvas', 50, 300000.00),          -- Material Canvas: 50 pieces, price 300K VND
 
 -- Product 2: Tranh núi non hùng vĩ (Total: 35)
-(2, 1, '50x70cm', 20),        -- Size 50x70cm: 20 pieces
-(2, 1, '40x60cm', 15),        -- Size 40x60cm: 15 pieces
-(2, 3, 'Canvas', 35),         -- Material Canvas: 35 pieces
+(2, 1, '50x70cm', 20, 2000000.00),        -- Size 50x70cm: 20 pieces, price 2M VND
+(2, 1, '40x60cm', 15, 1500000.00),        -- Size 40x60cm: 15 pieces, price 1.5M VND
+(2, 3, 'Canvas', 35, 300000.00),          -- Material Canvas: 35 pieces, price 300K VND
 
 -- Product 3: Tranh nghệ thuật trừu tượng hiện đại (Total: 40)
-(3, 1, '60x80cm', 25),        -- Size 60x80cm: 25 pieces
-(3, 1, '50x70cm', 15),        -- Size 50x70cm: 15 pieces
-(3, 2, 'Colorful', 22),       -- Colorful variant: 22 pieces
-(3, 2, 'Monochrome', 18),     -- Monochrome variant: 18 pieces
+(3, 1, '60x80cm', 25, 2500000.00),        -- Size 60x80cm: 25 pieces, price 2.5M VND
+(3, 1, '50x70cm', 15, 2000000.00),        -- Size 50x70cm: 15 pieces, price 2M VND
+(3, 2, 'Colorful', 22, 350000.00),        -- Colorful variant: 22 pieces, price 350K VND
+(3, 2, 'Monochrome', 18, 250000.00),      -- Monochrome variant: 18 pieces, price 250K VND
 
 -- Product 4: Tranh nghệ thuật hiện đại (Total: 20)
-(4, 1, '50x60cm', 12),        -- Size 50x60cm: 12 pieces
-(4, 1, '40x50cm', 8),         -- Size 40x50cm: 8 pieces
-(4, 2, 'Bright colors', 20),  -- Bright colors: 20 pieces
+(4, 1, '50x60cm', 12, 1800000.00),        -- Size 50x60cm: 12 pieces, price 1.8M VND
+(4, 1, '40x50cm', 8, 1400000.00),         -- Size 40x50cm: 8 pieces, price 1.4M VND
+(4, 2, 'Bright colors', 20, 300000.00),   -- Bright colors: 20 pieces, price 300K VND
 
 -- Product 5: Trang trí nội thất cao cấp (Total: 15)
-(5, 1, 'Large', 8),           -- Large size: 8 pieces
-(5, 1, 'Medium', 7),          -- Medium size: 7 pieces
-(5, 3, 'Premium material', 15), -- Premium material: 15 pieces
+(5, 1, 'Large', 8, 3000000.00),           -- Large size: 8 pieces, price 3M VND
+(5, 1, 'Medium', 7, 2200000.00),          -- Medium size: 7 pieces, price 2.2M VND
+(5, 3, 'Premium material', 15, 800000.00), -- Premium material: 15 pieces, price 800K VND
 
 -- Product 6: Tranh trang trí treo tường (Total: 60)
-(6, 1, '40x50cm', 35),        -- Size 40x50cm: 35 pieces
-(6, 1, '30x40cm', 25),        -- Size 30x40cm: 25 pieces
-(6, 2, 'Classic style', 30),  -- Classic style: 30 pieces
-(6, 2, 'Modern style', 30),   -- Modern style: 30 pieces
+(6, 1, '40x50cm', 35, 1600000.00),        -- Size 40x50cm: 35 pieces, price 1.6M VND
+(6, 1, '30x40cm', 25, 1200000.00),        -- Size 30x40cm: 25 pieces, price 1.2M VND
+(6, 2, 'Classic style', 30, 250000.00),   -- Classic style: 30 pieces, price 250K VND
+(6, 2, 'Modern style', 30, 300000.00),    -- Modern style: 30 pieces, price 300K VND
 
 -- Product 7: Chân dung người phụ nữ cổ điển (Total: 12)
-(7, 1, '30x40cm', 8),         -- Size 30x40cm: 8 pieces
-(7, 1, '25x35cm', 4),         -- Size 25x35cm: 4 pieces
-(7, 2, 'Classical tones', 12), -- Classical tones: 12 pieces
+(7, 1, '30x40cm', 8, 1800000.00),         -- Size 30x40cm: 8 pieces, price 1.8M VND
+(7, 1, '25x35cm', 4, 1400000.00),         -- Size 25x35cm: 4 pieces, price 1.4M VND
+(7, 2, 'Classical tones', 12, 400000.00), -- Classical tones: 12 pieces, price 400K VND
 
 -- Product 8: Chân dung người đàn ông nghệ thuật (Total: 8)
-(8, 1, '30x40cm', 5),         -- Size 30x40cm: 5 pieces
-(8, 1, '25x35cm', 3),         -- Size 25x35cm: 3 pieces
-(8, 2, 'Modern style', 8),    -- Modern style: 8 pieces
+(8, 1, '30x40cm', 5, 1900000.00),         -- Size 30x40cm: 5 pieces, price 1.9M VND
+(8, 1, '25x35cm', 3, 1500000.00),         -- Size 25x35cm: 3 pieces, price 1.5M VND
+(8, 2, 'Modern style', 8, 450000.00),     -- Modern style: 8 pieces, price 450K VND
 
 -- Product 9: Tượng Phật trang nghiêm (Total: 25)
-(9, 1, 'Large (40x60cm)', 15), -- Large size: 15 pieces
-(9, 1, 'Medium (30x45cm)', 10), -- Medium size: 10 pieces
-(9, 3, 'High-grade resin', 25), -- High-grade resin: 25 pieces
+(9, 1, 'Large (40x60cm)', 15, 2800000.00), -- Large size: 15 pieces, price 2.8M VND
+(9, 1, 'Medium (30x45cm)', 10, 2000000.00), -- Medium size: 10 pieces, price 2M VND
+(9, 3, 'High-grade resin', 25, 900000.00), -- High-grade resin: 25 pieces, price 900K VND
 
 -- Product 10: Tranh Chúa Giê-su tâm linh (Total: 18)
-(10, 1, '35x50cm', 12),       -- Size 35x50cm: 12 pieces
-(10, 1, '25x35cm', 6),        -- Size 25x35cm: 6 pieces
-(10, 2, 'Sacred colors', 18), -- Sacred colors: 18 pieces
+(10, 1, '35x50cm', 12, 2200000.00),       -- Size 35x50cm: 12 pieces, price 2.2M VND
+(10, 1, '25x35cm', 6, 1600000.00),        -- Size 25x35cm: 6 pieces, price 1.6M VND
+(10, 2, 'Sacred colors', 18, 500000.00),  -- Sacred colors: 18 pieces, price 500K VND
 
 -- Product 11: Bút vẽ chuyên nghiệp Faber-Castell (Total: 100)
-(11, 1, '24-piece set', 60),  -- 24-piece set: 60 sets
-(11, 1, '12-piece set', 40),  -- 12-piece set: 40 sets
-(11, 2, 'Multi-color', 100),  -- Multi-color: 100 sets
-(11, 4, 'Faber-Castell', 100), -- Brand Faber-Castell: 100 sets
+(11, 1, '24-piece set', 60, 850000.00),   -- 24-piece set: 60 sets, price 850K VND
+(11, 1, '12-piece set', 40, 500000.00),   -- 12-piece set: 40 sets, price 500K VND
+(11, 2, 'Multi-color', 100, 150000.00),   -- Multi-color: 100 sets, price 150K VND
+(11, 4, 'Faber-Castell', 100, 200000.00), -- Brand Faber-Castell: 100 sets, price 200K VND
 
 -- Product 12: Giấy vẽ canvas cao cấp (Total: 80)
-(12, 1, 'A3 (297x420mm)', 60), -- A3 size: 60 packs
-(12, 1, 'A4 (210x297mm)', 20), -- A4 size: 20 packs
-(12, 3, '100% Cotton', 40),     -- 100% Cotton: 40 packs
-(12, 3, 'Cotton blend', 40),    -- Cotton blend: 40 packs
+(12, 1, 'A3 (297x420mm)', 60, 350000.00), -- A3 size: 60 packs, price 350K VND
+(12, 1, 'A4 (210x297mm)', 20, 250000.00), -- A4 size: 20 packs, price 250K VND
+(12, 3, '100% Cotton', 40, 180000.00),     -- 100% Cotton: 40 packs, price 180K VND
+(12, 3, 'Cotton blend', 40, 150000.00),    -- Cotton blend: 40 packs, price 150K VND
 
 -- Product 13: Khung tranh gỗ tự nhiên (Total: 50)
-(13, 1, '40x60cm', 30),       -- Size 40x60cm: 30 pieces
-(13, 1, '30x40cm', 20),       -- Size 30x40cm: 20 pieces
-(13, 3, 'Natural oak', 25),   -- Natural oak: 25 pieces
-(13, 3, 'Pine wood', 25),     -- Pine wood: 25 pieces
+(13, 1, '40x60cm', 30, 750000.00),       -- Size 40x60cm: 30 pieces, price 750K VND
+(13, 1, '30x40cm', 20, 600000.00),       -- Size 30x40cm: 20 pieces, price 600K VND
+(13, 3, 'Natural oak', 25, 300000.00),   -- Natural oak: 25 pieces, price 300K VND
+(13, 3, 'Pine wood', 25, 250000.00),     -- Pine wood: 25 pieces, price 250K VND
 
 -- Product 14: Khung tranh kim loại hiện đại (Total: 35)
-(14, 1, '50x70cm', 20),       -- Size 50x70cm: 20 pieces
-(14, 1, '40x60cm', 15),       -- Size 40x60cm: 15 pieces
-(14, 2, 'Silver', 18),        -- Silver color: 18 pieces
-(14, 2, 'Black', 17),         -- Black color: 17 pieces
-(14, 3, 'Aluminum', 35),      -- Aluminum material: 35 pieces
+(14, 1, '50x70cm', 20, 950000.00),       -- Size 50x70cm: 20 pieces, price 950K VND
+(14, 1, '40x60cm', 15, 800000.00),       -- Size 40x60cm: 15 pieces, price 800K VND
+(14, 2, 'Silver', 18, 200000.00),        -- Silver color: 18 pieces, price 200K VND
+(14, 2, 'Black', 17, 180000.00),         -- Black color: 17 pieces, price 180K VND
+(14, 3, 'Aluminum', 35, 350000.00),      -- Aluminum material: 35 pieces, price 350K VND
 
 -- Product 15: Đèn trang trí nghệ thuật LED (Total: 30)
-(15, 1, 'Standard size', 30),  -- Standard size: 30 pieces
-(15, 2, 'Warm white', 20),     -- Warm white: 20 pieces
-(15, 2, 'Cool white', 10),     -- Cool white: 10 pieces
-(15, 3, 'LED + Metal', 30);    -- LED + Metal: 30 pieces
+(15, 1, 'Standard size', 30, 1200000.00), -- Standard size: 30 pieces, price 1.2M VND
+(15, 2, 'Warm white', 20, 300000.00),     -- Warm white: 20 pieces, price 300K VND
+(15, 2, 'Cool white', 10, 300000.00),     -- Cool white: 10 pieces, price 300K VND
+(15, 3, 'LED + Metal', 30, 500000.00);    -- LED + Metal: 30 pieces, price 500K VND
 
 -- INSERT SAMPLE REVIEWS
 INSERT INTO `REVIEW` (`USER_ID`, `PRODUCT_ID`, `PARENT_REVIEW_ID`, `ROOT_REVIEW_ID`, `REVIEW_LEVEL`, `RATING`, `REVIEW_CONTENT`, `COUNT_LIKE`, `IS_VISIBLE`, `IS_DELETED`) VALUES

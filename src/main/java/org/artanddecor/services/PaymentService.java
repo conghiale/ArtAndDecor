@@ -1,6 +1,7 @@
 package org.artanddecor.services;
 
 import org.artanddecor.dto.PaymentDto;
+import org.artanddecor.dto.PaymentQRRequestDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -74,4 +75,11 @@ public interface PaymentService {
      * Get total payment amount by state
      */
     Map<String, BigDecimal> getTotalAmountByState();
+    
+    /**
+     * Generate QR code for payment
+     * @param request Payment QR request containing order code and amount
+     * @return QR code image as byte array
+     */
+    byte[] generatePaymentQRCode(PaymentQRRequestDto request);
 }

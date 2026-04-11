@@ -2,6 +2,9 @@ package org.artanddecor.dto;
 
 import lombok.*;
 
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
@@ -25,6 +28,10 @@ public class CartItemAttributeDto {
     private String attributeValue;
 
     private String attributeDisplayName;
+
+    @DecimalMin(value = "0.0", inclusive = true, message = "Product attribute price must not be negative")
+    @Digits(integer = 13, fraction = 2, message = "Product attribute price must have at most 13 integer digits and 2 decimal places")
+    private BigDecimal productAttributePrice;
 
     private LocalDateTime createdDt;
 

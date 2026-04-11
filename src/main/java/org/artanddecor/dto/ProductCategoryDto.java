@@ -8,9 +8,10 @@ import lombok.NoArgsConstructor;
 
 import jakarta.validation.constraints.*;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
- * ProductCategory DTO for API requests and responses
+ * ProductCategory DTO for API requests and responses with hierarchical support
  */
 @Data
 @Builder
@@ -47,6 +48,9 @@ public class ProductCategoryDto {
     // Nested related entities
     private ProductTypeDto productType;
     private ImageDto image;
+    
+    // Hierarchical structure support - list of child categories
+    private List<ProductCategoryDto> children;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdDt;

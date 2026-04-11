@@ -66,9 +66,9 @@ public class ProductAttributeServiceImpl implements ProductAttributeService {
     @Override
     @Transactional
     public ProductAttributeDto createProductAttribute(ProductAttributeRequestDto requestDto) {
-        logger.info("Creating product attribute from DTO: productId={}, attrId={}, value={}, quantity={}", 
+        logger.info("Creating product attribute from DTO: productId={}, attrId={}, value={}, quantity={}, checkUnique={}", 
                    requestDto.getProductId(), requestDto.getProductAttrId(), 
-                   requestDto.getProductAttributeValue(), requestDto.getProductAttributeQuantity());
+                   requestDto.getProductAttributeValue(), requestDto.getProductAttributeQuantity(), requestDto.getCheckUnique());
         
         // Validate product exists if productId is provided
         Product product = null;
@@ -81,18 +81,19 @@ public class ProductAttributeServiceImpl implements ProductAttributeService {
         ProductAttr productAttr = productAttrRepository.findById(requestDto.getProductAttrId())
                 .orElseThrow(() -> new IllegalArgumentException("Product attribute not found with ID: " + requestDto.getProductAttrId()));
         
-        // Check unique combination of PRODUCT_ATTRIBUTE_VALUE and PRODUCT_ATTR_ID (always required)
-        if (requestDto.getProductAttributeValue() != null && requestDto.getProductAttrId() != null) {
-            boolean exists = productAttributeRepository.existsByValueAndAttrId(
-                requestDto.getProductAttributeValue(), requestDto.getProductAttrId());
+        // Check unique combination of PRODUCT_ATTRIBUTE_VALUE and PRODUCT_ATTRIBUTE_PRICE if checkUnique is true
+        if (requestDto.getCheckUnique() != null && requestDto.getCheckUnique() && 
+            requestDto.getProductAttributeValue() != null && requestDto.getProductAttributePrice() != null) {
+            boolean exists = productAttributeRepository.existsByValueAndPrice(
+                requestDto.getProductAttributeValue(), requestDto.getProductAttributePrice());
             if (exists) {
                 throw new IllegalArgumentException(
-                    String.format("Product attribute combination already exists: attrId=%d, value=%s", 
-                                 requestDto.getProductAttrId(), requestDto.getProductAttributeValue()));
+                    String.format("Product attribute combination already exists: value=%s, price=%s", 
+                                 requestDto.getProductAttributeValue(), requestDto.getProductAttributePrice()));
             }
         }
         
-        // Check if combination already exists using repository query (only if productId is provided) - Additional fallback validation
+        // Check if combination already exists using repository query (only if productId is provided) - Keep existing logic as fallback
         if (requestDto.getProductId() != null && 
             productAttributeRepository.findByProductId(requestDto.getProductId())
                 .stream()
@@ -121,22 +122,25 @@ public class ProductAttributeServiceImpl implements ProductAttributeService {
     @Override
     @Transactional
     public ProductAttributeDto updateProductAttribute(Long productAttributeId, ProductAttributeRequestDto requestDto) {
-        logger.info("Updating product attribute ID: {} from request DTO", productAttributeId);
+        logger.info("Updating product attribute ID: {} from request DTO, checkUnique={}", productAttributeId, requestDto.getCheckUnique());
         
         ProductAttribute existingProductAttribute = productAttributeRepository.findById(productAttributeId)
                 .orElseThrow(() -> new IllegalArgumentException("Product attribute not found with ID: " + productAttributeId));
         
-        // Check unique combination of PRODUCT_ATTRIBUTE_VALUE and PRODUCT_ATTR_ID if being updated (always required)
-        Long newAttrId = requestDto.getProductAttrId() != null ? requestDto.getProductAttrId() : existingProductAttribute.getProductAttr().getProductAttrId();
-        String newValue = requestDto.getProductAttributeValue() != null ? requestDto.getProductAttributeValue() : existingProductAttribute.getProductAttributeValue();
-        
-        if (newValue != null && newAttrId != null) {
-            boolean exists = productAttributeRepository.existsByValueAndAttrIdExcludingId(
-                newValue, newAttrId, productAttributeId);
-            if (exists) {
-                throw new IllegalArgumentException(
-                    String.format("Product attribute combination already exists: attrId=%d, value=%s", 
-                                 newAttrId, newValue));
+        // Check unique combination of PRODUCT_ATTRIBUTE_VALUE and PRODUCT_ATTRIBUTE_PRICE if checkUnique is true
+        // Only check if at least one of value or price is being updated
+        if (requestDto.getCheckUnique() != null && requestDto.getCheckUnique()) {
+            String newValue = requestDto.getProductAttributeValue() != null ? requestDto.getProductAttributeValue() : existingProductAttribute.getProductAttributeValue();
+            BigDecimal newPrice = requestDto.getProductAttributePrice() != null ? requestDto.getProductAttributePrice() : existingProductAttribute.getProductAttributePrice();
+            
+            if (newValue != null && newPrice != null) {
+                boolean exists = productAttributeRepository.existsByValueAndPriceExcludingId(
+                    newValue, newPrice, productAttributeId);
+                if (exists) {
+                    throw new IllegalArgumentException(
+                        String.format("Product attribute combination already exists: value=%s, price=%s", 
+                                     newValue, newPrice));
+                }
             }
         }
         

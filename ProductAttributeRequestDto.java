@@ -52,4 +52,9 @@ public class ProductAttributeRequestDto {
     @Schema(description = "Whether this product attribute is enabled. Defaults to true if not specified", 
             example = "true")
     private Boolean productAttributeEnabled = true;
+    
+    @Builder.Default
+    @Schema(description = "Whether to check unique combination of PRODUCT_ATTRIBUTE_VALUE and PRODUCT_ATTRIBUTE_PRICE. Defaults to false if not specified", 
+            example = "false")
+    private Boolean checkUnique = false;
 }

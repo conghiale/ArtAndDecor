@@ -183,6 +183,13 @@ public class CartItemServiceImpl implements CartItemService {
         if (request.hasSelectedAttributes()) {
             addAttributesToCartItem(savedCartItem.getCartItemId(), request.getSelectedAttributeIds());
             logger.info("Added {} attributes to cart item", request.getSelectedAttributesCount());
+            
+            // Recalculate price after adding attributes (they may affect unit price)
+            savedCartItem = cartItemRepository.findById(savedCartItem.getCartItemId())
+                .orElseThrow(() -> new ResourceNotFoundException("Cart item not found after save"));
+            savedCartItem.calculateTotalPrice();
+            savedCartItem = cartItemRepository.save(savedCartItem);
+            logger.info("Recalculated total price after adding attributes: {}", savedCartItem.getCartItemTotalPrice());
         }
         
         // Update cart total quantity
@@ -232,9 +239,14 @@ public class CartItemServiceImpl implements CartItemService {
             logger.info("Updated {} attributes for cart item", request.getSelectedAttributesCount());
         }
 
-        // Recalculate total price if quantity changed and > 0
+        // Recalculate total price after any changes (quantity or attributes may affect price)
         if (request.getQuantity() != null && request.getQuantity() > 0) {
             existingCartItem.calculateTotalPrice();
+            logger.info("Recalculated total price after updates: {}", existingCartItem.getCartItemTotalPrice());
+        } else if (request.hasSelectedAttributes()) {
+            // Even if quantity didn't change, attributes might affect price
+            existingCartItem.calculateTotalPrice();  
+            logger.info("Recalculated total price after attribute updates: {}", existingCartItem.getCartItemTotalPrice());
         }
 
         CartItem updatedCartItem = cartItemRepository.save(existingCartItem);

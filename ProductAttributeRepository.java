@@ -55,23 +55,23 @@ public interface ProductAttributeRepository extends JpaRepository<ProductAttribu
     boolean existsByProductProductIdAndProductAttrProductAttrId(Long productId, Long attrId);
 
     /**
-     * Check if product attribute value and attribute ID combination exists
+     * Check if product attribute value and price combination exists
      */
     @Query("SELECT COUNT(pa) > 0 FROM ProductAttribute pa " +
            "WHERE pa.productAttributeValue = :value " +
-           "AND pa.productAttr.productAttrId = :attrId")
-    boolean existsByValueAndAttrId(@Param("value") String productAttributeValue, @Param("attrId") Long productAttrId);
+           "AND pa.productAttributePrice = :price")
+    boolean existsByValueAndPrice(@Param("value") String productAttributeValue, @Param("price") BigDecimal productAttributePrice);
     
     /**
-     * Check if product attribute value and attribute ID combination exists excluding specific ID
+     * Check if product attribute value and price combination exists excluding specific ID
      */
     @Query("SELECT COUNT(pa) > 0 FROM ProductAttribute pa " +
            "WHERE pa.productAttributeValue = :value " +
-           "AND pa.productAttr.productAttrId = :attrId " +
+           "AND pa.productAttributePrice = :price " +
            "AND pa.productAttributeId != :excludeId")
-    boolean existsByValueAndAttrIdExcludingId(@Param("value") String productAttributeValue, 
-                                             @Param("attrId") Long productAttrId, 
-                                             @Param("excludeId") Long productAttributeId);
+    boolean existsByValueAndPriceExcludingId(@Param("value") String productAttributeValue, 
+                                            @Param("price") BigDecimal productAttributePrice, 
+                                            @Param("excludeId") Long productAttributeId);
 
     // =============================================
     // SEARCH OPERATIONS

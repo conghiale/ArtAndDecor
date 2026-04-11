@@ -16,7 +16,9 @@ import org.artanddecor.utils.ProductMapperUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +26,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.Map;
 
 /**
  * ProductCategory Service Implementation
@@ -52,13 +56,34 @@ public class ProductCategoryServiceImpl implements ProductCategoryService {
                 .map(this::convertToDto);
     }
 
-    @Override
-    public List<ProductCategoryDto> getRootCategories() {
-        logger.debug("Getting all root categories");
-        List<ProductCategory> rootCategories = productCategoryRepository.findRootCategories();
-        return rootCategories.stream()
+@Override
+    public List<ProductCategoryDto> getCategoriesHierarchy(Long productTypeId) {
+        logger.debug("Getting categories hierarchy with parent-child structure, productTypeId: {}", productTypeId);
+        
+        // Use unified criteria-based method for both cases (with and without productTypeId)
+        Page<ProductCategory> categoryPage = productCategoryRepository.findProductCategoriesByCriteriaPaginated(
+            null,           // textSearch
+            true,           // enabled
+            null,           // visible (null to get both visible and invisible)
+            productTypeId,  // productTypeId (can be null for all types)
+            null,           // parentCategoryId
+            PageRequest.of(0, Integer.MAX_VALUE, 
+                Sort.by("productCategoryName"))
+        );
+        List<ProductCategory> allCategories = categoryPage.getContent();
+        
+        logger.debug("Found {} enabled categories for productTypeId: {}", allCategories.size(), productTypeId);
+        
+        // Convert to DTOs
+        List<ProductCategoryDto> allCategoryDtos = allCategories.stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
+        
+        // Build hierarchy: Root categories with their children
+        List<ProductCategoryDto> hierarchy = buildHierarchy(allCategoryDtos);
+        logger.debug("Built hierarchy with {} root categories (productTypeId: {})", hierarchy.size(), productTypeId);
+        
+        return hierarchy;
     }
 
     @Override
@@ -210,6 +235,34 @@ public class ProductCategoryServiceImpl implements ProductCategoryService {
     // =============================================
     // HELPER METHODS
     // =============================================
+
+    /**
+     * Build hierarchical structure from flat list of categories
+     * Creates parent-child relationships and prevents recursion
+     * @param categories Flat list of all categories
+     * @return List of root categories with nested children
+     */
+    private List<ProductCategoryDto> buildHierarchy(List<ProductCategoryDto> categories) {
+        // Create maps for efficient lookup
+        Map<Long, ProductCategoryDto> categoryMap = categories.stream()
+                .collect(Collectors.toMap(ProductCategoryDto::getProductCategoryId, dto -> dto));
+        
+        Map<Long, List<ProductCategoryDto>> childrenMap = categories.stream()
+                .filter(dto -> dto.getParentCategoryId() != null)
+                .collect(Collectors.groupingBy(ProductCategoryDto::getParentCategoryId));
+        
+        // Build hierarchy: assign children to their parents
+        for (ProductCategoryDto category : categories) {
+            Long categoryId = category.getProductCategoryId();
+            List<ProductCategoryDto> children = childrenMap.getOrDefault(categoryId, new ArrayList<>());
+            category.setChildren(children);
+        }
+        
+        // Return only root categories (those without parent)
+        return categories.stream()
+                .filter(dto -> dto.getParentCategoryId() == null)
+                .collect(Collectors.toList());
+    }
 
     private ProductCategoryDto convertToDto(ProductCategory productCategory) {
         return ProductMapperUtil.toProductCategoryDto(productCategory);

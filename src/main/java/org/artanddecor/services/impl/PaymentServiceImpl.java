@@ -2,6 +2,8 @@ package org.artanddecor.services.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.artanddecor.dto.PaymentDto;
+import org.artanddecor.dto.PaymentQRRequestDto;
+import org.artanddecor.dto.PolicyDto;
 import org.artanddecor.exception.ResourceNotFoundException;
 import org.artanddecor.model.Payment;
 import org.artanddecor.model.PaymentMethod;
@@ -10,6 +12,7 @@ import org.artanddecor.repository.PaymentMethodRepository;
 import org.artanddecor.repository.PaymentRepository;
 import org.artanddecor.repository.PaymentStateRepository;
 import org.artanddecor.services.PaymentService;
+import org.artanddecor.services.PolicyService;
 import org.artanddecor.utils.PaymentMapperUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,11 +20,16 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 
+import java.io.StringReader;
 import java.math.BigDecimal;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 /**
  * Implementation of PaymentService interface
@@ -39,6 +47,8 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentMethodRepository paymentMethodRepository;
     private final PaymentStateRepository paymentStateRepository;
     private final PaymentMapperUtil paymentMapperUtil;
+    private final PolicyService policyService;
+    private final RestTemplate restTemplate;
 
     @Override
     @Transactional(readOnly = true)
@@ -182,5 +192,57 @@ public class PaymentServiceImpl implements PaymentService {
             amounts.put((String) result[0], (BigDecimal) result[1]);
         }
         return amounts;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public byte[] generatePaymentQRCode(PaymentQRRequestDto request) {
+        logger.debug("Generating QR code for order: {} with amount: {}", request.getOrderCode(), request.getAmount());
+        
+        try {
+            // Get bank information from policy by POLICY_NAME
+            PolicyDto bankPolicy = policyService.findPolicyByName("PAYMENT_BANK_INFO")
+                .orElseThrow(() -> new ResourceNotFoundException("Payment bank information not configured"));
+            
+            // Parse bank properties from policy
+            Properties bankProps = new Properties();
+            bankProps.load(new StringReader(bankPolicy.getPolicyValue()));
+            
+            String bankName = bankProps.getProperty("bank.name", "");
+            String accountNumber = bankProps.getProperty("bank.account.number", "");
+            String noteTemplate = bankProps.getProperty("bank.note.template", "Thanh toan don hang {orderId}");
+            
+            // Validate required fields
+            if (bankName.isEmpty() || accountNumber.isEmpty()) {
+                throw new IllegalStateException("Bank name and account number are required in policy configuration");
+            }
+            
+            // Generate payment description from template
+            String description = noteTemplate.replace("{orderId}", request.getOrderCode());
+            
+            // Build SEPAY QR code URL
+            StringBuilder qrUrlBuilder = new StringBuilder("https://qr.sepay.vn/img");
+            qrUrlBuilder.append("?acc=").append(accountNumber);
+            qrUrlBuilder.append("&bank=").append(URLEncoder.encode(bankName, StandardCharsets.UTF_8));
+            qrUrlBuilder.append("&amount=").append(request.getAmount().longValue());
+            qrUrlBuilder.append("&des=").append(URLEncoder.encode(description, StandardCharsets.UTF_8));
+            
+            String qrCodeUrl = qrUrlBuilder.toString();
+            logger.debug("Generated QR URL: {}", qrCodeUrl);
+            
+            // Call SEPAY API to get QR code as byte array
+            byte[] qrCodeBytes = restTemplate.getForObject(qrCodeUrl, byte[].class);
+            
+            if (qrCodeBytes == null || qrCodeBytes.length == 0) {
+                throw new RuntimeException("Failed to retrieve QR code from SEPAY service");
+            }
+            
+            logger.info("Generated QR code successfully for order: {}, size: {} bytes", request.getOrderCode(), qrCodeBytes.length);
+            return qrCodeBytes;
+            
+        } catch (Exception e) {
+            logger.error("Error generating QR code for order {}: {}", request.getOrderCode(), e.getMessage(), e);
+            throw new RuntimeException("Failed to generate QR code: " + e.getMessage(), e);
+        }
     }
 }

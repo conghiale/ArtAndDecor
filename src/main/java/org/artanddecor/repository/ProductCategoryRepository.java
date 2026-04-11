@@ -78,14 +78,7 @@ public interface ProductCategoryRepository extends JpaRepository<ProductCategory
            "ORDER BY pc.productCategoryName ASC")
     List<ProductCategory> findByProductTypeId(@Param("productTypeId") Long productTypeId);
 
-    /**
-     * Find root categories (no parent)
-     */
-    @Query("SELECT pc FROM ProductCategory pc " +
-           "WHERE pc.parentCategory IS NULL " +
-           "AND pc.productCategoryEnabled = true " +
-           "ORDER BY pc.productCategoryName ASC")
-    List<ProductCategory> findRootCategories();
+
 
     /**
      * Find child categories by parent ID

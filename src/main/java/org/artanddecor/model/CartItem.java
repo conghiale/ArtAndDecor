@@ -78,11 +78,53 @@ public class CartItem {
     }
 
     /**
-     * Calculate total price based on quantity and product price
+     * Calculate unit price based on product and selected attributes
+     * Uses the highest productAttributePrice from selected attributes, 
+     * or falls back to product price if no attributes have prices > 0
+     * @return Unit price for this cart item
+     */
+    public BigDecimal calculateUnitPrice() {
+        BigDecimal maxAttributePrice = BigDecimal.ZERO;
+        
+        // Check selected attributes for prices
+        if (cartItemAttributes != null && !cartItemAttributes.isEmpty()) {
+            for (CartItemAttribute cartItemAttribute : cartItemAttributes) {
+                if (cartItemAttribute.getProductAttribute() != null) {
+                    BigDecimal attributePrice = cartItemAttribute.getProductAttribute().getProductAttributePrice();
+                    if (attributePrice != null && attributePrice.compareTo(BigDecimal.ZERO) > 0) {
+                        if (maxAttributePrice.compareTo(attributePrice) < 0) {
+                            maxAttributePrice = attributePrice;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Use attribute price if found, otherwise use product price
+        if (maxAttributePrice.compareTo(BigDecimal.ZERO) > 0) {
+            logger.debug("Using attribute price {} for cart item {}", maxAttributePrice, cartItemId);
+            return maxAttributePrice;
+        } else if (product != null && product.getProductPrice() != null) {
+            logger.debug("Using product price {} for cart item {}", product.getProductPrice(), cartItemId);
+            return product.getProductPrice();
+        }
+        
+        logger.warn("No valid price found for cart item {}, using 0", cartItemId);
+        return BigDecimal.ZERO;
+    }
+
+    /**
+     * Calculate total price based on quantity and unit price (considering attributes)
      */
     public void calculateTotalPrice() {
-        if (product != null && product.getProductPrice() != null && cartItemQuantity != null) {
-            this.cartItemTotalPrice = product.getProductPrice().multiply(new BigDecimal(cartItemQuantity));
+        BigDecimal unitPrice = calculateUnitPrice();
+        if (unitPrice != null && cartItemQuantity != null) {
+            this.cartItemTotalPrice = unitPrice.multiply(new BigDecimal(cartItemQuantity));
+            logger.debug("Calculated total price {} = {} x {} for cart item {}", 
+                        cartItemTotalPrice, unitPrice, cartItemQuantity, cartItemId);
+        } else {
+            this.cartItemTotalPrice = BigDecimal.ZERO;
+            logger.warn("Unable to calculate total price for cart item {}", cartItemId);
         }
     }
 

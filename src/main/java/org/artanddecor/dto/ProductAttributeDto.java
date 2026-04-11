@@ -29,6 +29,10 @@ public class ProductAttributeDto {
     @Min(value = 0, message = "Product attribute quantity must not be negative")
     private Integer productAttributeQuantity;
     
+    @DecimalMin(value = "0.0", inclusive = true, message = "Product attribute price must not be negative")
+    @Digits(integer = 13, fraction = 2, message = "Product attribute price must have at most 13 integer digits and 2 decimal places")
+    private java.math.BigDecimal productAttributePrice;
+    
     @Builder.Default
     private Boolean productAttributeEnabled = true;
     

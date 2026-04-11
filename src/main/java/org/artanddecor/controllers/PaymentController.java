@@ -413,4 +413,68 @@ public class PaymentController {
             return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to retrieve payment amounts: " + e.getMessage()));
         }
     }
-}
+    // =============================================
+    // PAYMENT QR CODE ENDPOINT
+    // =============================================
+
+    /**
+     * Generate QR code for payment
+     * Role: permitAll (both customers and admin can generate QR codes)
+     */
+    @GetMapping("/qr/generate")
+    @Operation(
+        summary = "Generate QR code for payment",
+        description = "Generate QR code for bank transfer payment using order code and amount. " +
+                     "Returns QR code image as byte array for customer to scan and pay. " +
+                     "No authentication required - accessible to all users."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "QR code generated successfully", 
+                    content = @Content(mediaType = "image/png")),
+        @ApiResponse(responseCode = "400", description = "Invalid request parameters or validation failed"),
+        @ApiResponse(responseCode = "404", description = "Payment bank information not configured"),
+        @ApiResponse(responseCode = "500", description = "Internal server error occurred while generating QR code")
+    })
+    public ResponseEntity<byte[]> generatePaymentQRCode(
+            @Parameter(description = "Order code for payment identification", 
+                      example = "ORD001")
+            @RequestParam String orderCode,
+            
+            @Parameter(description = "Payment amount in VND",
+                      example = "1000000") 
+            @RequestParam BigDecimal amount) {
+        
+        logger.info("Generating QR code for order: {} with amount: {}", orderCode, amount);
+
+        try {
+            // Validate parameters
+            if (orderCode == null || orderCode.trim().isEmpty()) {
+                return ResponseEntity.badRequest().build();
+            }
+            if (amount == null || amount.compareTo(BigDecimal.valueOf(1000)) < 0) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            // Create request DTO
+            PaymentQRRequestDto request = PaymentQRRequestDto.builder()
+                    .orderCode(orderCode.trim())
+                    .amount(amount)
+                    .build();
+
+            byte[] qrCodeBytes = paymentService.generatePaymentQRCode(request);
+            
+            return ResponseEntity.ok()
+                    .header("Content-Type", "image/png")
+                    .header("Content-Disposition", "inline; filename=qr-code-" + orderCode + ".png")
+                    .body(qrCodeBytes);
+                    
+        } catch (Exception e) {
+            logger.error("Error generating QR code for order {}: {}", orderCode, e.getMessage(), e);
+            
+            if (e.getMessage().contains("not configured") || e.getMessage().contains("not found")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            }
+            
+            return ResponseEntity.badRequest().build();
+        }
+    }}

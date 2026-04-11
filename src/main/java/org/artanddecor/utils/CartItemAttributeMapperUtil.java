@@ -41,6 +41,7 @@ public class CartItemAttributeMapperUtil {
             if (entity.getProductAttribute() != null) {
                 builder.productAttributeId(entity.getProductAttribute().getProductAttributeId());
                 builder.attributeValue(entity.getProductAttribute().getProductAttributeValue());
+                builder.productAttributePrice(entity.getProductAttribute().getProductAttributePrice());
                 
                 // Set attribute name from ProductAttr
                 if (entity.getProductAttribute().getProductAttr() != null) {

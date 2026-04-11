@@ -24,10 +24,13 @@ public interface ProductCategoryService {
     Optional<ProductCategoryDto> findProductCategoryById(Long productCategoryId);
 
     /**
-     * Get root categories (categories with no parent)
-     * Returns enabled root categories only, ordered by name
+     * Get categories hierarchy with nested children structure filtered by product type
+     * Returns enabled categories of specified type organized as trees with parent-child relationships
+     * Perfect for client-side rendering of category menus and navigation
+     * @param productTypeId Product type ID to filter categories (nullable)
+     * @return List of root categories with nested children categories
      */
-    List<ProductCategoryDto> getRootCategories();
+    List<ProductCategoryDto> getCategoriesHierarchy(Long productTypeId);
 
     /**
      * Get product categories by multiple criteria with pagination (all parameters optional)
