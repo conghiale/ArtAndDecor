@@ -26,10 +26,11 @@ public interface ProductTypeService {
      * Get product types by multiple criteria with pagination (all parameters optional)
      * @param textSearch Text search in name, slug, displayName, remark (partial match, case-insensitive)
      * @param enabled Filter by enabled status
+     * @param productTypeSlug Filter by product type slug
      * @param pageable Pagination and sorting information
      * @return Page of ProductTypeDto matching criteria
      */
-    Page<ProductTypeDto> getProductTypesByCriteria(String textSearch, Boolean enabled, Pageable pageable);
+    Page<ProductTypeDto> getProductTypesByCriteria(String textSearch, Boolean enabled, String productTypeSlug, Pageable pageable);
 
     // =============================================
     // CRUD OPERATIONS

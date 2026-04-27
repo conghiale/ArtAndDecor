@@ -31,6 +31,9 @@ public class Order {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "USER_ID")
     private User user;
+    
+    @Column(name = "SESSION_ID", length = 100)
+    private String sessionId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "ORDER_STATE_ID", nullable = false)
@@ -45,6 +48,9 @@ public class Order {
     
     @Column(name = "DISCOUNT_VALUE", precision = 15, scale = 2)
     private BigDecimal discountValue;
+
+    // NOTE: Payment information is managed through Payment entities relationship
+    // Payment snapshot data is available in OrderDto for API responses
 
     @Column(name = "ORDER_CODE", nullable = false, unique = true, length = 50)
     private String orderCode;
@@ -128,8 +134,8 @@ public class Order {
 
     @PrePersist
     protected void onCreate() {
-        logger.debug("Creating new Order: {}, User ID: {}", orderCode, 
-                    user != null ? user.getUserId() : null);
+        logger.debug("Creating new Order: {}, User ID: {}, Session ID: {}", orderCode, 
+                    user != null ? user.getUserId() : null, sessionId);
         LocalDateTime now = LocalDateTime.now();
         this.createdDt = now;
         this.modifiedDt = now;

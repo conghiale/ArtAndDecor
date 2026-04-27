@@ -13,6 +13,7 @@ import java.util.List;
 
 /**
  * OrderItem Repository for database operations
+ * Cleaned up version - contains only methods used by services
  */
 @Repository
 public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
@@ -25,14 +26,7 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
     List<OrderItem> findByOrderOrderId(Long orderId);
 
     /**
-     * Find order items by product ID
-     * @param productId Product ID
-     * @return List of order items
-     */
-    List<OrderItem> findByProductProductId(Long productId);
-
-    /**
-     * Find order items with comprehensive filtering (unified method)
+     * Find order items with comprehensive filtering (used by searchOrderItems)
      * @param orderIds List of order IDs to filter by (optional)
      * @param productId Filter by product ID (optional)
      * @param minQuantity Filter by minimum quantity (optional)
@@ -70,5 +64,4 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
             @Param("maxTotalPrice") BigDecimal maxTotalPrice,
             @Param("textSearch") String textSearch,
             Pageable pageable);
-
 }

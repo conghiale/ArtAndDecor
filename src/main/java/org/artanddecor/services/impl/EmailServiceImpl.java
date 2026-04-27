@@ -51,6 +51,13 @@ public class EmailServiceImpl implements EmailService {
             
         } catch (Exception e) {
             logger.error("Failed to send password reset email to {}: {}", toEmail, e.getMessage(), e);
+            
+            // Auto-debug mail configuration when authentication fails
+            if (e.getMessage() != null && e.getMessage().toLowerCase().contains("authentication")) {
+                logger.warn("⚠️ Authentication failed detected - running mail configuration debug...");
+                mailConfiguration.debugMailConfiguration();
+            }
+            
             throw new RuntimeException("Failed to send password reset email", e);
         }
     }
@@ -77,6 +84,13 @@ public class EmailServiceImpl implements EmailService {
             
         } catch (Exception e) {
             logger.error("Failed to send notification email to {}: {}", toEmail, e.getMessage(), e);
+            
+            // Auto-debug mail configuration when authentication fails
+            if (e.getMessage() != null && e.getMessage().toLowerCase().contains("authentication")) {
+                logger.warn("⚠️ Authentication failed detected - running mail configuration debug...");
+                mailConfiguration.debugMailConfiguration();
+            }
+            
             throw new RuntimeException("Failed to send notification email", e);
         }
     }

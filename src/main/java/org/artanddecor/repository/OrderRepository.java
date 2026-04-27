@@ -34,6 +34,13 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findByUser_UserIdOrderByCreatedDtDesc(Long userId);
     
     /**
+     * Find orders by session ID (for guest users)
+     * @param sessionId Session ID
+     * @return List of orders for specific session
+     */
+    List<Order> findBySessionIdOrderByCreatedDtDesc(String sessionId);
+    
+    /**
      * Find user orders with filtering and pagination (performance optimized)
      * @param userId User ID
      * @param orderStateName Order state name (optional)
@@ -59,6 +66,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
      * @param orderId Filter by order ID (optional)
      * @param orderCode Filter by order code (optional)
      * @param userId Filter by user ID (optional)
+     * @param sessionId Filter by session ID (optional)
      * @param customerName Filter by customer name (optional)
      * @param customerPhone Filter by customer phone (optional)
      * @param customerEmail Filter by customer email (optional)
@@ -84,6 +92,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
            "(:orderId IS NULL OR o.orderId = :orderId) AND " +
            "(:orderCode IS NULL OR LOWER(o.orderCode) LIKE LOWER(CONCAT('%', :orderCode, '%'))) AND " +
            "(:userId IS NULL OR u.userId = :userId) AND " +
+           "(:sessionId IS NULL OR o.sessionId = :sessionId) AND " +
            "(:customerName IS NULL OR LOWER(o.receiverName) LIKE LOWER(CONCAT('%', :customerName, '%'))) AND " +
            "(:customerPhone IS NULL OR LOWER(o.receiverPhone) LIKE LOWER(CONCAT('%', :customerPhone, '%'))) AND " +
            "(:customerEmail IS NULL OR LOWER(o.receiverEmail) LIKE LOWER(CONCAT('%', :customerEmail, '%'))) AND " +
@@ -113,6 +122,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
         @Param("orderId") Long orderId,
         @Param("orderCode") String orderCode,
         @Param("userId") Long userId,
+        @Param("sessionId") String sessionId,
         @Param("customerName") String customerName,
         @Param("customerPhone") String customerPhone,
         @Param("customerEmail") String customerEmail,

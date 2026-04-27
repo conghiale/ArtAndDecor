@@ -270,7 +270,7 @@ CHARACTER SET utf8mb4
 COLLATE utf8mb4_unicode_ci;
 
 -- Tạo user
-CREATE USER 'maison-art'@'localhost' IDENTIFIED BY 'db@maison-art';
+CREATE USER 'maison-art'@'localhost' IDENTIFIED BY 'db@Maison-art123';
 
 -- Cấp quyền
 GRANT ALL PRIVILEGES ON `ART_AND_DECOR`.* TO 'maison-art'@'localhost';
@@ -283,7 +283,7 @@ SELECT user,host FROM mysql.user WHERE user='maison-art';
 -- Chạy file SQL
 -- chạy từ terminal
 mysql -u maison-art -p ART_AND_DECOR < RUN_ALL_DATABASE_SCRIPTS.sql;
-db@maison-art
+db@Maison-art123
 
 -- chạy từ bên trong MySQL CLI
 SOURCE /full/path/to/file.sql;
@@ -315,7 +315,7 @@ systemctl start nginx
 
 ### 9.1) Cấu hình reverse proxy cho maison-art
 ```bash
-nano /etc/nginx/sites-available/maison-art.conf
+nano /etc/nginx/sites-available/maison-art.conf                                                                          
 ```
 
 ```nginx
@@ -479,8 +479,8 @@ module.exports = {
     script: 'node_modules/.bin/next',
     args: 'start',
     cwd: '/var/www/maison-art-client',
-    instances: 1, // có thể scale lên nhiều instance nếu cần 2/3 cho production
-    exec_mode: 'fork', // 'cluster' mode có thể dùng nhưng cần cẩn thận với stateful features
+    instances: 2, // có thể scale lên nhiều instance nếu cần 2/3 cho production
+    exec_mode: 'cluster', // 'cluster' mode có thể dùng nhưng cần cẩn thận với stateful features
     autorestart: true,
     watch: false,
     max_memory_restart: '1G',

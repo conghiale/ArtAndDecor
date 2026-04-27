@@ -21,8 +21,4 @@ public interface OrderStateHistoryRepository extends JpaRepository<OrderStateHis
      */
     @Query("SELECT osh FROM OrderStateHistory osh WHERE osh.order.orderId = :orderId ORDER BY osh.createdDt DESC")
     List<OrderStateHistory> findByOrderIdOrderByStateChangeDateDesc(@Param("orderId") Long orderId);
-
-
-
-
 }

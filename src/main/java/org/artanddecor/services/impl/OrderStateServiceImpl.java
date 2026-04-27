@@ -31,24 +31,6 @@ public class OrderStateServiceImpl implements OrderStateService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<OrderStateDto> getAllOrderStates() {
-        List<OrderState> orderStates = orderStateRepository.findAll();
-        return orderStates.stream()
-                .map(orderMapperUtil::mapToDto)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<OrderStateDto> getAllEnabledOrderStates() {
-        List<OrderState> enabledOrderStates = orderStateRepository.findByOrderStateEnabledOrderByOrderStateName(true);
-        return enabledOrderStates.stream()
-                .map(orderMapperUtil::mapToDto)
-                .collect(Collectors.toList());
-    }
-    
-    @Override
-    @Transactional(readOnly = true)
     public Page<OrderStateDto> getOrderStates(Long orderStateId, String orderStateName, Boolean enabled, Pageable pageable) {
         List<OrderState> allOrderStates = orderStateRepository.findAll();
         

@@ -245,4 +245,29 @@ public class PaymentServiceImpl implements PaymentService {
             throw new RuntimeException("Failed to generate QR code: " + e.getMessage(), e);
         }
     }
+
+    @Override
+    @Transactional
+    public PaymentDto updatePaymentStatus(Long paymentId, Long paymentStateId) {
+        logger.info("Updating payment status - paymentId: {}, newStateId: {}", paymentId, paymentStateId);
+        
+        // Find payment
+        Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Payment not found with ID: " + paymentId));
+        
+        // Validate payment state exists
+        PaymentState paymentState = paymentStateRepository.findById(paymentStateId)
+                .orElseThrow(() -> new ResourceNotFoundException("Payment state not found with ID: " + paymentStateId));
+        
+        // Update payment state
+        payment.setPaymentState(paymentState);
+        
+        // Save updated payment
+        Payment updatedPayment = paymentRepository.save(payment);
+        
+        logger.info("Payment status updated successfully - paymentId: {}, newState: {}", 
+                   paymentId, paymentState.getPaymentStateName());
+        
+        return paymentMapperUtil.mapPaymentToDto(updatedPayment);
+    }
 }

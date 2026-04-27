@@ -3,10 +3,14 @@ package org.artanddecor.services.impl;
 import lombok.RequiredArgsConstructor;
 import org.artanddecor.dto.ProductDto;
 import org.artanddecor.dto.ProductRequestDto;
-import org.artanddecor.dto.ProductAttributeRequestDto;
+import org.artanddecor.dto.ProductVariantRequestDto;
+import org.artanddecor.dto.ProductVariantDto;
 import org.artanddecor.dto.ProductImageDto;
 import org.artanddecor.dto.SeoMetaRequestDto;
 import org.artanddecor.dto.SeoMetaDto;
+import org.artanddecor.dto.SimilarImageSearchResponseDto;
+import org.artanddecor.dto.SimilarImageResultDto;
+import org.artanddecor.dto.PolicyDto;
 import org.artanddecor.model.Product;
 import org.artanddecor.model.ProductImage;
 import org.artanddecor.model.ProductAttribute;
@@ -18,7 +22,9 @@ import org.artanddecor.repository.ProductAttributeRepository;
 import org.artanddecor.repository.ProductAttrRepository;
 import org.artanddecor.repository.ImageRepository;
 import org.artanddecor.services.ProductService;
+import org.artanddecor.services.ProductVariantService;
 import org.artanddecor.services.SeoMetaService;
+import org.artanddecor.services.PolicyService;
 import org.artanddecor.utils.ProductMapperUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +32,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.*;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.core.io.ByteArrayResource;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -34,6 +46,7 @@ import java.util.stream.Collectors;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Arrays;
 import java.util.function.Function;
 
 /**
@@ -52,7 +65,10 @@ public class ProductServiceImpl implements ProductService {
     private final ProductAttributeRepository productAttributeRepository;
     private final ProductAttrRepository productAttrRepository;
     private final ImageRepository imageRepository;
+    private final ProductVariantService productVariantService;
     private final SeoMetaService seoMetaService;
+    private final PolicyService policyService;
+    private final RestTemplate restTemplate;
 
     // =============================================
     // CUSTOMER-FOCUSED OPERATIONS
@@ -68,13 +84,13 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public Page<ProductDto> getProductsByCriteria(String textSearch, Boolean enabled, Long categoryId, Long typeId, Long stateId, 
                                                 BigDecimal minPrice, BigDecimal maxPrice, Boolean inStock, String productCode, 
-                                                Boolean featured, Boolean highlighted, Pageable pageable) {
-        logger.debug("Getting products with criteria - textSearch: {}, enabled: {}, categoryId: {}, typeId: {}, stateId: {}, featured: {}, highlighted: {}", 
-                    textSearch, enabled, categoryId, typeId, stateId, featured, highlighted);
+                                                Boolean featured, Boolean highlighted, String productCategorySlug, String productTypeSlug, Pageable pageable) {
+        logger.debug("Getting products with criteria - textSearch: {}, enabled: {}, categoryId: {}, typeId: {}, stateId: {}, featured: {}, highlighted: {}, productCategorySlug: {}, productTypeSlug: {}", 
+                    textSearch, enabled, categoryId, typeId, stateId, featured, highlighted, productCategorySlug, productTypeSlug);
         
         Page<Product> productPage = productRepository.findProductsByCriteriaPaginated(
             textSearch, enabled, categoryId, typeId, stateId, minPrice, maxPrice, inStock, productCode, 
-            featured, highlighted, pageable);
+            featured, highlighted, productCategorySlug, productTypeSlug, pageable);
         
         return productPage.map(this::convertToDto);
     }
@@ -90,20 +106,6 @@ public class ProductServiceImpl implements ProductService {
                 .map(this::convertToDto);
     }
 
-    @Override
-    public Optional<ProductDto> findProductByName(String productName) {
-        logger.debug("Finding product by name: {}", productName);
-        return productRepository.findByProductName(productName)
-                .map(this::convertToDto);
-    }
-
-    @Override
-    public Optional<ProductDto> findProductByCode(String productCode) {
-        logger.debug("Finding product by code: {}", productCode);
-        return productRepository.findByProductCode(productCode)
-                .map(this::convertToDto);
-    }
-
     // =============================================
     // CRUD OPERATIONS - Unified ProductRequestDto approach
     // =============================================
@@ -112,9 +114,9 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public ProductDto updateProduct(Long productId, ProductRequestDto productRequestDto) {
-        logger.info("Updating product ID: {} with request DTO and {} images and {} attributes", productId, 
+        logger.info("Updating product ID: {} with request DTO and {} images and {} variants", productId, 
                    productRequestDto.getImageIds() != null ? productRequestDto.getImageIds().size() : 0,
-                   productRequestDto.getProductAttributes() != null ? productRequestDto.getProductAttributes().size() : 0);
+                   productRequestDto.getProductVariants() != null ? productRequestDto.getProductVariants().size() : 0);
         
         Product existingProduct = productRepository.findById(productId)
                 .orElseThrow(() -> new IllegalArgumentException("Product not found with ID: " + productId));
@@ -141,8 +143,8 @@ public class ProductServiceImpl implements ProductService {
             }
         }
         
-        // Validate product attributes if provided
-        validateProductAttributes(productRequestDto.getProductAttributes());
+        // Validate product variants if provided
+        validateProductVariants(productRequestDto.getProductVariants());
         
         // Handle SEO meta update if provided
         Long seoMetaId = null;
@@ -159,9 +161,9 @@ public class ProductServiceImpl implements ProductService {
             updateProductImages(updatedProduct, productRequestDto.getImageIds(), productRequestDto.getPrimaryImageId());
         }
         
-        // Update attributes if provided
-        if (productRequestDto.getProductAttributes() != null) {
-            updateProductAttributes(updatedProduct, productRequestDto.getProductAttributes());
+        // Update variants if provided - NEW functionality
+        if (productRequestDto.getProductVariants() != null) {
+            updateProductVariants(updatedProduct, productRequestDto.getProductVariants());
         }
         
         return convertToDto(updatedProduct);
@@ -171,10 +173,10 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public ProductDto createProduct(ProductRequestDto productRequestDto) {
-        logger.info("Creating new product from request DTO: {} with {} images and {} attributes", 
+        logger.info("Creating new product from request DTO: {} with {} images and {} variants", 
                    productRequestDto.getProductName(), 
                    productRequestDto.getImageIds() != null ? productRequestDto.getImageIds().size() : 0,
-                   productRequestDto.getProductAttributes() != null ? productRequestDto.getProductAttributes().size() : 0);
+                   productRequestDto.getProductVariants() != null ? productRequestDto.getProductVariants().size() : 0);
         
         // Validation
         if (existsBySlug(productRequestDto.getProductSlug())) {
@@ -195,8 +197,8 @@ public class ProductServiceImpl implements ProductService {
             }
         }
         
-        // Validate product attributes if provided
-        validateProductAttributes(productRequestDto.getProductAttributes());
+        // Validate product variants if provided
+        validateProductVariants(productRequestDto.getProductVariants());
         
         // Create SEO meta if provided
         Long seoMetaId = null;
@@ -212,9 +214,9 @@ public class ProductServiceImpl implements ProductService {
             associateImagesToProduct(savedProduct, productRequestDto.getImageIds(), productRequestDto.getPrimaryImageId());
         }
         
-        // Associate attributes if provided - use direct association for new products
-        if (productRequestDto.getProductAttributes() != null && !productRequestDto.getProductAttributes().isEmpty()) {
-            associateAttributesToProduct(savedProduct, productRequestDto.getProductAttributes());
+        // Associate variants if provided - NEW functionality 
+        if (productRequestDto.getProductVariants() != null && !productRequestDto.getProductVariants().isEmpty()) {
+            associateVariantsToProduct(savedProduct, productRequestDto.getProductVariants());
         }
         
         return convertToDto(savedProduct);
@@ -223,12 +225,6 @@ public class ProductServiceImpl implements ProductService {
     // =============================================
     // PRODUCT IMAGE OPERATIONS
     // =============================================
-
-    @Override
-    public ProductImageDto addImageToProduct(Long productId, Long imageId, Boolean isPrimary) {
-        // Implementation to be added based on ProductImageService
-        throw new UnsupportedOperationException("Method not yet implemented");
-    }
 
     @Override
     public void removeImageFromProduct(Long productId, Long imageId) {
@@ -255,18 +251,6 @@ public class ProductServiceImpl implements ProductService {
         logger.info("Successfully removed image {} from product {}", imageId, productId);
     }
 
-    @Override
-    public List<ProductImageDto> getProductImages(Long productId) {
-        // Implementation to be added based on ProductImageService
-        throw new UnsupportedOperationException("Method not yet implemented");
-    }
-
-    @Override
-    public ProductImageDto setPrimaryImage(Long productId, Long imageId) {
-        // Implementation to be added based on ProductImageService
-        throw new UnsupportedOperationException("Method not yet implemented");
-    }
-
     // =============================================
     // PRODUCT ATTRIBUTE OPERATIONS (Reserved for future use)
     // =============================
@@ -285,12 +269,12 @@ public class ProductServiceImpl implements ProductService {
         logger.debug("Getting featured products with pagination");
         
         // First try to get featured products
-        Page<ProductDto> featuredProducts = getProductsByCriteria(null, true, null, null, null, null, null, null, null, true, null, pageable);
+        Page<ProductDto> featuredProducts = getProductsByCriteria(null, true, null, null, null, null, null, null, null, true, null, null, null, pageable);
         
         // If no featured products found, fallback to all enabled products
         if (featuredProducts.getTotalElements() == 0) {
             logger.debug("No featured products found, falling back to all enabled products");
-            return getProductsByCriteria(null, true, null, null, null, null, null, null, null, null, null, pageable);
+            return getProductsByCriteria(null, true, null, null, null, null, null, null, null, null, null, null, null, pageable);
         }
         
         return featuredProducts;
@@ -301,12 +285,12 @@ public class ProductServiceImpl implements ProductService {
         logger.debug("Getting highlighted products with pagination");
         
         // First try to get highlighted products
-        Page<ProductDto> highlightedProducts = getProductsByCriteria(null, true, null, null, null, null, null, null, null, null, true, pageable);
+        Page<ProductDto> highlightedProducts = getProductsByCriteria(null, true, null, null, null, null, null, null, null, null, true, null, null, pageable);
         
         // If no highlighted products found, fallback to all enabled products
         if (highlightedProducts.getTotalElements() == 0) {
             logger.debug("No highlighted products found, falling back to all enabled products");
-            return getProductsByCriteria(null, true, null, null, null, null, null, null, null, null, null, pageable);
+            return getProductsByCriteria(null, true, null, null, null, null, null, null, null, null, null, null, null, pageable);
         }
         
         return highlightedProducts;
@@ -317,7 +301,7 @@ public class ProductServiceImpl implements ProductService {
         logger.debug("Getting latest products with pagination");
         
         // Get all enabled products sorted by creation date (this should always have results if any products exist)
-        Page<ProductDto> latestProducts = getProductsByCriteria(null, true, null, null, null, null, null, null, null, null, null, pageable);
+        Page<ProductDto> latestProducts = getProductsByCriteria(null, true, null, null, null, null, null, null, null, null, null, null, null, pageable);
         
         // If somehow no enabled products found, this fallback won't help much, but log the issue
         if (latestProducts.getTotalElements() == 0) {
@@ -349,16 +333,6 @@ public class ProductServiceImpl implements ProductService {
         }
         
         return topSellingProducts.map(this::convertToDto);
-    }
-
-    @Override
-    public Long getProductCountByCategoryId(Long categoryId) {
-        return productRepository.countByProductCategoryId(categoryId);
-    }
-
-    @Override
-    public Long getProductCountByStateId(Long stateId) {
-        return productRepository.countByProductStateId(stateId);
     }
 
     @Override
@@ -425,50 +399,26 @@ public class ProductServiceImpl implements ProductService {
     }
     
     /**
-     * Validate that all provided product attribute IDs exist in the database
-     * @param productAttributes List of product attributes to validate  
-     * @throws IllegalArgumentException if any productAttrId doesn't exist
+     * Validate that all provided product variant data is correct
+     * @param productVariants List of product variants to validate  
+     * @throws IllegalArgumentException if any productAttributeId doesn't exist or data is invalid
      */
-    private void validateProductAttributes(List<ProductAttributeRequestDto> productAttributes) {
-        if (productAttributes == null || productAttributes.isEmpty()) {
+    private void validateProductVariants(List<ProductVariantRequestDto> productVariants) {
+        if (productVariants == null || productVariants.isEmpty()) {
             return;
         }
         
-        for (ProductAttributeRequestDto attrRequest : productAttributes) {
-            if (!productAttrRepository.existsById(attrRequest.getProductAttrId())) {
-                throw new IllegalArgumentException("Product attribute definition not found with ID: " + attrRequest.getProductAttrId());
+        for (ProductVariantRequestDto variantRequest : productVariants) {
+            // Validate productAttributeId exists
+            if (!productAttributeRepository.existsById(variantRequest.getProductAttributeId())) {
+                throw new IllegalArgumentException("Product attribute not found with ID: " + variantRequest.getProductAttributeId());
+            }
+            
+            // Validate quantity is not negative
+            if (variantRequest.getProductVariantStock() < 0) {
+                throw new IllegalArgumentException("Product variant quantity cannot be negative");
             }
         }
-    }
-    
-    /**
-     * Associate product attributes to a product
-     * @param product Product entity
-     * @param productAttributes List of product attributes to associate
-     */
-    private void associateAttributesToProduct(Product product, List<ProductAttributeRequestDto> productAttributes) {
-        if (productAttributes == null || productAttributes.isEmpty()) {
-            logger.debug("No attributes to associate with product {}", product.getProductId());
-            return;
-        }
-        
-        logger.debug("Associating {} attributes to product {}", productAttributes.size(), product.getProductId());
-        
-        for (ProductAttributeRequestDto attrRequest : productAttributes) {
-            ProductAttr productAttr = productAttrRepository.findById(attrRequest.getProductAttrId())
-                .orElseThrow(() -> new IllegalArgumentException("Product attribute definition not found with ID: " + attrRequest.getProductAttrId()));
-            
-            ProductAttribute productAttribute = new ProductAttribute();
-            productAttribute.setProduct(product);
-            productAttribute.setProductAttr(productAttr);
-            productAttribute.setProductAttributeValue(attrRequest.getProductAttributeValue());
-            productAttribute.setProductAttributeQuantity(attrRequest.getProductAttributeQuantity());
-            productAttribute.setProductAttributeEnabled(attrRequest.getProductAttributeEnabled());
-            
-            productAttributeRepository.save(productAttribute);
-        }
-        
-        logger.info("Successfully associated {} attributes to product {}", productAttributes.size(), product.getProductId());
     }
     
     /**
@@ -546,162 +496,6 @@ public class ProductServiceImpl implements ProductService {
         logger.info("Successfully updated images for product {} - {} total images", productId, newImageIds.size());
     }
     
-    /**
-     * Update product attributes using differential approach with multi-value support
-     * Supports multiple values per attribute (e.g., Color: Cool/Warm, Size: 30x40/40x60)
-     * Compares existing attributes with requested attributes and performs selective operations
-     * @param product Product entity
-     * @param requestAttributes List of requested product attributes
-     */
-    private void updateProductAttributes(Product product, List<ProductAttributeRequestDto> requestAttributes) {
-        if (requestAttributes == null) {
-            requestAttributes = List.of(); // Convert null to empty list for consistent processing
-        }
-        
-        Long productId = product.getProductId();
-        logger.debug("Updating product attributes for product {} - {} attributes requested", 
-                    productId, requestAttributes.size());
-        
-        // 1. Get existing attributes from DB - handle possible null result
-        List<ProductAttribute> existing = productAttributeRepository.findByProductId(productId);
-        if (existing == null) {
-            existing = List.of(); // Convert null to empty list
-        }
-        
-        // 2. Group existing attributes by productAttrId to support multi-value attributes
-        Map<Long, List<ProductAttribute>> existingGrouped = existing.stream()
-            .collect(Collectors.groupingBy(pa -> pa.getProductAttr().getProductAttrId()));
-        
-        // 3. Group request attributes by productAttrId to support multi-value attributes
-        Map<Long, List<ProductAttributeRequestDto>> requestGrouped = requestAttributes.stream()
-            .collect(Collectors.groupingBy(ProductAttributeRequestDto::getProductAttrId));
-        
-        // 4. Get all attribute IDs from both existing and request
-        Set<Long> allAttrIds = new HashSet<>();
-        allAttrIds.addAll(existingGrouped.keySet());
-        allAttrIds.addAll(requestGrouped.keySet());
-        
-        // 5. Process each attribute group
-        for (Long attrId : allAttrIds) {
-            List<ProductAttribute> existingForAttr = existingGrouped.getOrDefault(attrId, List.of());
-            List<ProductAttributeRequestDto> requestForAttr = requestGrouped.getOrDefault(attrId, List.of());
-            
-            if (requestForAttr.isEmpty()) {
-                // CASE A: Attribute not in request - remove all existing values
-                for (ProductAttribute _existing : existingForAttr) {
-                    productAttributeRepository.delete(_existing);
-                    logger.debug("Removed attribute {} with value '{}' from product {}", 
-                                attrId, _existing.getProductAttributeValue(), productId);
-                }
-            } else if (existingForAttr.isEmpty()) {
-                // CASE B: New attribute - add all requested values
-                ProductAttr productAttr = productAttrRepository.findById(attrId)
-                    .orElseThrow(() -> new IllegalArgumentException(
-                        "Product attribute definition not found with ID: " + attrId));
-                
-                for (ProductAttributeRequestDto req : requestForAttr) {
-                    ProductAttribute newAttr = new ProductAttribute();
-                    newAttr.setProduct(product);
-                    newAttr.setProductAttr(productAttr);
-                    newAttr.setProductAttributeValue(req.getProductAttributeValue());
-                    newAttr.setProductAttributeQuantity(req.getProductAttributeQuantity());
-                    newAttr.setProductAttributeEnabled(req.getProductAttributeEnabled());
-                    
-                    productAttributeRepository.save(newAttr);
-                    logger.debug("Added new attribute {} to product {}: {} (qty: {})", 
-                                attrId, productId, req.getProductAttributeValue(), req.getProductAttributeQuantity());
-                }
-            } else {
-                // CASE C: Attribute exists - perform value-based differential update
-                updateAttributeValuesDifferentially(productId, attrId, existingForAttr, requestForAttr);
-            }
-        }
-        
-        logger.info("Successfully updated attributes for product {} - {} total attribute groups processed", 
-                   productId, allAttrIds.size());
-    }
-    
-    /**
-     * Perform differential update for multiple values of the same attribute
-     * Matches existing and requested values by attribute value string
-     * @param productId Product ID for logging
-     * @param attrId Attribute ID for logging
-     * @param existing List of existing ProductAttribute for this attrId
-     * @param requested List of requested ProductAttributeRequestDto for this attrId
-     */
-    private void updateAttributeValuesDifferentially(Long productId, Long attrId,
-                                                   List<ProductAttribute> existing,
-                                                   List<ProductAttributeRequestDto> requested) {
-        // Map existing by value for efficient lookup
-        Map<String, ProductAttribute> existingByValue = existing.stream()
-            .collect(Collectors.toMap(
-                ProductAttribute::getProductAttributeValue,
-                Function.identity(),
-                (a, b) -> {
-                    logger.warn("Duplicate attribute value found for product {} attribute {}: {}", 
-                                productId, attrId, a.getProductAttributeValue());
-                    return a; // Keep first one if duplicates exist
-                }
-            ));
-        
-        // Map requested by value and validate for duplicates within this attribute
-        Map<String, ProductAttributeRequestDto> requestedByValue = requested.stream()
-            .collect(Collectors.toMap(
-                ProductAttributeRequestDto::getProductAttributeValue,
-                Function.identity(),
-                (a, b) -> {
-                    throw new IllegalArgumentException(
-                        "Duplicate attribute value in request for attribute " + attrId + ": " + a.getProductAttributeValue());
-                }
-            ));
-        
-        // REMOVE: Delete existing values not in request
-        for (ProductAttribute existingAttr : existing) {
-            String value = existingAttr.getProductAttributeValue();
-            if (!requestedByValue.containsKey(value)) {
-                productAttributeRepository.delete(existingAttr);
-                logger.debug("Removed attribute {} value '{}' from product {}", attrId, value, productId);
-            }
-        }
-        
-        // ADD or UPDATE: Process each requested value
-        ProductAttr productAttr = null; // Cache for new attributes
-        
-        for (Map.Entry<String, ProductAttributeRequestDto> entry : requestedByValue.entrySet()) {
-            String value = entry.getKey();
-            ProductAttributeRequestDto req = entry.getValue();
-            ProductAttribute existingAttr = existingByValue.get(value);
-            
-            if (existingAttr != null) {
-                // UPDATE existing attribute value
-                existingAttr.setProductAttributeQuantity(req.getProductAttributeQuantity());
-                existingAttr.setProductAttributeEnabled(req.getProductAttributeEnabled());
-                
-                productAttributeRepository.save(existingAttr);
-                logger.debug("Updated attribute {} value '{}' for product {}: qty={}, enabled={}", 
-                           attrId, value, productId, req.getProductAttributeQuantity(), req.getProductAttributeEnabled());
-            } else {
-                // INSERT new attribute value
-                if (productAttr == null) {
-                    productAttr = productAttrRepository.findById(attrId)
-                        .orElseThrow(() -> new IllegalArgumentException(
-                            "Product attribute definition not found with ID: " + attrId));
-                }
-                
-                ProductAttribute newAttr = new ProductAttribute();
-                newAttr.setProduct(existing.get(0).getProduct()); // Use product from existing
-                newAttr.setProductAttr(productAttr);
-                newAttr.setProductAttributeValue(req.getProductAttributeValue());
-                newAttr.setProductAttributeQuantity(req.getProductAttributeQuantity());
-                newAttr.setProductAttributeEnabled(req.getProductAttributeEnabled());
-                
-                productAttributeRepository.save(newAttr);
-                logger.debug("Added new attribute {} value '{}' to product {}: qty={}, enabled={}", 
-                           attrId, value, productId, req.getProductAttributeQuantity(), req.getProductAttributeEnabled());
-            }
-        }
-    }
-    
     // =============================================
     // SEO META HELPER METHODS
     // =============================================
@@ -741,8 +535,59 @@ public class ProductServiceImpl implements ProductService {
     }
     
     /**
+     * Associate product variants to a product after creation
+     * @param product Product entity
+     * @param productVariants List of product variants to associate
+     */
+    private void associateVariantsToProduct(Product product, List<ProductVariantRequestDto> productVariants) {
+        logger.debug("Associating {} variants to product {}", productVariants.size(), product.getProductId());
+        
+        for (ProductVariantRequestDto variantRequest : productVariants) {
+            // Set productId for the variant request
+            variantRequest.setProductId(product.getProductId());
+            
+            // Create the variant using ProductVariantService
+            productVariantService.createProductVariant(variantRequest);
+        }
+        
+        logger.debug("Successfully associated {} variants to product {}", productVariants.size(), product.getProductId());
+    }
+    
+    /**
+     * Update product variants using differential approach
+     * Removes existing variants and recreates them based on new data
+     * @param product Product entity
+     * @param productVariants New list of product variants
+     */
+    private void updateProductVariants(Product product, List<ProductVariantRequestDto> productVariants) {
+        logger.debug("Updating variants for product {} - {} variants requested", 
+                    product.getProductId(), productVariants.size());
+        
+        Long productId = product.getProductId();
+        
+        // 1. Remove all existing variants for this product
+        List<ProductVariantDto> existingVariants = productVariantService.findVariantsByProductId(productId);
+        for (ProductVariantDto existingVariant : existingVariants) {
+            productVariantService.deleteProductVariant(existingVariant.getProductVariantId());
+        }
+        logger.debug("Removed {} existing variants for product {}", existingVariants.size(), productId);
+        
+        // 2. Create new variants
+        if (!productVariants.isEmpty()) {
+            for (ProductVariantRequestDto variantRequest : productVariants) {
+                // Set productId for the variant request
+                variantRequest.setProductId(productId);
+                
+                // Create the variant using ProductVariantService
+                productVariantService.createProductVariant(variantRequest);
+            }
+            logger.debug("Created {} new variants for product {}", productVariants.size(), productId);
+        }
+    }
+    
+    /**
      * Convert SeoMetaRequestDto to SeoMetaDto with consistent field mapping
-     * @param seoMetaRequest Request DTO
+     * @param seoMetaRequest Request DTO containing SEO metadata
      * @return SeoMetaDto for service operations
      */
     private SeoMetaDto convertSeoMetaRequestToDto(SeoMetaRequestDto seoMetaRequest) {
@@ -757,5 +602,131 @@ public class ProductServiceImpl implements ProductService {
                 .seoMetaCustomJson(seoMetaRequest.getSeoMetaCustomJson())
                 .seoMetaEnabled(seoMetaRequest.getSeoMetaEnabled())
                 .build();
+    }
+
+    // =============================================
+    // AI SIMILAR IMAGE SEARCH OPERATIONS
+    // =============================================
+
+    @Override
+    public Page<ProductDto> searchProductsBySimilarImage(MultipartFile imageFile, Boolean isSelling, Pageable pageable) throws Exception {
+        logger.info("Searching products by similar image, isSelling: {}, file size: {} bytes", isSelling, imageFile.getSize());
+        
+        // 1. Get AI service configuration from policy
+        PolicyDto aiConfig = policyService.findPolicyByName("SIMILAR_IMAGE_CONFIG")
+                .orElseThrow(() -> new IllegalArgumentException("SIMILAR_IMAGE_CONFIG policy not found"));
+        
+        if (!aiConfig.getPolicyEnabled()) {
+            throw new IllegalArgumentException("SIMILAR_IMAGE_CONFIG policy is disabled");
+        }
+        
+        // 2. Parse configuration properties
+        Map<String, String> configProperties = parseConfigProperties(aiConfig.getPolicyValue());
+        String host = configProperties.get("host");
+        String thresholdStr = configProperties.get("threshold");
+        String topKStr = configProperties.get("top_k");
+        
+        if (host == null || thresholdStr == null || topKStr == null) {
+            throw new IllegalArgumentException("Invalid SIMILAR_IMAGE_CONFIG: missing required properties (host, threshold, top_k)");
+        }
+        
+        double threshold = Double.parseDouble(thresholdStr);
+        int topK = Integer.parseInt(topKStr);
+        
+        // 3. Call AI service
+        SimilarImageSearchResponseDto aiResponse = callAiImageSearchService(host, imageFile, threshold, topK);
+        
+        if (aiResponse.getResults() == null || aiResponse.getResults().isEmpty()) {
+            logger.info("No similar images found from AI service");
+            return Page.empty(pageable);
+        }
+        
+        // 4. Extract image IDs from AI response
+        List<Long> imageIds = aiResponse.getResults().stream()
+                .map(SimilarImageResultDto::getId)
+                .collect(Collectors.toList());
+        
+        if (imageIds.isEmpty()) {
+            logger.info("No image IDs extracted from AI response");
+            return Page.empty(pageable);
+        }
+        
+        logger.info("Found {} similar images from AI service, searching products...", imageIds.size());
+        
+        // 5. Find products by image IDs with selling filter
+        Page<Product> productPage = productRepository.findProductsByImageIdsWithSellingFilter(imageIds, isSelling, pageable);
+        
+        // 6. Convert to DTOs and return
+        return productPage.map(this::convertToDto);
+    }
+    
+    /**
+     * Parse configuration properties from policy value
+     * Expected format: key1=value1\nkey2=value2\n...
+     * @param policyValue Policy value string
+     * @return Map of configuration properties
+     */
+    private Map<String, String> parseConfigProperties(String policyValue) {
+        return Arrays.stream(policyValue.split("\\n"))
+                .map(String::trim)
+                .filter(line -> !line.isEmpty() && line.contains("="))
+                .map(line -> line.split("=", 2))
+                .collect(Collectors.toMap(
+                    parts -> parts[0].trim(),
+                    parts -> parts.length > 1 ? parts[1].trim() : ""
+                ));
+    }
+    
+    /**
+     * Call AI service for image search
+     * @param host AI service host URL
+     * @param imageFile Image file to search
+     * @param threshold Similarity threshold
+     * @param topK Number of top results to return
+     * @return AI service response
+     * @throws Exception if call fails
+     */
+    private SimilarImageSearchResponseDto callAiImageSearchService(String host, MultipartFile imageFile, double threshold, int topK) throws Exception {
+        String url = host + "/api/v1/search";
+        
+        // Prepare request headers
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        
+        // Prepare multipart request body
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("file", new ByteArrayResource(imageFile.getBytes()) {
+            @Override
+            public String getFilename() {
+                return imageFile.getOriginalFilename();
+            }
+        });
+        body.add("threshold", threshold);
+        body.add("top_k", topK);
+        
+        HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
+        
+        try {
+            logger.debug("Calling AI service at: {} with threshold: {}, top_k: {}", url, threshold, topK);
+            ResponseEntity<SimilarImageSearchResponseDto> response = restTemplate.exchange(
+                url,
+                HttpMethod.POST,
+                requestEntity,
+                SimilarImageSearchResponseDto.class
+            );
+            
+            if (response.getStatusCode().is2xxSuccessful()) {
+                response.getBody();
+                logger.debug("AI service call successful, found {} results",
+                        response.getBody().getResults() != null ?
+                        response.getBody().getResults().size() : 0);
+                return response.getBody();
+            } else {
+                throw new Exception("AI service call failed with status: " + response.getStatusCode());
+            }
+        } catch (Exception e) {
+            logger.error("Failed to call AI service at {}: {}", url, e.getMessage());
+            throw new Exception("Failed to call AI service: " + e.getMessage(), e);
+        }
     }
 }

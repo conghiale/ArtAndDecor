@@ -7,7 +7,11 @@ import org.artanddecor.dto.ImageUploadResponseDto;
 import org.artanddecor.dto.ImageUploadErrorDto;
 import org.artanddecor.exception.UnsupportedImageFormatException;
 import org.artanddecor.model.Image;
+import org.artanddecor.model.ImageEmbedding;
+import org.artanddecor.model.Policy;
 import org.artanddecor.repository.ImageRepository;
+import org.artanddecor.repository.ImageEmbeddingRepository;
+import org.artanddecor.repository.PolicyRepository;
 import org.artanddecor.services.ImageService;
 import org.artanddecor.services.ImageFileService;
 import org.artanddecor.services.ImageFileService.FileUploadResult;
@@ -20,12 +24,19 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.http.*;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Properties;
+import java.io.StringReader;
+import java.util.concurrent.CompletableFuture;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
 
 /**
  * Image Service Implementation
@@ -41,6 +52,10 @@ public class ImageServiceImpl implements ImageService {
 
     private final ImageRepository imageRepository;
     private final ImageFileService imageFileService;
+    private final ImageEmbeddingRepository imageEmbeddingRepository;
+    private final PolicyRepository policyRepository;
+    private final RestTemplate restTemplate;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
      /*=============================================
      RETRIEVE OPERATIONS - Used by Controller
@@ -149,6 +164,9 @@ public class ImageServiceImpl implements ImageService {
                 failedImages.add(errorDto);
             }
         }
+        
+        // Process AI embeddings for successfully uploaded images (async, doesn't affect response)
+        processImageEmbeddingsAsync(uploadedImages);
         
         ImageUploadResponseDto response = ImageUploadResponseDto.builder()
                 .uploadedImages(uploadedImages)
@@ -428,5 +446,157 @@ public class ImageServiceImpl implements ImageService {
                    displayName, savedImage.getImageId(), imageSize, uploadResult.getPathFile());
         
         return convertToDto(savedImage);
+    }
+
+    // =============================================
+    // AI EMBEDDING HELPER METHODS
+    // =============================================
+
+    /**
+     * Process image embeddings asynchronously for uploaded images
+     * This method doesn't affect the main response flow
+     * @param uploadedImages List of successfully uploaded images
+     */
+    private void processImageEmbeddingsAsync(List<ImageDto> uploadedImages) {
+        if (uploadedImages == null || uploadedImages.isEmpty()) {
+            return;
+        }
+
+        // Process embeddings asynchronously to not block the main response
+        CompletableFuture.runAsync(() -> {
+            for (ImageDto imageDto : uploadedImages) {
+                try {
+                    processImageEmbedding(imageDto.getImageId());
+                } catch (Exception e) {
+                    logger.error("Failed to process embedding for image ID {}: {}", 
+                               imageDto.getImageId(), e.getMessage(), e);
+                }
+            }
+        });
+    }
+
+    /**
+     * Process embedding for a single image
+     * @param imageId Image ID to process
+     */
+    private void processImageEmbedding(Long imageId) {
+        try {
+            // Check if embedding already exists with valid data
+            Optional<ImageEmbedding> existingEmbedding = imageEmbeddingRepository.findByImageIdWithEmbedding(imageId);
+            if (existingEmbedding.isPresent()) {
+                logger.debug("Embedding already exists for image ID: {}", imageId);
+                return;
+            }
+
+            // If no valid embedding exists, create/update embedding
+            logger.info("Creating/updating embedding for image ID: {}", imageId);
+            callAiEmbeddingService(imageId);
+            
+        } catch (Exception e) {
+            logger.error("Error processing embedding for image ID {}: {}", imageId, e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Call AI service to generate embedding for image
+     * @param imageId Image ID to generate embedding for
+     */
+    private void callAiEmbeddingService(Long imageId) {
+        try {
+            // Get AI service configuration from policy
+            Properties aiConfig = getAiServiceConfig();
+            if (aiConfig == null) {
+                logger.error("AI service configuration not found in policies");
+                return;
+            }
+
+            String host = aiConfig.getProperty("host");
+            if (host == null || host.trim().isEmpty()) {
+                logger.error("AI service host not configured");
+                return;
+            }
+
+            // Prepare API call
+            String apiUrl = host.trim() + "/api/v1/embeddings/" + imageId;
+            logger.debug("Calling AI embedding service: {}", apiUrl);
+
+            // Prepare headers
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setAccept(java.util.Collections.singletonList(MediaType.APPLICATION_JSON));
+
+            // Create request entity (empty body for POST)
+            HttpEntity<String> requestEntity = new HttpEntity<>("", headers);
+
+            // Make the API call using RestTemplate
+            ResponseEntity<String> response = restTemplate.exchange(
+                    apiUrl,
+                    HttpMethod.POST,
+                    requestEntity,
+                    String.class);
+            
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                // Parse response
+                JsonNode jsonResponse = objectMapper.readTree(response.getBody());
+                String status = jsonResponse.path("status").asText();
+                
+                if ("success".equals(status)) {
+                    logger.info("Embedding created successfully for image ID: {}", imageId);
+                    
+                    // Create or update embedding record in database
+                    ImageEmbedding embedding = imageEmbeddingRepository.findByImageId(imageId)
+                            .orElse(new ImageEmbedding());
+                    embedding.setImageId(imageId);
+                    // Note: The actual embedding data would come from AI service response
+                    // For now, we just mark that embedding process was initiated
+                    imageEmbeddingRepository.save(embedding);
+                    
+                } else {
+                    logger.warn("AI service returned non-success status for image ID {}: {}", 
+                              imageId, jsonResponse.path("message").asText());
+                }
+            } else {
+                logger.error("AI service returned error status {} for image ID {}: {}", 
+                           response.getStatusCode(), imageId, response.getBody());
+            }
+            
+        } catch (Exception e) {
+            logger.error("Failed to call AI embedding service for image ID {}: {}", imageId, e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Get AI service configuration from policy table
+     * @return Properties object containing AI service configuration or null if not found
+     */
+    private Properties getAiServiceConfig() {
+        try {
+            Optional<Policy> aiConfigPolicy = policyRepository.findByPolicyName("AI_IMAGE_SEARCH_CONFIG");
+            if (aiConfigPolicy.isEmpty()) {
+                logger.error("AI_IMAGE_SEARCH_CONFIG policy not found");
+                return null;
+            }
+
+            String configValue = aiConfigPolicy.get().getPolicyValue();
+            if (configValue == null || configValue.trim().isEmpty()) {
+                logger.error("AI_IMAGE_SEARCH_CONFIG policy value is empty");
+                return null;
+            }
+
+            // Parse properties format: host=http://ai-service:8000\nthreshold=90\ntop_k=20
+            Properties properties = new Properties();
+            properties.load(new StringReader(configValue));
+            
+            logger.debug("AI service configuration loaded: host={}, threshold={}, top_k={}", 
+                       properties.getProperty("host"), 
+                       properties.getProperty("threshold"), 
+                       properties.getProperty("top_k"));
+            
+            return properties;
+            
+        } catch (Exception e) {
+            logger.error("Failed to load AI service configuration: {}", e.getMessage(), e);
+            return null;
+        }
     }
 }

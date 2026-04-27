@@ -16,7 +16,7 @@ public interface BlogService {
      * Get blogs with filtering and pagination
      */
     Page<BlogDto> getBlogs(String blogTitle, Boolean blogEnabled, Long blogCategoryId, 
-                          LocalDate fromDate, LocalDate toDate, Pageable pageable);
+                          LocalDate fromDate, LocalDate toDate, String blogCategorySlug, String blogTypeSlug, Pageable pageable);
 
     /**
      * Get blog by ID

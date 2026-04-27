@@ -7,11 +7,12 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import jakarta.validation.constraints.*;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
  * ProductAttribute DTO for API requests and responses
- * Contains PRODUCT_ATTRIBUTE table data with nested related entities
+ * Represents master attribute definitions with pricing
  */
 @Data
 @Builder
@@ -25,13 +26,12 @@ public class ProductAttributeDto {
     @Size(max = 256, message = "Product attribute value must not exceed 256 characters")
     private String productAttributeValue;
     
-    @NotNull(message = "Product attribute quantity is required")
-    @Min(value = 0, message = "Product attribute quantity must not be negative")
-    private Integer productAttributeQuantity;
+    @Size(max = 256, message = "Product attribute display name must not exceed 256 characters")
+    private String productAttributeDisplayName;
     
     @DecimalMin(value = "0.0", inclusive = true, message = "Product attribute price must not be negative")
     @Digits(integer = 13, fraction = 2, message = "Product attribute price must have at most 13 integer digits and 2 decimal places")
-    private java.math.BigDecimal productAttributePrice;
+    private BigDecimal productAttributePrice;
     
     @Builder.Default
     private Boolean productAttributeEnabled = true;
@@ -42,6 +42,6 @@ public class ProductAttributeDto {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime modifiedDt;
     
-    // Nested related entity (only ProductAttr, not Product to avoid circular reference)
+    // Nested related entity (ProductAttr info only)
     private ProductAttrDto productAttr;
 }

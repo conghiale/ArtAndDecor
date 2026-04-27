@@ -82,7 +82,9 @@ public interface OrderService {
     /**
      * Search orders with filters (API 5) - Used by both admin and public access
      * @param orderId Filter by order ID (optional)
-     * @param customerId Filter by customer ID (optional)  
+     * @param userId Filter by user ID (optional)
+     * @param sessionId Filter by session ID for guest orders (optional)
+     * @param orderCode Filter by order code (optional)  
      * @param state Filter by state (optional)
      * @param fromDate Filter from date (optional)
      * @param toDate Filter to date (optional)
@@ -93,7 +95,9 @@ public interface OrderService {
      */
     Page<OrderDto> searchOrders(
             Long orderId,
-            Long customerId,
+            Long userId,
+            String sessionId,
+            String orderCode,
             String state,
             LocalDate fromDate,
             LocalDate toDate,
@@ -104,21 +108,7 @@ public interface OrderService {
     // REMOVED: adminSearchOrders method - consolidated with searchOrders
     // All search functionality is handled by searchOrders method
 
-    /**
-     * Admin create order (API 6) - DISCOUNT removed
-     * @param customerId Customer ID
-     * @param shippingAddressId Shipping address ID
-     * @param discountCode Discount code (set to null, kept for backward compatibility)
-     * @param orderItems List of order items
-     * @param createdByUserId Admin user who created order
-     * @return Created order
-     */
-    OrderDto adminCreateOrder(
-            Long customerId,
-            Long shippingAddressId,
-            String discountCode,
-            List<CreateOrderItemRequest> orderItems,
-            Long createdByUserId);
+
             
     /**
      * Admin update order (API 7) - If order state changes, creates history record

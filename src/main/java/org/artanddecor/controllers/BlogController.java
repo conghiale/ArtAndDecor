@@ -391,11 +391,18 @@ public class BlogController {
             @Parameter(description = "Filter blogs to this date (optional). Format: YYYY-MM-DD")
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             
+            @Parameter(description = "Filter by blog category slug (URL-friendly identifier)")
+            @RequestParam(required = false) String blogCategorySlug,
+            
+            @Parameter(description = "Filter by blog type slug (URL-friendly identifier)")
+            @RequestParam(required = false) String blogTypeSlug,
+            
             @PageableDefault(page = 0, size = 10, sort = "createdDt", direction = Sort.Direction.DESC) Pageable pageable) {
         
         try {
             Page<BlogDto> blogs = blogService.getBlogs(
-                blogTitle, blogEnabled, blogCategoryId, fromDate, toDate, pageable);
+                blogTitle, blogEnabled, blogCategoryId, fromDate, toDate, 
+                blogCategorySlug, blogTypeSlug, pageable);
             
             return ResponseEntity.ok(BaseResponseDto.success("Blogs retrieved successfully", blogs));
         } catch (Exception e) {

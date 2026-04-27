@@ -14,18 +14,6 @@ import java.util.List;
 public interface OrderStateService {
 
     /**
-     * Get all order states
-     * @return List of all order states
-     */
-    List<OrderStateDto> getAllOrderStates();
-
-    /**
-     * Get all enabled order states
-     * @return List of enabled order states
-     */
-    List<OrderStateDto> getAllEnabledOrderStates();
-    
-    /**
      * Get order states with filtering and pagination
      * @param orderStateId Filter by order state ID (optional)
      * @param orderStateName Filter by order state name (optional)

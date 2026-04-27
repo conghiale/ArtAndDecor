@@ -36,7 +36,7 @@ public class ProductTypeDto {
 
     private Boolean productTypeEnabled;
 
-    private Long seoMetaId;
+    private SeoMetaDto seoMeta;
 
     // Nested related entity
     private ImageDto image;

@@ -37,8 +37,11 @@ public class ContactMapper {
 
     /**
      * Map ContactRequest to new Contact entity (for create operations)
+     * @param request Contact request DTO
+     * @param seoMetaId Optional SEO Meta ID from SEO service (null for contacts without SEO)
+     * @return Contact entity
      */
-    public Contact toContactEntity(ContactRequest request) {
+    public Contact toContactEntity(ContactRequest request, Long seoMetaId) {
         if (request == null) return null;
 
         Contact entity = new Contact();
@@ -50,7 +53,7 @@ public class ContactMapper {
         entity.setContactFanpage(request.getContactFanpage());
         entity.setContactEnabled(request.getContactEnabled() != null ? request.getContactEnabled() : true);
         entity.setContactRemark(request.getContactRemark());
-        entity.setSeoMetaId(request.getSeoMetaId());
+        entity.setSeoMetaId(seoMetaId); // Handled via parameter
 
         // Auto-fill timestamps
         LocalDateTime now = LocalDateTime.now();
@@ -62,8 +65,11 @@ public class ContactMapper {
 
     /**
      * Update Contact entity from ContactRequest (for update operations)
+     * @param entity Existing Contact entity to update
+     * @param request Contact request DTO with updated data
+     * @param seoMetaId Optional SEO Meta ID (null to keep existing)
      */
-    public void updateContactFromRequest(Contact entity, ContactRequest request) {
+    public void updateContactFromRequest(Contact entity, ContactRequest request, Long seoMetaId) {
         if (entity == null || request == null) return;
 
         entity.setContactName(request.getContactName());
@@ -76,8 +82,10 @@ public class ContactMapper {
             entity.setContactEnabled(request.getContactEnabled());
         }
         entity.setContactRemark(request.getContactRemark());
-        if (request.getSeoMetaId() != null) {
-            entity.setSeoMetaId(request.getSeoMetaId());
+        
+        // Update SEO Meta ID if provided
+        if (seoMetaId != null) {
+            entity.setSeoMetaId(seoMetaId);
         }
 
         // Auto-update modification timestamp

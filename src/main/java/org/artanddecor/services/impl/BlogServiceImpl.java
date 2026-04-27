@@ -46,15 +46,15 @@ public class BlogServiceImpl implements BlogService {
     @Override
     @Transactional(readOnly = true)
     public Page<BlogDto> getBlogs(String blogTitle, Boolean blogEnabled, Long blogCategoryId, 
-                                 LocalDate fromDate, LocalDate toDate, Pageable pageable) {
-        logger.info("Getting blogs with filters - title: {}, enabled: {}, categoryId: {}, fromDate: {}, toDate: {}", 
-                   blogTitle, blogEnabled, blogCategoryId, fromDate, toDate);
+                                 LocalDate fromDate, LocalDate toDate, String blogCategorySlug, String blogTypeSlug, Pageable pageable) {
+        logger.info("Getting blogs with filters - title: {}, enabled: {}, categoryId: {}, fromDate: {}, toDate: {}, blogCategorySlug: {}, blogTypeSlug: {}", 
+                   blogTitle, blogEnabled, blogCategoryId, fromDate, toDate, blogCategorySlug, blogTypeSlug);
         
         LocalDateTime fromDateTime = fromDate != null ? fromDate.atStartOfDay() : null;
         LocalDateTime toDateTime = toDate != null ? toDate.atTime(23, 59, 59) : null;
         
         Page<Blog> blogs = blogRepository.findWithFilters(
-            blogTitle, blogEnabled, blogCategoryId, fromDateTime, toDateTime, pageable);
+            blogTitle, blogEnabled, blogCategoryId, fromDateTime, toDateTime, blogCategorySlug, blogTypeSlug, pageable);
         return blogs.map(blogMapper::toBlogDto);
     }
 

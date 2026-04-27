@@ -70,30 +70,47 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/products/highlighted", "/products/latest").permitAll()
                         .requestMatchers(HttpMethod.GET, "/products/{productId:[\\d+]}/images").permitAll()
                         .requestMatchers(HttpMethod.GET, "/products/types/**", "/products/categories/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/products/states", "/products/attrs").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/products/attrs/{productAttrId:[\\d+]}").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/products/attributes/{productAttributeId:[\\d+]}").permitAll() // Get single attribute by ID
-                        .requestMatchers(HttpMethod.GET, "/products/attributes/grouped").permitAll() // New API: Get grouped attributes
-                        .requestMatchers(HttpMethod.PATCH, "/products/attributes/update-prices").permitAll() // New API: Update prices by values
-                        .requestMatchers(HttpMethod.DELETE, "/products/attributes/batch-delete").permitAll() // New API: Delete by values or attr ID
+                        .requestMatchers(HttpMethod.GET, "/products/states", "/products/attrs/**").permitAll()
                         
-                        // Admin-only product read access (management operations)
-                        .requestMatchers(HttpMethod.GET, "/products/{productId:[\\d+]}").hasAnyRole("ADMIN", "MANAGER")
+                        // Public product AI search (customer-facing)
+                        .requestMatchers(HttpMethod.POST, "/products/search-by-image").permitAll()
+                        
+                        // Product Attribute endpoints (Master Catalog)
+                        .requestMatchers(HttpMethod.GET, "/products/attributes").permitAll() // Public: List master attributes
+                        .requestMatchers(HttpMethod.GET, "/products/attributes/{productAttributeId:[\\d+]}").permitAll() // Public: Get attribute by ID
+                        
+                        // Product Variant endpoints (Product-Specific Stock Management)  
+                        .requestMatchers(HttpMethod.GET, "/products/{productId:[\\d+]}/variants").permitAll() // Public: Get product variants
+                        
+                        // Product read access by ID - now public for customer viewing
+                        .requestMatchers(HttpMethod.GET, "/products/{productId:[\\d+]}").permitAll()
+                        // Admin-only product stats access (management operations)
                         .requestMatchers(HttpMethod.GET, "/products/stats/**").hasAnyRole("ADMIN", "MANAGER")
-                        .requestMatchers(HttpMethod.GET, "/products/attributes").hasAnyRole("ADMIN", "MANAGER")
                         
                         // Product management operations (Admin/Manager only)
                         .requestMatchers(HttpMethod.POST, "/products").hasAnyRole("ADMIN", "MANAGER")
-                        .requestMatchers(HttpMethod.POST, "/products/{productId:[\\d+]}/images/{imageId:[\\d+]}").hasAnyRole("ADMIN", "MANAGER")
-                        .requestMatchers(HttpMethod.POST, "/products/attributes").hasAnyRole("ADMIN", "MANAGER")
-                        .requestMatchers(HttpMethod.POST, "/products/types").hasAnyRole("ADMIN", "MANAGER")
-                        .requestMatchers(HttpMethod.POST, "/products/categories").hasAnyRole("ADMIN", "MANAGER")
-                        .requestMatchers(HttpMethod.POST, "/products/attrs").hasAnyRole("ADMIN", "MANAGER")
+                        .requestMatchers(HttpMethod.PUT, "/products/{productId:[\\d+]}").hasAnyRole("ADMIN", "MANAGER")
                         
-                        .requestMatchers(HttpMethod.PUT, "/products/**").hasAnyRole("ADMIN", "MANAGER")
-                        .requestMatchers(HttpMethod.PATCH, "/products/attributes/{productAttributeId:[\\d+]}/quantity").hasAnyRole("ADMIN", "MANAGER")
-                        .requestMatchers(HttpMethod.PATCH, "/products/attributes/update-by-values").hasAnyRole("ADMIN", "MANAGER") // New API: Update attributes by values
-                        .requestMatchers(HttpMethod.DELETE, "/products/**").hasAnyRole("ADMIN", "MANAGER")
+                        // Product Image management (Admin/Manager only)
+                        .requestMatchers(HttpMethod.POST, "/products/{productId:[\\d+]}/images/{imageId:[\\d+]}").hasAnyRole("ADMIN", "MANAGER")
+                        .requestMatchers(HttpMethod.DELETE, "/products/{productId:[\\d+]}/images/{imageId:[\\d+]}").hasAnyRole("ADMIN", "MANAGER")
+                        .requestMatchers(HttpMethod.PUT, "/products/{productId:[\\d+]}/images/{imageId:[\\d+]}/primary").hasAnyRole("ADMIN", "MANAGER")
+                        
+                        // Product Attribute management (Master Catalog - Admin/Manager only)
+                        .requestMatchers(HttpMethod.POST, "/products/attributes").hasAnyRole("ADMIN", "MANAGER")
+                        .requestMatchers(HttpMethod.PUT, "/products/attributes/{productAttributeId:[\\d+]}").hasAnyRole("ADMIN", "MANAGER")
+                        .requestMatchers(HttpMethod.DELETE, "/products/attributes/{productAttributeId:[\\d+]}").hasAnyRole("ADMIN", "MANAGER")
+                        
+                        // Product Variant management (Product-Specific Stock - Admin/Manager only)
+                        .requestMatchers(HttpMethod.POST, "/products/{productId:[\\d+]}/variants").hasAnyRole("ADMIN", "MANAGER")
+                        .requestMatchers(HttpMethod.PATCH, "/products/variants/{variantId:[\\d+]}/quantity").hasAnyRole("ADMIN", "MANAGER")
+                        .requestMatchers(HttpMethod.DELETE, "/products/variants/{variantId:[\\d+]}").hasAnyRole("ADMIN", "MANAGER")
+                        
+                        // Product Categories & Types management (Admin/Manager only)
+                        .requestMatchers(HttpMethod.POST, "/products/types").hasAnyRole("ADMIN", "MANAGER")
+                        .requestMatchers(HttpMethod.PUT, "/products/types/{productTypeId:[\\d+]}").hasAnyRole("ADMIN", "MANAGER")
+                        .requestMatchers(HttpMethod.POST, "/products/categories").hasAnyRole("ADMIN", "MANAGER")
+                        .requestMatchers(HttpMethod.PUT, "/products/categories/{productCategoryId:[\\d+]}").hasAnyRole("ADMIN", "MANAGER")
 
                         // Cart endpoints - structured by functionality
                         // Public cart access (support both logged-in and guest users)
@@ -112,6 +129,7 @@ public class SecurityConfiguration {
 
                         // Contact endpoints - public read by slug/search, admin for management
                         .requestMatchers(HttpMethod.GET, "/contacts/slug/**", "/contacts").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/contacts/send-contact-email").permitAll() // Public: Customer contact email
                         .requestMatchers(HttpMethod.GET, "/contacts/names", "/contacts/stats/**").hasRole("ADMIN")
                         .requestMatchers("/contacts/**").hasRole("ADMIN")
 
@@ -173,6 +191,7 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.POST, "/shipments/states").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/shipments/states/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/shipments/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/shipments/*/status").hasRole("ADMIN")
 
                         // Payment endpoints - only API endpoints that actually exist in PaymentController
                         // Public read access for payment configuration (customer needs to see payment options)
@@ -189,6 +208,7 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.POST, "/payments/states").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/payments/states/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/payments/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/payments/*/status").hasRole("ADMIN")
                         
                         // Admin-only payment statistics endpoints
                         .requestMatchers(HttpMethod.GET, "/payments/stats/**").hasRole("ADMIN")
@@ -257,6 +277,7 @@ public class SecurityConfiguration {
                 "http://localhost:3000",
                 "http://localhost:5173",
                 "http://localhost:8180",
+                "http://103.166.182.45:3000",
                 "https://maisonart.vn"
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));

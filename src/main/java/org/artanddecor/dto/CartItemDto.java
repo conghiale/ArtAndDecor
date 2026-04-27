@@ -29,6 +29,9 @@ public class CartItemDto {
     @Builder.Default
     private Integer quantity = 1;
     
+    @DecimalMin(value = "0.0", inclusive = true, message = "Unit price from frontend must not be negative")
+    private BigDecimal cartItemUnitPrice;
+    
     @NotNull(message = "Unit price is required")
     @DecimalMin(value = "0.0", inclusive = false, message = "Unit price must be greater than 0")
     private BigDecimal unitPrice;
@@ -76,6 +79,24 @@ public class CartItemDto {
     }
     
     /**
+     * Constructor with cart item unit price from frontend
+     * @param cart Cart object
+     * @param product Product object  
+     * @param quantity Item quantity
+     * @param cartItemUnitPrice Unit price from frontend
+     * @param unitPrice Calculated unit price
+     */
+    public CartItemDto(CartDto cart, ProductDto product, Integer quantity, BigDecimal cartItemUnitPrice, BigDecimal unitPrice) {
+        this.cart = cart;
+        this.product = product;
+        this.quantity = quantity;
+        this.cartItemUnitPrice = cartItemUnitPrice;
+        this.unitPrice = unitPrice;
+        this.totalPrice = unitPrice != null && quantity != null ? 
+                         unitPrice.multiply(new BigDecimal(quantity)) : BigDecimal.ZERO;
+    }
+    
+    /**
      * Check if cart item is active
      */
     public boolean isActive() {
@@ -90,13 +111,21 @@ public class CartItemDto {
     }
     
     /**
-     * Calculate updated total price with current product price
+     * Calculate updated total price using cartItemUnitPrice if available, otherwise current product price
      */
     public BigDecimal getUpdatedTotalPrice() {
+        // Priority 1: Use cartItemUnitPrice if set (from frontend calculation)
+        if (cartItemUnitPrice != null && cartItemUnitPrice.compareTo(BigDecimal.ZERO) >= 0 && quantity != null) {
+            return cartItemUnitPrice.multiply(new BigDecimal(quantity));
+        }
+        
+        // Priority 2: Fallback to current product price (legacy behavior)
         if (product != null && product.getProductPrice() != null && quantity != null) {
             return product.getProductPrice().multiply(new BigDecimal(quantity));
         }
-        return totalPrice;
+        
+        // Priority 3: Use existing totalPrice as last resort
+        return totalPrice != null ? totalPrice : BigDecimal.ZERO;
     }
     
     /**

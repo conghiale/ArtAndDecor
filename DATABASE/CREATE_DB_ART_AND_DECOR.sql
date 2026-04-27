@@ -120,6 +120,17 @@ CREATE TABLE `IMAGE` (
     INDEX `idx_image_path_file` (`PATH_FILE`)
 );
 
+-- Table: IMAGE_EMBEDDING
+CREATE TABLE `IMAGE_EMBEDDING` (
+    `IMAGE_EMBEDDING_ID` BIGINT PRIMARY KEY AUTO_INCREMENT,
+    `IMAGE_ID` BIGINT NOT NULL,
+    `EMBEDDING` VARBINARY(8000) NOT NULL,
+    `CREATED_DT` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `MODIFIED_DT` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (`IMAGE_ID`) REFERENCES `IMAGE`(`IMAGE_ID`) ON DELETE CASCADE,
+    INDEX `idx_image_embedding_image_id` (`IMAGE_ID`)
+);
+
 -- =============================================
 -- PRODUCT MANAGEMENT TABLES
 -- =============================================
@@ -232,22 +243,37 @@ CREATE TABLE `PRODUCT_IMAGE` (
     UNIQUE KEY `idx_product_image_unique` (`PRODUCT_ID`, `IMAGE_ID`)
 );
 
--- Table: PRODUCT_ATTRIBUTE
+-- Table: PRODUCT_ATTRIBUTE (Master attribute definitions with pricing)
 CREATE TABLE `PRODUCT_ATTRIBUTE` (
     `PRODUCT_ATTRIBUTE_ID` BIGINT PRIMARY KEY AUTO_INCREMENT,
-    `PRODUCT_ID` BIGINT NULL,
     `PRODUCT_ATTR_ID` BIGINT NOT NULL,
     `PRODUCT_ATTRIBUTE_VALUE` VARCHAR(256) NOT NULL,
-    `PRODUCT_ATTRIBUTE_QUANTITY` INT NOT NULL DEFAULT 0,
+    `PRODUCT_ATTRIBUTE_DISPLAY_NAME` VARCHAR(256),
     `PRODUCT_ATTRIBUTE_PRICE` DECIMAL(15, 2) NULL DEFAULT NULL,
     `PRODUCT_ATTRIBUTE_ENABLED` BOOLEAN NOT NULL DEFAULT TRUE,
     `CREATED_DT` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `MODIFIED_DT` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (`PRODUCT_ID`) REFERENCES `PRODUCT`(`PRODUCT_ID`) ON DELETE CASCADE,
     FOREIGN KEY (`PRODUCT_ATTR_ID`) REFERENCES `PRODUCT_ATTR`(`PRODUCT_ATTR_ID`) ON DELETE RESTRICT,
-    UNIQUE KEY `idx_product_attribute_value_unique` (`PRODUCT_ID`, `PRODUCT_ATTR_ID`, `PRODUCT_ATTRIBUTE_VALUE`),
-    INDEX `idx_product_attribute_quantity` (`PRODUCT_ATTRIBUTE_QUANTITY`),
+    UNIQUE KEY `idx_product_attribute_unique` (`PRODUCT_ATTR_ID`, `PRODUCT_ATTRIBUTE_VALUE`, `PRODUCT_ATTRIBUTE_PRICE`),
+    INDEX `idx_product_attribute_value` (`PRODUCT_ATTRIBUTE_VALUE`),
+    INDEX `idx_product_attribute_display_name` (`PRODUCT_ATTRIBUTE_DISPLAY_NAME`),
     INDEX `idx_product_attribute_price` (`PRODUCT_ATTRIBUTE_PRICE`)
+);
+
+-- Table: PRODUCT_VARIANT (Maps products to attributes with stock management)
+CREATE TABLE `PRODUCT_VARIANT` (
+    `PRODUCT_VARIANT_ID` BIGINT PRIMARY KEY AUTO_INCREMENT,
+    `PRODUCT_ID` BIGINT NOT NULL,
+    `PRODUCT_ATTRIBUTE_ID` BIGINT NOT NULL,
+    `PRODUCT_VARIANT_STOCK` INT NOT NULL DEFAULT 0,
+    `PRODUCT_VARIANT_ENABLED` BOOLEAN NOT NULL DEFAULT TRUE,
+    `CREATED_DT` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `MODIFIED_DT` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (`PRODUCT_ID`) REFERENCES `PRODUCT`(`PRODUCT_ID`) ON DELETE CASCADE,
+    FOREIGN KEY (`PRODUCT_ATTRIBUTE_ID`) REFERENCES `PRODUCT_ATTRIBUTE`(`PRODUCT_ATTRIBUTE_ID`) ON DELETE CASCADE,
+    UNIQUE KEY `idx_product_variant_unique` (`PRODUCT_ID`, `PRODUCT_ATTRIBUTE_ID`),
+    INDEX `idx_product_variant_stock` (`PRODUCT_VARIANT_STOCK`),
+    INDEX `idx_product_variant_enabled` (`PRODUCT_VARIANT_ENABLED`)
 );
 
 -- =============================================
@@ -364,6 +390,7 @@ CREATE TABLE `CART_ITEM` (
     `CART_ID` BIGINT NOT NULL,
     `PRODUCT_ID` BIGINT NOT NULL,
     `CART_ITEM_QUANTITY` INT NOT NULL DEFAULT 1,
+    `CART_ITEM_UNIT_PRICE` DECIMAL(15,2) NULL COMMENT 'Unit price calculated on frontend and passed to API',
     `CART_ITEM_TOTAL_PRICE` DECIMAL(15,2) NOT NULL,
     `CART_ITEM_STATE_ID` BIGINT NOT NULL,
     `CREATED_DT` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -446,6 +473,9 @@ CREATE TABLE `ORDERS` (
 
 	-- USER (có thể NULL nếu guest checkout)
 	`USER_ID` BIGINT NULL,
+	
+	-- SESSION_ID cho guest users (lưu sessionId từ cart khi guest đặt hàng)
+	`SESSION_ID` VARCHAR(100) NULL,
 
 	`ORDER_CODE` VARCHAR(50) NOT NULL UNIQUE,
 	`ORDER_SLUG` VARCHAR(64) NOT NULL UNIQUE,
@@ -491,6 +521,7 @@ CREATE TABLE `ORDERS` (
 
 	INDEX `idx_order_code` (`ORDER_CODE`),
 	INDEX `idx_order_user` (`USER_ID`),
+	INDEX `idx_order_session` (`SESSION_ID`),
 	INDEX `idx_order_state` (`ORDER_STATE_ID`),
 	INDEX `idx_order_created_dt` (`CREATED_DT`)
 );
@@ -849,36 +880,36 @@ CREATE TABLE `PAGE` (
 -- =============================================
 
 -- These triggers automatically update PRODUCT.STOCK_QUANTITY
--- when PRODUCT_ATTRIBUTE quantities change
+-- when PRODUCT_VARIANT stock changes (NEW ARCHITECTURE)
 
 DELIMITER $$
 
--- Trigger for INSERT - updates product stock when new attribute added
-CREATE TRIGGER `trg_product_attribute_insert_update_stock`
-    AFTER INSERT ON `PRODUCT_ATTRIBUTE`
+-- Trigger for INSERT - updates product stock when new variant added
+CREATE TRIGGER `trg_product_variant_insert_update_stock`
+    AFTER INSERT ON `PRODUCT_VARIANT`
     FOR EACH ROW
 BEGIN
     UPDATE `PRODUCT` 
     SET `STOCK_QUANTITY` = (
-        SELECT COALESCE(SUM(`PRODUCT_ATTRIBUTE_QUANTITY`), 0)
-        FROM `PRODUCT_ATTRIBUTE` 
+        SELECT COALESCE(SUM(`PRODUCT_VARIANT_STOCK`), 0)
+        FROM `PRODUCT_VARIANT` 
         WHERE `PRODUCT_ID` = NEW.`PRODUCT_ID` 
-        AND `PRODUCT_ATTRIBUTE_ENABLED` = TRUE
+        AND `PRODUCT_VARIANT_ENABLED` = TRUE
     )
     WHERE `PRODUCT_ID` = NEW.`PRODUCT_ID`;
 END$$
 
--- Trigger for UPDATE - updates product stock when attribute quantity changes
-CREATE TRIGGER `trg_product_attribute_update_update_stock`
-    AFTER UPDATE ON `PRODUCT_ATTRIBUTE`
+-- Trigger for UPDATE - updates product stock when variant stock changes
+CREATE TRIGGER `trg_product_variant_update_update_stock`
+    AFTER UPDATE ON `PRODUCT_VARIANT`
     FOR EACH ROW
 BEGIN
     UPDATE `PRODUCT` 
     SET `STOCK_QUANTITY` = (
-        SELECT COALESCE(SUM(`PRODUCT_ATTRIBUTE_QUANTITY`), 0)
-        FROM `PRODUCT_ATTRIBUTE` 
+        SELECT COALESCE(SUM(`PRODUCT_VARIANT_STOCK`), 0)
+        FROM `PRODUCT_VARIANT` 
         WHERE `PRODUCT_ID` = NEW.`PRODUCT_ID` 
-        AND `PRODUCT_ATTRIBUTE_ENABLED` = TRUE
+        AND `PRODUCT_VARIANT_ENABLED` = TRUE
     )
     WHERE `PRODUCT_ID` = NEW.`PRODUCT_ID`;
     
@@ -886,26 +917,26 @@ BEGIN
     IF OLD.`PRODUCT_ID` != NEW.`PRODUCT_ID` THEN
         UPDATE `PRODUCT` 
         SET `STOCK_QUANTITY` = (
-            SELECT COALESCE(SUM(`PRODUCT_ATTRIBUTE_QUANTITY`), 0)
-            FROM `PRODUCT_ATTRIBUTE` 
+            SELECT COALESCE(SUM(`PRODUCT_VARIANT_STOCK`), 0)
+            FROM `PRODUCT_VARIANT` 
             WHERE `PRODUCT_ID` = OLD.`PRODUCT_ID` 
-            AND `PRODUCT_ATTRIBUTE_ENABLED` = TRUE
+            AND `PRODUCT_VARIANT_ENABLED` = TRUE
         )
         WHERE `PRODUCT_ID` = OLD.`PRODUCT_ID`;
     END IF;
 END$$
 
--- Trigger for DELETE - updates product stock when attribute removed
-CREATE TRIGGER `trg_product_attribute_delete_update_stock`
-    AFTER DELETE ON `PRODUCT_ATTRIBUTE`
+-- Trigger for DELETE - updates product stock when variant removed
+CREATE TRIGGER `trg_product_variant_delete_update_stock`
+    AFTER DELETE ON `PRODUCT_VARIANT`
     FOR EACH ROW
 BEGIN
     UPDATE `PRODUCT` 
     SET `STOCK_QUANTITY` = (
-        SELECT COALESCE(SUM(`PRODUCT_ATTRIBUTE_QUANTITY`), 0)
-        FROM `PRODUCT_ATTRIBUTE` 
+        SELECT COALESCE(SUM(`PRODUCT_VARIANT_STOCK`), 0)
+        FROM `PRODUCT_VARIANT` 
         WHERE `PRODUCT_ID` = OLD.`PRODUCT_ID` 
-        AND `PRODUCT_ATTRIBUTE_ENABLED` = TRUE
+        AND `PRODUCT_VARIANT_ENABLED` = TRUE
     )
     WHERE `PRODUCT_ID` = OLD.`PRODUCT_ID`;
 END$$
@@ -913,34 +944,39 @@ END$$
 DELIMITER ;
 
 -- =============================================
--- HELPFUL VIEWS FOR STOCK MANAGEMENT
+-- HELPFUL VIEWS FOR STOCK MANAGEMENT (NEW ARCHITECTURE)
 -- =============================================
 
--- View to see product stock summary
+-- View to see product stock summary with variants
 CREATE VIEW `v_product_stock_summary` AS
 SELECT 
     p.`PRODUCT_ID`,
     p.`PRODUCT_NAME`,
     p.`PRODUCT_CODE`,
     p.`STOCK_QUANTITY` AS `TOTAL_STOCK`,
-    COUNT(pa.`PRODUCT_ATTRIBUTE_ID`) as `ATTRIBUTE_COUNT`,
-    SUM(CASE WHEN pa.`PRODUCT_ATTRIBUTE_ENABLED` = TRUE THEN pa.`PRODUCT_ATTRIBUTE_QUANTITY` ELSE 0 END) as `CALCULATED_STOCK`
+    COUNT(pv.`PRODUCT_VARIANT_ID`) as `VARIANT_COUNT`,
+    SUM(CASE WHEN pv.`PRODUCT_VARIANT_ENABLED` = TRUE THEN pv.`PRODUCT_VARIANT_STOCK` ELSE 0 END) as `CALCULATED_STOCK`,
+    COUNT(CASE WHEN pv.`PRODUCT_VARIANT_ENABLED` = TRUE AND pv.`PRODUCT_VARIANT_STOCK` > 0 THEN 1 END) as `AVAILABLE_VARIANTS`
 FROM `PRODUCT` p
-LEFT JOIN `PRODUCT_ATTRIBUTE` pa ON p.`PRODUCT_ID` = pa.`PRODUCT_ID`
+LEFT JOIN `PRODUCT_VARIANT` pv ON p.`PRODUCT_ID` = pv.`PRODUCT_ID`
 GROUP BY p.`PRODUCT_ID`, p.`PRODUCT_NAME`, p.`PRODUCT_CODE`, p.`STOCK_QUANTITY`;
 
--- View to see detailed attribute quantities  
-CREATE VIEW `v_product_attribute_detail` AS
+-- View to see detailed variant stock information  
+CREATE VIEW `v_product_variant_detail` AS
 SELECT 
     p.`PRODUCT_ID`,
     p.`PRODUCT_NAME`,
     p.`PRODUCT_CODE`,
     pat.`PRODUCT_ATTR_NAME` as `ATTRIBUTE_TYPE`,
     pa.`PRODUCT_ATTRIBUTE_VALUE` as `ATTRIBUTE_VALUE`,
-    pa.`PRODUCT_ATTRIBUTE_QUANTITY`,
-    pa.`PRODUCT_ATTRIBUTE_ENABLED`
+    pa.`PRODUCT_ATTRIBUTE_DISPLAY_NAME` as `ATTRIBUTE_DISPLAY_NAME`,
+    pa.`PRODUCT_ATTRIBUTE_PRICE` as `ATTRIBUTE_PRICE`,
+    pv.`PRODUCT_VARIANT_STOCK` as `VARIANT_STOCK`,
+    pv.`PRODUCT_VARIANT_ENABLED` as `VARIANT_ENABLED`,
+    CASE WHEN pv.`PRODUCT_VARIANT_ENABLED` = TRUE AND pv.`PRODUCT_VARIANT_STOCK` > 0 THEN 'AVAILABLE' ELSE 'OUT_OF_STOCK' END as `AVAILABILITY_STATUS`
 FROM `PRODUCT` p
-JOIN `PRODUCT_ATTRIBUTE` pa ON p.`PRODUCT_ID` = pa.`PRODUCT_ID`
+JOIN `PRODUCT_VARIANT` pv ON p.`PRODUCT_ID` = pv.`PRODUCT_ID`
+JOIN `PRODUCT_ATTRIBUTE` pa ON pv.`PRODUCT_ATTRIBUTE_ID` = pa.`PRODUCT_ATTRIBUTE_ID`
 JOIN `PRODUCT_ATTR` pat ON pa.`PRODUCT_ATTR_ID` = pat.`PRODUCT_ATTR_ID`
 ORDER BY p.`PRODUCT_ID`, pat.`PRODUCT_ATTR_NAME`, pa.`PRODUCT_ATTRIBUTE_VALUE`;
 
@@ -948,13 +984,19 @@ ORDER BY p.`PRODUCT_ID`, pat.`PRODUCT_ATTR_NAME`, pa.`PRODUCT_ATTRIBUTE_VALUE`;
 -- SCHEMA CREATION COMPLETE
 -- =============================================
 -- Database now includes:
--- 1. PRODUCT_ATTRIBUTE_QUANTITY field for inventory management per attribute
--- 2. Automatic triggers to update PRODUCT.STOCK_QUANTITY from attribute totals
--- 3. Views for easy stock monitoring and reporting
--- 4. Support for multiple attribute values per product (e.g., multiple colors/sizes)
+-- 1. PRODUCT_VARIANT_STOCK field for inventory management per product variant
+-- 2. Automatic triggers to update PRODUCT.STOCK_QUANTITY from variant stock totals
+-- 3. Views for easy stock monitoring and reporting with new variant architecture
+-- 4. Support for multiple attribute variants per product with individual stock management
+-- 
+-- NEW ARCHITECTURE:
+-- - PRODUCT_ATTRIBUTE: Master catalog (no PRODUCT_ID, no stock info)
+-- - PRODUCT_VARIANT: Product-specific attribute mappings with PRODUCT_VARIANT_STOCK
+-- - PRODUCT.STOCK_QUANTITY = Sum of all enabled PRODUCT_VARIANT.PRODUCT_VARIANT_STOCK
 -- 
 -- Usage:
--- - PRODUCT.STOCK_QUANTITY = Sum of all enabled PRODUCT_ATTRIBUTE.PRODUCT_ATTRIBUTE_QUANTITY
--- - Each attribute variant can have its own stock quantity
--- - Triggers ensure data consistency automatically
+-- - Each product can have multiple variants (combinations of attributes)
+-- - Each variant manages its own stock independently
+-- - Triggers ensure PRODUCT.STOCK_QUANTITY stays synchronized automatically
+-- - Master catalog allows attribute reuse across multiple products
 -- =============================================

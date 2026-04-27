@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 
 /**
@@ -45,6 +46,6 @@ public class ContactRequest {
     @Size(max = 1000, message = "Contact remark must not exceed 1000 characters")
     private String contactRemark;
 
-    @Positive(message = "SEO Meta ID must be a positive number")
-    private Long seoMetaId;
+    @Valid
+    private SeoMetaRequestDto seoMeta;
 }

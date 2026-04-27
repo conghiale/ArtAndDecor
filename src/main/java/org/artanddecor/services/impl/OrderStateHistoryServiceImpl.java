@@ -48,15 +48,6 @@ public class OrderStateHistoryServiceImpl implements OrderStateHistoryService {
     private OrderMapperUtil orderMapperUtil; // Using consolidated mapper
 
     @Override
-    @Transactional(readOnly = true)
-    public List<OrderStateHistoryDto> getOrderStateHistory(Long orderId) {
-        List<OrderStateHistory> historyList = orderStateHistoryRepository.findByOrderIdOrderByStateChangeDateDesc(orderId);
-        return historyList.stream()
-                .map(orderMapperUtil::mapToDto)
-                .collect(Collectors.toList());
-    }
-
-    @Override
     @Transactional
     public OrderStateHistoryDto createOrderStateHistory(
             Long orderId,

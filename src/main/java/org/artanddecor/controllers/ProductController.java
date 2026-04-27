@@ -9,9 +9,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -46,6 +48,7 @@ public class ProductController {
     private final ProductStateService productStateService;
     private final ProductAttrService productAttrService;
     private final ProductAttributeService productAttributeService;
+    private final ProductVariantService productVariantService;
 
     /*=============================================
      PRODUCT ENDPOINTS
@@ -167,20 +170,96 @@ public class ProductController {
                       example = "true") 
             @RequestParam(value = "highlighted", required = false) Boolean highlighted,
             
+            @Parameter(description = "Filter by product category slug (URL-friendly identifier)", 
+                      example = "tranh-treo-tuong") 
+            @RequestParam(value = "productCategorySlug", required = false) String productCategorySlug,
+            
+            @Parameter(description = "Filter by product type slug (URL-friendly identifier)", 
+                      example = "image") 
+            @RequestParam(value = "productTypeSlug", required = false) String productTypeSlug,
+            
             @Parameter(description = "Pagination settings: page number (0-based), size, sort field, and direction") 
             @PageableDefault(page = 0, size = 10, sort = "createdDt", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable) {
         
-        logger.info("Getting products with criteria - textSearch: {}, enabled: {}, categoryId: {}, typeId: {}, stateId: {}, featured: {}, highlighted: {}", 
-                   textSearch, enabled, categoryId, typeId, stateId, featured, highlighted);
+        logger.info("Getting products with criteria - textSearch: {}, enabled: {}, categoryId: {}, typeId: {}, stateId: {}, featured: {}, highlighted: {}, productCategorySlug: {}, productTypeSlug: {}", 
+                   textSearch, enabled, categoryId, typeId, stateId, featured, highlighted, productCategorySlug, productTypeSlug);
         
         try {
             Page<ProductDto> productsPage = productService.getProductsByCriteria(
                 textSearch, enabled, categoryId, typeId, stateId, minPrice, maxPrice, inStock, productCode, 
-                featured, highlighted, pageable);
+                featured, highlighted, productCategorySlug, productTypeSlug, pageable);
             return ResponseEntity.ok(BaseResponseDto.success("Products retrieved successfully", productsPage));
         } catch (Exception e) {
             logger.error("Error getting products: {}", e.getMessage(), e);
             return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to get products: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Search products by similar image using AI service
+     */
+    @PostMapping(value = "/search-by-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(
+        summary = "Search products by similar image using AI service",
+        description = "Upload an image to find products with similar images using AI-powered image similarity search. The system will call an external AI service to find similar images and return matching products with optional filtering for selling status. Requires SIMILAR_IMAGE_CONFIG policy to be configured with host, threshold, and top_k parameters."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Products with similar images retrieved successfully",
+                    content = @Content(schema = @Schema(implementation = Page.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid image file or AI service configuration error"),
+        @ApiResponse(responseCode = "404", description = "SIMILAR_IMAGE_CONFIG policy not found or no similar products found"),
+        @ApiResponse(responseCode = "500", description = "AI service call failed or internal server error")
+    })
+    public ResponseEntity<BaseResponseDto<Page<ProductDto>>> searchProductsBySimilarImage(
+            @Parameter(description = "Image file to search for similar products", required = true,
+                      content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
+                      schema = @Schema(type = "string", format = "binary")))
+            @RequestPart("imageFile") MultipartFile imageFile,
+            
+            @Parameter(description = "Filter by selling status: true=only selling products, false=only non-selling products, null=all products",
+                      example = "true")
+            @RequestPart(value = "isSelling", required = false) Boolean isSelling,
+            
+            @Parameter(description = "Pagination settings: page number (0-based), size, sort field, and direction")
+            @PageableDefault(page = 0, size = 10, sort = "createdDt", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable) {
+        
+        logger.info("Searching products by similar image, isSelling: {}, file: {}, size: {} bytes", 
+                   isSelling, imageFile.getOriginalFilename(), imageFile.getSize());
+        
+        try {
+            // Validate image file
+            if (imageFile.isEmpty()) {
+                return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Image file is required and cannot be empty"));
+            }
+            
+            // Check file size (limit to 10MB)
+            if (imageFile.getSize() > 10 * 1024 * 1024) {
+                return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Image file size cannot exceed 10MB"));
+            }
+            
+            // Check file type
+            String contentType = imageFile.getContentType();
+            if (contentType == null || !contentType.startsWith("image/")) {
+                return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Only image files are allowed"));
+            }
+            
+            Page<ProductDto> productsPage = productService.searchProductsBySimilarImage(imageFile, isSelling, pageable);
+            
+            if (productsPage.isEmpty()) {
+                return ResponseEntity.ok(BaseResponseDto.success("No products found with similar images", productsPage));
+            }
+            
+            return ResponseEntity.ok(BaseResponseDto.success(
+                String.format("Found %d products with similar images", productsPage.getNumberOfElements()), 
+                productsPage));
+                
+        } catch (IllegalArgumentException e) {
+            logger.error("Invalid request for image search: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Invalid request: " + e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Error searching products by similar image: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(BaseResponseDto.serverError("Failed to search products by similar image: " + e.getMessage()));
         }
     }
 
@@ -190,13 +269,13 @@ public class ProductController {
     @PostMapping
     @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     @Operation(
-        summary = "Create new product with images, attributes, and SEO metadata", 
-        description = "Create a new product in the system using simplified input with IDs. Supports uploading multiple images by providing imageIds array, product attributes by providing productAttributes array, and SEO optimization by providing seoMeta object. Client should upload images first and include the received image IDs. Product attributes define variations like Size, Color, Material with their values and quantities. SEO metadata will be automatically created if provided. This operation is restricted to users with ADMIN or MANAGER roles."
+        summary = "Create new product with images, variants, and SEO metadata", 
+        description = "Create a new product in the system using simplified input with IDs. Supports uploading multiple images by providing imageIds array, product variants by providing productVariants array, and SEO optimization by providing seoMeta object. Client should upload images first and include the received image IDs. Product variants define variations like Size, Color, Material with their quantities and stock information. SEO metadata will be automatically created if provided. This operation is restricted to users with ADMIN or MANAGER roles."
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "201", description = "Product created successfully with images, attributes, and SEO metadata",
+        @ApiResponse(responseCode = "201", description = "Product created successfully with images, variants, and SEO metadata",
                     content = @Content(schema = @Schema(implementation = ProductDto.class))),
-        @ApiResponse(responseCode = "400", description = "Invalid product data, image IDs, attribute data, SEO metadata, or validation errors"),
+        @ApiResponse(responseCode = "400", description = "Invalid product data, image IDs, variant data, SEO metadata, or validation errors"),
         @ApiResponse(responseCode = "401", description = "Authentication required"),
         @ApiResponse(responseCode = "403", description = "Access denied - ADMIN or MANAGER role required"),
         @ApiResponse(responseCode = "409", description = "Product with same name, slug, or code already exists"),
@@ -204,7 +283,7 @@ public class ProductController {
     })
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<BaseResponseDto<ProductDto>> createProduct(
-            @Parameter(description = "Product data to create with IDs for foreign keys, optional imageIds array for associating images, optional productAttributes array for product variations, and optional seoMeta object for SEO optimization") 
+            @Parameter(description = "Product data to create with IDs for foreign keys, optional imageIds array for associating images, optional productVariants array for product variations, and optional seoMeta object for SEO optimization") 
             @Valid @RequestBody ProductRequestDto productRequestDto) {
         logger.info("Creating new product: {} with {} images", productRequestDto.getProductName(), 
                    productRequestDto.getImageIds() != null ? productRequestDto.getImageIds().size() : 0);
@@ -229,13 +308,13 @@ public class ProductController {
     @PutMapping("/{productId}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     @Operation(
-        summary = "Update existing product with images, attributes, and SEO metadata", 
-        description = "Update product information using simplified DTO with IDs. Supports updating associated images by providing imageIds array, product attributes by providing productAttributes array, and SEO metadata by providing seoMeta object. Client should upload new images first if needed. When imageIds or productAttributes are provided, they completely replace existing associations (not merged). If seoMeta is provided, existing SEO metadata will be updated or new SEO metadata will be created. Admin/Manager access required."
+        summary = "Update existing product with images, variants, and SEO metadata", 
+        description = "Update product information using simplified DTO with IDs. Supports updating associated images by providing imageIds array, product variants by providing productVariants array, and SEO metadata by providing seoMeta object. Client should upload new images first if needed. When imageIds or productVariants are provided, they completely replace existing associations (not merged). If seoMeta is provided, existing SEO metadata will be updated or new SEO metadata will be created. Admin/Manager access required."
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Product updated successfully with images, attributes, and SEO metadata",
+        @ApiResponse(responseCode = "200", description = "Product updated successfully with images, variants, and SEO metadata",
                     content = @Content(schema = @Schema(implementation = ProductDto.class))),
-        @ApiResponse(responseCode = "400", description = "Invalid product data, image IDs, attribute data, SEO metadata, or validation errors"),
+        @ApiResponse(responseCode = "400", description = "Invalid product data, image IDs, variant data, SEO metadata, or validation errors"),
         @ApiResponse(responseCode = "401", description = "Authentication required"),
         @ApiResponse(responseCode = "403", description = "Access denied - ADMIN or MANAGER role required"),
         @ApiResponse(responseCode = "404", description = "Product not found with specified ID"),
@@ -246,7 +325,7 @@ public class ProductController {
     public ResponseEntity<BaseResponseDto<ProductDto>> updateProduct(
             @Parameter(description = "Product database ID", example = "1") 
             @PathVariable Long productId, 
-            @Parameter(description = "Product data to update with IDs for foreign keys, optional imageIds array for updating associated images, optional productAttributes array for updating product variations, and optional seoMeta object for SEO optimization") 
+            @Parameter(description = "Product data to update with IDs for foreign keys, optional imageIds array for updating associated images, optional productVariants array for updating product variations, and optional seoMeta object for SEO optimization") 
             @Valid @RequestBody ProductRequestDto productRequestDto) {
         logger.info("Updating product ID: {} with {} images", productId, 
                    productRequestDto.getImageIds() != null ? productRequestDto.getImageIds().size() : 0);
@@ -408,42 +487,6 @@ public class ProductController {
      =============================================*/
 
     /**
-     * Get product images
-     */
-    @GetMapping("/{productId}/images")
-    @Operation(summary = "Get product images", description = "Get all images for a specific product")
-    public ResponseEntity<BaseResponseDto<List<ProductImageDto>>> getProductImages(@PathVariable Long productId) {
-        logger.info("Getting images for product ID: {}", productId);
-        try {
-            List<ProductImageDto> images = productService.getProductImages(productId);
-            return ResponseEntity.ok(BaseResponseDto.success("Product images retrieved successfully", images));
-        } catch (Exception e) {
-            logger.error("Error getting product images for {}: {}", productId, e.getMessage(), e);
-            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to get product images: " + e.getMessage()));
-        }
-    }
-
-    /**
-     * Add image to product (Admin only)
-     */
-    @PostMapping("/{productId}/images/{imageId}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
-    @Operation(summary = "Add image to product", description = "Associate an image with a product. Admin/Manager access required.")
-    @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<BaseResponseDto<ProductImageDto>> addImageToProduct(
-            @PathVariable Long productId, @PathVariable Long imageId,
-            @RequestParam(value = "isPrimary", defaultValue = "false") Boolean isPrimary) {
-        logger.info("Adding image {} to product {}, isPrimary: {}", imageId, productId, isPrimary);
-        try {
-            ProductImageDto productImage = productService.addImageToProduct(productId, imageId, isPrimary);
-            return ResponseEntity.ok(BaseResponseDto.success("Image added to product successfully", productImage));
-        } catch (Exception e) {
-            logger.error("Error adding image to product: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to add image to product: " + e.getMessage()));
-        }
-    }
-
-    /**
      * Remove image from product (Admin only)
      */
     @DeleteMapping("/{productId}/images/{imageId}")
@@ -462,55 +505,56 @@ public class ProductController {
         }
     }
 
-    /**
-     * Set primary image for product (Admin only)
-     */
-    @PutMapping("/{productId}/images/{imageId}/primary")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
-    @Operation(summary = "Set primary image", description = "Set an image as primary for the product. Admin/Manager access required.")
-    @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<BaseResponseDto<ProductImageDto>> setPrimaryImage(
-            @PathVariable Long productId, @PathVariable Long imageId) {
-        logger.info("Setting primary image {} for product {}", imageId, productId);
-        try {
-            ProductImageDto primaryImage = productService.setPrimaryImage(productId, imageId);
-            return ResponseEntity.ok(BaseResponseDto.success("Primary image set successfully", primaryImage));
-        } catch (Exception e) {
-            logger.error("Error setting primary image: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to set primary image: " + e.getMessage()));
-        }
-    }
-
     /*=============================================
-     PRODUCT ATTRIBUTE ENDPOINTS
+     PRODUCT ATTRIBUTE ENDPOINTS (Master Attribute Catalog Management)
      =============================================*/
 
     /**
-     * Update product attribute (update entire PRODUCT_ATTRIBUTE by PRODUCT_ATTRIBUTE_ID)
+     * Get all product attributes (Master attribute catalog)
      */
-    @PutMapping("/attributes/{productAttributeId}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
-    @Operation(summary = "Update product attribute association", description = "Update entire product attribute association by PRODUCT_ATTRIBUTE_ID. Admin/Manager access required.")
-    @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<BaseResponseDto<ProductAttributeDto>> updateProductAttribute(
-            @PathVariable Long productAttributeId, @Valid @RequestBody ProductAttributeRequestDto productAttributeRequestDto) {
-        logger.info("Updating product attribute association ID: {}", productAttributeId);
+    @GetMapping("/attributes")
+    @Operation(
+        summary = "Get all product attributes (Master catalog)",
+        description = "Retrieve all master product attributes with filtering options. These are attribute definitions that can be used across products. Supports filtering by attribute ID, enabled status, and attribute value."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Product attributes retrieved successfully with pagination info"),
+        @ApiResponse(responseCode = "400", description = "Invalid filter parameters or pagination settings"),
+        @ApiResponse(responseCode = "500", description = "Internal server error occurred while searching product attributes")
+    })
+    public ResponseEntity<BaseResponseDto<Page<ProductAttributeDto>>> getAllProductAttributes(
+            @Parameter(description = "Filter by product attribute ID from PRODUCT_ATTR table", example = "2")
+            @RequestParam(value = "productAttrId", required = false) Long productAttrId,
+            
+            @Parameter(description = "Filter by enabled status", example = "true")
+            @RequestParam(value = "enabled", required = false) Boolean enabled,
+            
+            @Parameter(description = "Search by attribute value (partial match)", example = "Red")
+            @RequestParam(value = "attributeValue", required = false) String attributeValue,
+            
+            @Parameter(description = "Pagination settings: page number (0-based), size, sort field, and direction")
+            @PageableDefault(page = 0, size = 20, sort = "createdDt", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable) {
+        
+        logger.info("Getting all product attributes with criteria - attrId: {}, enabled: {}, value: {}", 
+                   productAttrId, enabled, attributeValue);
+        
         try {
-            ProductAttributeDto updatedProductAttribute = productAttributeService.updateProductAttribute(productAttributeId, productAttributeRequestDto);
-            return ResponseEntity.ok(BaseResponseDto.success("Product attribute association updated successfully", updatedProductAttribute));
+            Page<ProductAttributeDto> productAttributesPage = productAttributeService.getProductAttributesByCriteria(
+                    productAttrId, enabled, attributeValue, null, null, pageable);
+            return ResponseEntity.ok(BaseResponseDto.success("Product attributes retrieved successfully", productAttributesPage));
         } catch (Exception e) {
-            logger.error("Error updating product attribute association: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to update product attribute association: " + e.getMessage()));
+            logger.error("Error getting product attributes: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to get product attributes: " + e.getMessage()));
         }
     }
 
     /**
-     * Get product attribute by ID (Admin/System reference)
+     * Get product attribute by ID (Master catalog)
      */
     @GetMapping("/attributes/{productAttributeId}")
     @Operation(
-        summary = "Get product attribute by ID",
-        description = "Retrieve detailed information about a specific product attribute association by its database ID. Admin/System endpoint for management operations."
+        summary = "Get product attribute by ID (Master catalog)",
+        description = "Retrieve detailed information about a specific master product attribute by its database ID."
     )
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Product attribute retrieved successfully",
@@ -536,107 +580,73 @@ public class ProductController {
     }
 
     /**
-     * Get all product attributes with filtering and pagination (Admin dashboard)
+     * Create new product attribute (Master catalog)
      */
-    @GetMapping("/attributes")
+    @PostMapping("/attributes")
     @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     @Operation(
-        summary = "Get all product attributes with filtering and pagination",
-        description = "Retrieve product attributes with comprehensive filtering options. Supports filtering by product ID, attribute ID, enabled status, and attribute value. Returns paginated results for admin dashboard. Admin/Manager access required."
+        summary = "Create new product attribute (Master catalog)",
+        description = "Create a new master product attribute definition. These attributes can be used across multiple products. Admin/Manager access required."
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Product attributes retrieved successfully with pagination info"),
-        @ApiResponse(responseCode = "400", description = "Invalid filter parameters or pagination settings"),
+        @ApiResponse(responseCode = "201", description = "Product attribute created successfully",
+                    content = @Content(schema = @Schema(implementation = ProductAttributeDto.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid request data or validation errors"),
         @ApiResponse(responseCode = "401", description = "Authentication required"),
         @ApiResponse(responseCode = "403", description = "Access denied - ADMIN or MANAGER role required"),
-        @ApiResponse(responseCode = "500", description = "Internal server error occurred while searching product attributes")
+        @ApiResponse(responseCode = "409", description = "Product attribute combination already exists"),
+        @ApiResponse(responseCode = "500", description = "Internal server error occurred while creating product attribute")
     })
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<BaseResponseDto<Page<ProductAttributeDto>>> getAllProductAttributesByCriteria(
-            @Parameter(description = "Filter by product ID", example = "1")
-            @RequestParam(value = "productId", required = false) Long productId,
-            
-            @Parameter(description = "Filter by attribute ID from PRODUCT_ATTR table", example = "2")
-            @RequestParam(value = "productAttrId", required = false) Long productAttrId,
-            
-            @Parameter(description = "Filter by enabled status", example = "true")
-            @RequestParam(value = "enabled", required = false) Boolean enabled,
-            
-            @Parameter(description = "Search by attribute value (partial match)", example = "Red")
-            @RequestParam(value = "attributeValue", required = false) String attributeValue,
-            
-            @Parameter(description = "Pagination settings: page number (0-based), size, sort field, and direction")
-            @PageableDefault(page = 0, size = 20, sort = "createdDt", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable) {
+    public ResponseEntity<BaseResponseDto<ProductAttributeDto>> createProductAttribute(
+            @Parameter(description = "Product attribute data to create")
+            @Valid @RequestBody ProductAttributeRequestDto request) {
         
-        logger.info("Getting all product attributes with criteria - productId: {}, attrId: {}, enabled: {}, value: {}", 
-                   productId, productAttrId, enabled, attributeValue);
+        logger.info("Creating product attribute: attrId={}, value={}, displayName={}, price={}", 
+                   request.getProductAttrId(), request.getProductAttributeValue(), 
+                   request.getProductAttributeDisplayName(), request.getProductAttributePrice());
         
         try {
-            Page<ProductAttributeDto> productAttributesPage = productAttributeService.getProductAttributesByCriteria(
-                    productId, productAttrId, enabled, attributeValue, pageable);
-            return ResponseEntity.ok(BaseResponseDto.success("Product attributes retrieved successfully", productAttributesPage));
-        } catch (Exception e) {
-            logger.error("Error getting product attributes: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to get product attributes: " + e.getMessage()));
-        }
-    }
-
-    /**
-     * Update product attribute quantity only (Admin only)
-     */
-    @PatchMapping("/attributes/{productAttributeId}/quantity")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
-    @Operation(
-        summary = "Update product attribute quantity",
-        description = "Update only the quantity field of a product attribute. Useful for stock management operations. Admin/Manager access required."
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Product attribute quantity updated successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid quantity value or validation errors"),
-        @ApiResponse(responseCode = "401", description = "Authentication required"),
-        @ApiResponse(responseCode = "403", description = "Access denied - ADMIN or MANAGER role required"),
-        @ApiResponse(responseCode = "404", description = "Product attribute not found"),
-        @ApiResponse(responseCode = "500", description = "Internal server error occurred while updating quantity")
-    })
-    @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<BaseResponseDto<ProductAttributeDto>> updateProductAttributeQuantity(
-            @Parameter(description = "Database product attribute identifier", example = "1")
-            @PathVariable Long productAttributeId,
-            
-            @Parameter(description = "New quantity value (must be >= 0)", example = "25")
-            @RequestParam Integer quantity) {
-        
-        logger.info("Updating product attribute quantity: ID={}, newQuantity={}", productAttributeId, quantity);
-        
-        try {
-            ProductAttributeDto updatedProductAttribute = productAttributeService.updateProductAttributeQuantity(
-                    productAttributeId, quantity);
-            return ResponseEntity.ok(BaseResponseDto.success("Product attribute quantity updated successfully", updatedProductAttribute));
+            ProductAttributeDto productAttribute = productAttributeService.createProductAttribute(request);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(BaseResponseDto.success("Product attribute created successfully", productAttribute));
         } catch (IllegalArgumentException e) {
-            logger.error("Validation error updating quantity: {}", e.getMessage());
+            logger.error("Validation error creating product attribute: {}", e.getMessage());
             return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(e.getMessage()));
         } catch (Exception e) {
-            logger.error("Error updating product attribute quantity {}: {}", productAttributeId, e.getMessage(), e);
-            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to update quantity: " + e.getMessage()));
+            logger.error("Error creating product attribute: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to create product attribute: " + e.getMessage()));
         }
     }
 
     /**
-     * Delete product attribute by ID (Admin only)
+     * Update product attribute (Master catalog)
+     */
+    @PutMapping("/attributes/{productAttributeId}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
+    @Operation(summary = "Update product attribute (Master catalog)", description = "Update master product attribute definition. Admin/Manager access required.")
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<BaseResponseDto<ProductAttributeDto>> updateProductAttribute(
+            @PathVariable Long productAttributeId, @Valid @RequestBody ProductAttributeRequestDto productAttributeRequestDto) {
+        logger.info("Updating product attribute ID: {}", productAttributeId);
+        try {
+            ProductAttributeDto updatedProductAttribute = productAttributeService.updateProductAttribute(productAttributeId, productAttributeRequestDto);
+            return ResponseEntity.ok(BaseResponseDto.success("Product attribute updated successfully", updatedProductAttribute));
+        } catch (Exception e) {
+            logger.error("Error updating product attribute: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to update product attribute: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Delete product attribute by ID (Master catalog)
      */
     @DeleteMapping("/attributes/{productAttributeId}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     @Operation(
-        summary = "Delete product attribute association",
-        description = "Delete a product attribute association by its ID. This action cannot be undone. Admin/Manager access required."
+        summary = "Delete product attribute (Master catalog)",
+        description = "Delete a master product attribute by its ID. This action cannot be undone. Admin/Manager access required."
     )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Product attribute deleted successfully"),
-        @ApiResponse(responseCode = "401", description = "Authentication required"),
-        @ApiResponse(responseCode = "403", description = "Access denied - ADMIN or MANAGER role required"),
-        @ApiResponse(responseCode = "404", description = "Product attribute not found"),
-        @ApiResponse(responseCode = "500", description = "Internal server error occurred while deleting product attribute")
-    })
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<BaseResponseDto<Void>> deleteProductAttributeById(
             @Parameter(description = "Database product attribute identifier", example = "1")
@@ -656,211 +666,154 @@ public class ProductController {
         }
     }
 
-    /**
-     * Create new product attribute (Admin only)
-     */
-    @PostMapping("/attributes")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
-    @Operation(
-        summary = "Create new product attribute",
-        description = "Create a new product attribute association. Links a product with an attribute and specifies the value and quantity. Admin/Manager access required."
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "201", description = "Product attribute created successfully",
-                    content = @Content(schema = @Schema(implementation = ProductAttributeDto.class))),
-        @ApiResponse(responseCode = "400", description = "Invalid request data or validation errors"),
-        @ApiResponse(responseCode = "401", description = "Authentication required"),
-        @ApiResponse(responseCode = "403", description = "Access denied - ADMIN or MANAGER role required"),
-        @ApiResponse(responseCode = "404", description = "Product or attribute not found"),
-        @ApiResponse(responseCode = "409", description = "Product attribute combination already exists"),
-        @ApiResponse(responseCode = "500", description = "Internal server error occurred while creating product attribute")
-    })
-    @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<BaseResponseDto<ProductAttributeDto>> createProductAttribute(
-            @Parameter(description = "Product attribute data to create")
-            @Valid @RequestBody ProductAttributeRequestDto request) {
-        
-        logger.info("Creating product attribute: productId={}, attrId={}, value={}, quantity={}", 
-                   request.getProductId(), request.getProductAttrId(), request.getProductAttributeValue(), request.getProductAttributeQuantity());
-        
-        try {
-            ProductAttributeDto productAttribute = productAttributeService.createProductAttribute(request);
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(BaseResponseDto.success("Product attribute created successfully", productAttribute));
-        } catch (IllegalArgumentException e) {
-            logger.error("Validation error creating product attribute: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(e.getMessage()));
-        } catch (Exception e) {
-            logger.error("Error creating product attribute: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to create product attribute: " + e.getMessage()));
-        }
-    }
+    /*=============================================
+     PRODUCT VARIANT ENDPOINTS (Product-Specific Stock Management)
+     =============================================*/
 
     /**
-     * Get grouped product attributes by value and price (Public access)
+     * Get all product variants for a specific product
      */
-    @GetMapping("/attributes/grouped")
+    @GetMapping("/{productId}/variants")
     @Operation(
-        summary = "Get grouped product attributes by value and price",
-        description = "Get product attributes grouped by unique combinations of attribute value and price. Multiple records with the same value and price return as one item with sample data from the group. Supports optional filtering by product ID, attribute ID, and enabled status."
+        summary = "Get all variants for a product",
+        description = "Retrieve all product variants for a specific product with filtering options. Shows product-specific attribute assignments with stock quantities."
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Grouped product attributes retrieved successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid filter parameters"),
-        @ApiResponse(responseCode = "500", description = "Internal server error occurred while retrieving grouped attributes")
+        @ApiResponse(responseCode = "200", description = "Product variants retrieved successfully"),
+        @ApiResponse(responseCode = "404", description = "Product not found"),
+        @ApiResponse(responseCode = "500", description = "Internal server error occurred while retrieving variants")
     })
-    public ResponseEntity<BaseResponseDto<List<GroupedProductAttributeDto>>> getGroupedProductAttributes(
-            @Parameter(description = "Optional filter by product ID", example = "1")
-            @RequestParam(value = "productId", required = false) Long productId,
+    public ResponseEntity<BaseResponseDto<Page<ProductVariantDto>>> getProductVariants(
+            @Parameter(description = "Product ID", example = "1")
+            @PathVariable Long productId,
             
-            @Parameter(description = "Optional filter by product attribute ID from PRODUCT_ATTR table", example = "2")
+            @Parameter(description = "Filter by product attribute ID", example = "2")
             @RequestParam(value = "productAttrId", required = false) Long productAttrId,
             
-            @Parameter(description = "Optional filter by enabled status", example = "true")
-            @RequestParam(value = "enabled", required = false) Boolean enabled) {
+            @Parameter(description = "Filter by enabled status", example = "true")
+            @RequestParam(value = "enabled", required = false) Boolean enabled,
+            
+            @Parameter(description = "Pagination settings")
+            @PageableDefault(page = 0, size = 20, sort = "createdDt", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable) {
         
-        logger.info("Getting grouped product attributes with filters - productId: {}, productAttrId: {}, enabled: {}", 
+        logger.info("Getting product variants for productId: {}, attrId: {}, enabled: {}", 
                    productId, productAttrId, enabled);
         
         try {
-            List<GroupedProductAttributeDto> groupedAttributes = productAttributeService.getGroupedProductAttributes(
-                    productId, productAttrId, enabled);
-            return ResponseEntity.ok(BaseResponseDto.success("Grouped product attributes retrieved successfully", groupedAttributes));
+            Page<ProductVariantDto> variantsPage = productVariantService.getProductVariantsByCriteria(
+                    productId, productAttrId, enabled, null, pageable);
+            return ResponseEntity.ok(BaseResponseDto.success("Product variants retrieved successfully", variantsPage));
         } catch (Exception e) {
-            logger.error("Error getting grouped product attributes: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to get grouped attributes: " + e.getMessage()));
+            logger.error("Error getting product variants: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to get product variants: " + e.getMessage()));
         }
     }
 
     /**
-     * Update product attribute prices by values (Public access)
+     * Create new product variant
      */
-    @PatchMapping("/attributes/update-prices")
-    @Operation(
-        summary = "Update product attribute prices by attribute values",
-        description = "Update the price for all product attributes that match the specified attribute values. All records with the same attribute value will be updated to the new price."
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Product attribute prices updated successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid request parameters or validation errors"),
-        @ApiResponse(responseCode = "500", description = "Internal server error occurred while updating prices")
-    })
-    public ResponseEntity<BaseResponseDto<String>> updatePricesByAttributeValues(
-            @Parameter(description = "List of attribute values to update (e.g., ['30x40', '50x60'])", 
-                      example = "[\"30x40\", \"50x60\"]")
-            @RequestParam List<String> productAttributeValues,
-            
-            @Parameter(description = "New price to set for all matching attribute values", example = "500000")
-            @RequestParam BigDecimal productAttributePrice) {
-        
-        logger.info("Updating attribute prices: values={}, newPrice={}", productAttributeValues, productAttributePrice);
-        
-        try {
-            int updatedCount = productAttributeService.updatePricesByAttributeValues(productAttributeValues, productAttributePrice);
-            String message = String.format("Successfully updated %d product attribute records to price %s",
-                    updatedCount, productAttributePrice);
-            return ResponseEntity.ok(BaseResponseDto.success(message, message));
-        } catch (IllegalArgumentException e) {
-            logger.error("Validation error updating prices: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(e.getMessage()));
-        } catch (Exception e) {
-            logger.error("Error updating attribute prices: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to update prices: " + e.getMessage()));
-        }
-    }
-
-    /**
-     * Update product attributes by attribute values (Admin only)
-     */
-    @PatchMapping("/attributes/update-by-values")
+    @PostMapping("/{productId}/variants")
     @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     @Operation(
-        summary = "Update product attributes by attribute values",
-        description = "Update multiple product attributes that match the specified attribute values. Only provided fields will be updated - null fields are ignored. Useful for bulk operations on attributes with same values. Admin/Manager access required."
+        summary = "Create new product variant",
+        description = "Create a new product variant linking a product to a master attribute with specific stock quantity. Admin/Manager access required."
     )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Product attributes updated successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid request parameters or validation errors"),
-        @ApiResponse(responseCode = "401", description = "Authentication required"),
-        @ApiResponse(responseCode = "403", description = "Access denied - ADMIN or MANAGER role required"),
-        @ApiResponse(responseCode = "500", description = "Internal server error occurred while updating attributes")
-    })
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<BaseResponseDto<String>> updateAttributesByValues(
-            @Parameter(description = "List of attribute values to update (e.g., ['Red', 'Blue'])", 
-                      example = "[\"Red\", \"Blue\"]")
-            @RequestParam List<String> productAttributeValues,
+    public ResponseEntity<BaseResponseDto<ProductVariantDto>> createProductVariant(
+            @Parameter(description = "Product ID", example = "1")
+            @PathVariable Long productId,
             
-            @Parameter(description = "Product attribute data to update. Only non-null fields will be updated.")
-            @Valid @RequestBody ProductAttributeRequestDto requestDto) {
+            @Parameter(description = "Product variant data to create")
+            @Valid @RequestBody ProductVariantRequestDto request) {
         
-        logger.info("Updating attributes by values: values={}, updateData={}", productAttributeValues, requestDto);
+        logger.info("Creating product variant: productId={}, attributeId={}, quantity={}", 
+                   productId, request.getProductAttributeId(), request.getProductVariantStock());
         
         try {
-            int updatedCount = productAttributeService.updateByAttributeValues(productAttributeValues, requestDto);
-            String message = String.format("Successfully updated %d product attribute records", updatedCount);
-            return ResponseEntity.ok(BaseResponseDto.success(message, message));
+            // Set productId in request DTO
+            request.setProductId(productId); 
+            ProductVariantDto variant = productVariantService.createProductVariant(request);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(BaseResponseDto.success("Product variant created successfully", variant));
         } catch (IllegalArgumentException e) {
-            logger.error("Validation error updating attributes by values: {}", e.getMessage());
+            logger.error("Validation error creating product variant: {}", e.getMessage());
             return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(e.getMessage()));
         } catch (Exception e) {
-            logger.error("Error updating attributes by values: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to update attributes: " + e.getMessage()));
+            logger.error("Error creating product variant: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to create product variant: " + e.getMessage()));
         }
     }
 
     /**
-     * Delete product attributes by values or attribute ID (Public access) 
+     * Update product variant quantity
      */
-    @DeleteMapping("/attributes/batch-delete")
+    @PatchMapping("/variants/{variantId}/quantity")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     @Operation(
-        summary = "Delete product attributes by values or attribute ID",
-        description = "Delete multiple product attributes by either attribute values or product attribute ID. Both parameters are optional, but at least one must be provided. If both are provided, deletion is done by values (attribute ID is ignored)."
+        summary = "Update product variant quantity",
+        description = "Update only the quantity field of a product variant. Useful for stock management operations. Admin/Manager access required."
     )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Product attributes deleted successfully"),
-        @ApiResponse(responseCode = "400", description = "No valid parameters provided or validation errors"),
-        @ApiResponse(responseCode = "500", description = "Internal server error occurred while deleting attributes")
-    })
-    public ResponseEntity<BaseResponseDto<String>> batchDeleteProductAttributes(
-            @Parameter(description = "Optional list of attribute values to delete (e.g., ['Red', 'Blue'])", 
-                      example = "[\"Red\", \"Blue\"]")
-            @RequestParam(value = "productAttributeValues", required = false) List<String> productAttributeValues,
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<BaseResponseDto<ProductVariantDto>> updateProductVariantQuantity(
+            @Parameter(description = "Product variant identifier", example = "1")
+            @PathVariable Long variantId,
             
-            @Parameter(description = "Optional product attribute ID to delete all associated records", 
-                      example = "2")
-            @RequestParam(value = "productAttrId", required = false) Long productAttrId) {
+            @Parameter(description = "New quantity value (must be >= 0)", example = "25")
+            @RequestParam Integer quantity) {
         
-        logger.info("Batch deleting product attributes: values={}, attrId={}", productAttributeValues, productAttrId);
+        logger.info("Updating product variant quantity: ID={}, newQuantity={}", variantId, quantity);
         
         try {
-            // Validate that at least one parameter is provided
-            if ((productAttributeValues == null || productAttributeValues.isEmpty()) && productAttrId == null) {
-                return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(
-                        "At least one parameter must be provided: productAttributeValues or productAttrId"));
+            // Get current variant
+            Optional<ProductVariantDto> currentVariant = productVariantService.findProductVariantById(variantId);
+            if (currentVariant.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(BaseResponseDto.notFound("Product variant not found with ID: " + variantId));
             }
             
-            int deletedCount;
-            String message;
+            // Create update request with only quantity change
+            ProductVariantRequestDto updateRequest = new ProductVariantRequestDto();
+            updateRequest.setProductId(currentVariant.get().getProductAttribute().getProductAttr().getProductAttrId()); // This might need adjustment
+            updateRequest.setProductAttributeId(currentVariant.get().getProductAttribute().getProductAttributeId());
+            updateRequest.setProductVariantStock(quantity);
+            updateRequest.setProductVariantEnabled(currentVariant.get().getProductVariantEnabled());
             
-            // Prioritize deletion by values if provided
-            if (productAttributeValues != null && !productAttributeValues.isEmpty()) {
-                deletedCount = productAttributeService.deleteByAttributeValues(productAttributeValues);
-                message = String.format("Successfully deleted %d product attribute records by values: %s", 
-                        deletedCount, productAttributeValues);
-            } else {
-                deletedCount = productAttributeService.deleteByProductAttrId(productAttrId);
-                message = String.format("Successfully deleted %d product attribute records by attribute ID: %d", 
-                        deletedCount, productAttrId);
-            }
-            
-            return ResponseEntity.ok(BaseResponseDto.success(message, message));
+            ProductVariantDto updatedVariant = productVariantService.updateProductVariant(variantId, updateRequest);
+            return ResponseEntity.ok(BaseResponseDto.success("Product variant quantity updated successfully", updatedVariant));
         } catch (IllegalArgumentException e) {
-            logger.error("Validation error batch deleting attributes: {}", e.getMessage());
+            logger.error("Validation error updating quantity: {}", e.getMessage());
             return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(e.getMessage()));
         } catch (Exception e) {
-            logger.error("Error batch deleting attributes: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to delete attributes: " + e.getMessage()));
+            logger.error("Error updating product variant quantity {}: {}", variantId, e.getMessage(), e);
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to update quantity: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Delete product variant
+     */
+    @DeleteMapping("/variants/{variantId}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
+    @Operation(
+        summary = "Delete product variant",
+        description = "Delete a product variant by its ID. This removes the product-attribute association. Admin/Manager access required."
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<BaseResponseDto<Void>> deleteProductVariant(
+            @Parameter(description = "Product variant identifier", example = "1")
+            @PathVariable Long variantId) {
+        
+        logger.info("Deleting product variant by ID: {}", variantId);
+        
+        try {
+            productVariantService.deleteProductVariant(variantId);
+            return ResponseEntity.ok(BaseResponseDto.success("Product variant deleted successfully", null));
+        } catch (IllegalArgumentException e) {
+            logger.error("Product variant not found: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(BaseResponseDto.notFound(e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Error deleting product variant {}: {}", variantId, e.getMessage(), e);
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to delete product variant: " + e.getMessage()));
         }
     }
 
@@ -893,12 +846,13 @@ public class ProductController {
     public ResponseEntity<BaseResponseDto<Page<ProductTypeDto>>> getProductTypesByCriteria(
             @RequestParam(value = "textSearch", required = false) String textSearch,
             @RequestParam(value = "enabled", required = false) Boolean enabled,
+            @RequestParam(value = "productTypeSlug", required = false) String productTypeSlug,
             @PageableDefault(page = 0, size = 10, sort = "createdDt", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable) {
         
-        logger.info("Getting product types with criteria - textSearch: {}, enabled: {}", textSearch, enabled);
+        logger.info("Getting product types with criteria - textSearch: {}, enabled: {}, productTypeSlug: {}", textSearch, enabled, productTypeSlug);
         
         try {
-            Page<ProductTypeDto> productTypesPage = productTypeService.getProductTypesByCriteria(textSearch, enabled, pageable);
+            Page<ProductTypeDto> productTypesPage = productTypeService.getProductTypesByCriteria(textSearch, enabled, productTypeSlug, pageable);
             return ResponseEntity.ok(BaseResponseDto.success("Product types retrieved successfully", productTypesPage));
         } catch (Exception e) {
             logger.error("Error getting product types: {}", e.getMessage(), e);
@@ -1027,11 +981,15 @@ public class ProductController {
                       example = "true")
             @RequestParam(value = "rootOnly", required = false) Boolean rootOnly,
             
+            @Parameter(description = "Filter by product category slug", 
+                      example = "art-collections")
+            @RequestParam(value = "productCategorySlug", required = false) String productCategorySlug,
+            
             @Parameter(description = "Pagination settings")
             @PageableDefault(page = 0, size = 10, sort = "createdDt", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable) {
         
-        logger.info("Getting product categories with criteria - textSearch: {}, productTypeId: {}, parentCategoryId: {}, rootOnly: {}", 
-                   textSearch, productTypeId, parentCategoryId, rootOnly);
+        logger.info("Getting product categories with criteria - textSearch: {}, productTypeId: {}, parentCategoryId: {}, rootOnly: {}, productCategorySlug: {}", 
+                   textSearch, productTypeId, parentCategoryId, rootOnly, productCategorySlug);
         
         try {
             // Validation: cannot use both parentCategoryId and rootOnly
@@ -1041,7 +999,7 @@ public class ProductController {
             }
             
             Page<ProductCategoryDto> productCategoriesPage = productCategoryService.getProductCategoriesByCriteria(
-                textSearch, enabled, visible, productTypeId, parentCategoryId, rootOnly, pageable);
+                textSearch, enabled, visible, productTypeId, parentCategoryId, rootOnly, productCategorySlug, pageable);
             return ResponseEntity.ok(BaseResponseDto.success("Product categories retrieved successfully", productCategoriesPage));
         } catch (Exception e) {
             logger.error("Error getting product categories: {}", e.getMessage(), e);

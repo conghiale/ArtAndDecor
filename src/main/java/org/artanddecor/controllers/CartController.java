@@ -93,7 +93,8 @@ public class CartController {
 
     @Operation(
         summary = "Add product to cart",
-        description = "Add a product to cart with optional attributes. Cart identification (cartId, userId, or sessionId) is optional - if not provided, a new guest cart will be created automatically. Supports comprehensive product configuration with attributes."
+        description = "Add a product to cart with optional attributes and unit price. Cart identification (cartId, userId, or sessionId) is optional - if not provided, a new guest cart will be created automatically. " +
+                     "Supports comprehensive product configuration with attributes. Unit price can be calculated on frontend and passed to API, or will be calculated automatically based on policy mapping."
     )
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Product added to cart successfully"),

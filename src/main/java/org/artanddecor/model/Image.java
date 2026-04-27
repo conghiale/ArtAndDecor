@@ -58,6 +58,10 @@ public class Image {
     @OneToMany(mappedBy = "image", fetch = FetchType.LAZY)
     private List<ProductImage> productImages;
 
+    // One-to-One relationship with ImageEmbedding
+    @OneToOne(mappedBy = "image", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private ImageEmbedding imageEmbedding;
+
     @PrePersist
     protected void onCreate() {
         logger.debug("Creating new Image: {}", imageName);

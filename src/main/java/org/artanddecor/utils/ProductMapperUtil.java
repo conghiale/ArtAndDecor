@@ -2,11 +2,14 @@ package org.artanddecor.utils;
 
 import org.artanddecor.dto.*;
 import org.artanddecor.model.*;
+import org.artanddecor.services.SeoMetaService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -16,31 +19,16 @@ import java.util.stream.Collectors;
 @Component
 public class ProductMapperUtil {
 
+    private static SeoMetaService seoMetaService;
+
+    @Autowired
+    public void setSeoMetaService(SeoMetaService seoMetaService) {
+        ProductMapperUtil.seoMetaService = seoMetaService;
+    }
+
     // =============================================
     // PRODUCT TYPE MAPPING METHODS
     // =============================================
-
-    /**
-     * Convert ProductTypeDto to ProductType entity
-     * @param productTypeDto Product type DTO
-     * @return ProductType entity
-     */
-    public static ProductType toProductTypeEntity(ProductTypeDto productTypeDto) {
-        if (productTypeDto == null) return null;
-        
-        ProductType productType = new ProductType();
-        productType.setProductTypeId(productTypeDto.getProductTypeId());
-        productType.setProductTypeName(productTypeDto.getProductTypeName());
-        productType.setProductTypeSlug(productTypeDto.getProductTypeSlug());
-        productType.setProductTypeDisplayName(productTypeDto.getProductTypeDisplayName());
-        productType.setProductTypeRemark(productTypeDto.getProductTypeRemark());
-        productType.setProductTypeEnabled(productTypeDto.getProductTypeEnabled());
-        productType.setSeoMetaId(productTypeDto.getSeoMetaId());
-        productType.setCreatedDt(productTypeDto.getCreatedDt());
-        productType.setModifiedDt(productTypeDto.getModifiedDt());
-        
-        return productType;
-    }
 
     /**
      * Convert ProductType entity to ProductTypeDto
@@ -58,7 +46,7 @@ public class ProductMapperUtil {
                 .productTypeDisplayName(productType.getProductTypeDisplayName())
                 .productTypeRemark(productType.getProductTypeRemark())
                 .productTypeEnabled(productType.getProductTypeEnabled())
-                .seoMetaId(productType.getSeoMetaId())
+                .seoMeta(productType.getSeoMetaId() != null ? fetchSeoMetaDto(productType.getSeoMetaId()) : null)
                 .image(ImageMapperUtil.toBasicDto(productType.getImage()))
                 .createdDt(productType.getCreatedDt())
                 .modifiedDt(productType.getModifiedDt())
@@ -80,7 +68,7 @@ public class ProductMapperUtil {
                 .productCategoryRemark(productCategory.getProductCategoryRemark())
                 .productCategoryEnabled(productCategory.getProductCategoryEnabled())
                 .productCategoryVisible(productCategory.getProductCategoryVisible())
-                .seoMetaId(productCategory.getSeoMetaId())
+                .seoMeta(productCategory.getSeoMetaId() != null ? fetchSeoMetaDto(productCategory.getSeoMetaId()) : null)
                 .productTypeId(productCategory.getProductType() != null ? productCategory.getProductType().getProductTypeId() : null)
                 .parentCategoryId(productCategory.getParentCategory() != null ? productCategory.getParentCategory().getProductCategoryId() : null)
                 .productType(toProductTypeDto(productCategory.getProductType()))
@@ -93,26 +81,6 @@ public class ProductMapperUtil {
     // =============================================
     // PRODUCT STATE MAPPING METHODS
     // =============================================
-
-    /**
-     * Convert ProductStateDto to ProductState entity
-     * @param productStateDto Product state DTO
-     * @return ProductState entity
-     */
-    public static ProductState toProductStateEntity(ProductStateDto productStateDto) {
-        if (productStateDto == null) return null;
-        
-        ProductState productState = new ProductState();
-        productState.setProductStateId(productStateDto.getProductStateId());
-        productState.setProductStateName(productStateDto.getProductStateName());
-        productState.setProductStateEnabled(productStateDto.getProductStateEnabled());
-        productState.setProductStateDisplayName(productStateDto.getProductStateDisplayName());
-        productState.setProductStateRemark(productStateDto.getProductStateRemark());
-        productState.setCreatedDt(productStateDto.getCreatedDt());
-        productState.setModifiedDt(productStateDto.getModifiedDt());
-        
-        return productState;
-    }
 
     /**
      * Convert ProductState entity to ProductStateDto
@@ -137,26 +105,6 @@ public class ProductMapperUtil {
     // =============================================
     // PRODUCT ATTR MAPPING METHODS
     // =============================================
-
-    /**
-     * Convert ProductAttrDto to ProductAttr entity
-     * @param productAttrDto Product attribute DTO
-     * @return ProductAttr entity
-     */
-    public static ProductAttr toProductAttrEntity(ProductAttrDto productAttrDto) {
-        if (productAttrDto == null) return null;
-        
-        ProductAttr productAttr = new ProductAttr();
-        productAttr.setProductAttrId(productAttrDto.getProductAttrId());
-        productAttr.setProductAttrName(productAttrDto.getProductAttrName());
-        productAttr.setProductAttrEnabled(productAttrDto.getProductAttrEnabled());
-        productAttr.setProductAttrDisplayName(productAttrDto.getProductAttrDisplayName());
-        productAttr.setProductAttrRemark(productAttrDto.getProductAttrRemark());
-        productAttr.setCreatedDt(productAttrDto.getCreatedDt());
-        productAttr.setModifiedDt(productAttrDto.getModifiedDt());
-        
-        return productAttr;
-    }
 
     /**
      * Convert ProductAttr entity to ProductAttrDto
@@ -198,10 +146,10 @@ public class ProductMapperUtil {
                     .collect(Collectors.toList());
         }
         
-        // Map product attributes (grouped by ProductAttr, only quantity > 0)
-        List<ProductAttrWithAttributesDto> productAttributeGroupsDto = null;
-        if (product.getProductAttributes() != null) {
-            productAttributeGroupsDto = toProductAttrWithAttributesDtoList(product.getProductAttributes());
+        // Map product variants (grouped by ProductAttr, only quantity > 0)
+        List<ProductAttrWithVariantsDto> productVariantGroupsDto = null;
+        if (product.getProductVariants() != null) {
+            productVariantGroupsDto = toProductAttrWithVariantsDtoList(product.getProductVariants());
         }
         
         // Map reviews (simplified version without circular reference)
@@ -228,7 +176,7 @@ public class ProductMapperUtil {
                 .productState(toProductStateDto(product.getProductState()))
                 .seoMeta(SeoMetaMapperUtil.toSeoMetaDto(product.getSeoMeta()))
                 .productImages(productImagesDto)
-                .productAttributeGroups(productAttributeGroupsDto)
+                .productAttributeGroups(productVariantGroupsDto)
                 .reviews(reviewsDto)
                 .createdDt(product.getCreatedDt())
                 .modifiedDt(product.getModifiedDt())
@@ -371,44 +319,20 @@ public class ProductMapperUtil {
                 .build();
     }
 
-    // =============================================
-    // PRODUCT CATEGORY MAPPING METHODS
-    // =============================================
+    // =============================================\n    // PRODUCT ATTRIBUTE MAPPING METHODS (Master Attribute Catalog)\n    // =============================================
 
     /**
-     * Convert ProductCategoryDto to ProductCategory entity
-     * @param productCategoryDto Product category DTO
-     * @return ProductCategory entity
+     * Convert ProductAttribute entity to ProductAttributeDto
+     * @param productAttribute Master attribute entity
+     * @return ProductAttributeDto
      */
-    public static ProductCategory toProductCategoryEntity(ProductCategoryDto productCategoryDto) {
-        if (productCategoryDto == null) return null;
-        
-        ProductCategory productCategory = new ProductCategory();
-        productCategory.setProductCategoryId(productCategoryDto.getProductCategoryId());
-        productCategory.setProductCategoryName(productCategoryDto.getProductCategoryName());
-        productCategory.setProductCategorySlug(productCategoryDto.getProductCategorySlug());
-        productCategory.setProductCategoryDisplayName(productCategoryDto.getProductCategoryDisplayName());
-        productCategory.setProductCategoryRemark(productCategoryDto.getProductCategoryRemark());
-        productCategory.setProductCategoryEnabled(productCategoryDto.getProductCategoryEnabled());
-        productCategory.setProductCategoryVisible(productCategoryDto.getProductCategoryVisible());
-        productCategory.setSeoMetaId(productCategoryDto.getSeoMetaId());
-        productCategory.setCreatedDt(productCategoryDto.getCreatedDt());
-        productCategory.setModifiedDt(productCategoryDto.getModifiedDt());
-        
-        return productCategory;
-    }
-
-    // =============================================
-    // PRODUCT ATTRIBUTE MAPPING METHODS
-    // =============================================
-
     public static ProductAttributeDto toProductAttributeDto(ProductAttribute productAttribute) {
         if (productAttribute == null) return null;
         
         return ProductAttributeDto.builder()
                 .productAttributeId(productAttribute.getProductAttributeId())
                 .productAttributeValue(productAttribute.getProductAttributeValue())
-                .productAttributeQuantity(productAttribute.getProductAttributeQuantity())
+                .productAttributeDisplayName(productAttribute.getProductAttributeDisplayName())
                 .productAttributePrice(productAttribute.getProductAttributePrice())
                 .productAttributeEnabled(productAttribute.getProductAttributeEnabled())
                 .productAttr(toProductAttrDto(productAttribute.getProductAttr()))
@@ -416,38 +340,60 @@ public class ProductMapperUtil {
                 .modifiedDt(productAttribute.getModifiedDt())
                 .build();
     }
+
+    // =============================================
+    // PRODUCT VARIANT MAPPING METHODS
+    // =============================================
+
+    /**
+     * Convert ProductVariant entity to ProductVariantDto
+     * @param productVariant Product variant entity
+     * @return ProductVariantDto
+     */
+    public static ProductVariantDto toProductVariantDto(ProductVariant productVariant) {
+        if (productVariant == null) return null;
+        
+        return ProductVariantDto.builder()
+                .productVariantId(productVariant.getProductVariantId())
+                .productVariantStock(productVariant.getProductVariantStock())
+                .productVariantEnabled(productVariant.getProductVariantEnabled())
+                .productAttribute(toProductAttributeDto(productVariant.getProductAttribute()))
+                .createdDt(productVariant.getCreatedDt())
+                .modifiedDt(productVariant.getModifiedDt())
+                .build();
+    }
     
     /**
-     * Map List of ProductAttributes to grouped ProductAttrWithAttributesDto
-     * Only includes attributes with quantity > 0
+     * Map List of ProductVariants to grouped ProductAttrWithVariantsDto
+     * Only includes variants with quantity > 0
      */
-    public static List<ProductAttrWithAttributesDto> toProductAttrWithAttributesDtoList(List<ProductAttribute> productAttributes) {
-        if (productAttributes == null) return null;
+    public static List<ProductAttrWithVariantsDto> toProductAttrWithVariantsDtoList(List<ProductVariant> productVariants) {
+        if (productVariants == null) return null;
         
-        // Filter attributes with quantity > 0 and group by ProductAttr
-        Map<Long, List<ProductAttribute>> groupedByAttr = productAttributes.stream()
-                .filter(attr -> attr.getProductAttributeQuantity() != null && attr.getProductAttributeQuantity() > 0)
-//                .filter(attr -> attr.getProductAttributeEnabled() != null && attr.getProductAttributeEnabled())
+        // Filter variants with stock > 0 and group by ProductAttr
+        Map<Long, List<ProductVariant>> groupedByAttr = productVariants.stream()
+                .filter(variant -> variant.getProductVariantStock() != null && variant.getProductVariantStock() > 0)
+                .filter(variant -> variant.getProductVariantEnabled() != null && variant.getProductVariantEnabled())
                 .collect(Collectors.groupingBy(
-                    attr -> attr.getProductAttr().getProductAttrId()
+                    variant -> variant.getProductAttribute().getProductAttr().getProductAttrId()
                 ));
         
         return groupedByAttr.entrySet().stream()
                 .map(entry -> {
-                    List<ProductAttribute> attributes = entry.getValue();
-                    if (attributes.isEmpty()) return null;
+                    List<ProductVariant> variants = entry.getValue();
+                    if (variants.isEmpty()) return null;
                     
-                    // Get ProductAttr from first attribute in group
-                    ProductAttr productAttr = attributes.get(0).getProductAttr();
+                    // Get ProductAttr from first variant in group
+                    ProductAttr productAttr = variants.get(0).getProductAttribute().getProductAttr();
                     
-                    // Convert attributes to DTOs
-                    List<ProductAttributeDto> attributeDtos = attributes.stream()
-                            .map(ProductMapperUtil::toProductAttributeDto)
+                    // Convert variants to DTOs
+                    List<ProductVariantDto> variantDtos = variants.stream()
+                            .map(ProductMapperUtil::toProductVariantDto)
                             .collect(Collectors.toList());
                     
-                    ProductAttrWithAttributesDto dto = ProductAttrWithAttributesDto.builder()
+                    ProductAttrWithVariantsDto dto = ProductAttrWithVariantsDto.builder()
                             .productAttr(toProductAttrDto(productAttr))
-                            .attributeValues(attributeDtos)
+                            .variants(variantDtos)
                             .build();
                     
                     // Calculate computed fields
@@ -490,5 +436,22 @@ public class ProductMapperUtil {
                 .build();
     }
     
+    /**
+     * Helper method to fetch SeoMetaDto by ID
+     * @param seoMetaId SEO Meta ID
+     * @return SeoMetaDto or null if not found
+     */
+    private static SeoMetaDto fetchSeoMetaDto(Long seoMetaId) {
+        if (seoMetaService == null || seoMetaId == null) {
+            return null;
+        }
+        try {
+            Optional<SeoMetaDto> seoMeta = seoMetaService.findById(seoMetaId);
+            return seoMeta.orElse(null);
+        } catch (Exception e) {
+            // Log error and return null to avoid breaking the mapping
+            return null;
+        }
+    }
 
 }

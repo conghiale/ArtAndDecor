@@ -463,7 +463,7 @@ public class OrderController {
     }
 
     /**
-     * API 5: Get Orders (Admin/Manager)
+     * API 5: Get Orders
      * Role: permitAll - Get orders with comprehensive filtering and pagination
      * Business Analysis: Both ADMIN and CUSTOMER need to view orders with different access levels
      */
@@ -484,8 +484,14 @@ public class OrderController {
         )
     })
     public ResponseEntity<BaseResponseDto<Page<OrderDto>>> getOrders(
-            @Parameter(description = "Filter by customer ID (optional)", example = "456")
-            @RequestParam(required = false) Long customerId,
+            @Parameter(description = "Filter by user ID (optional)", example = "456")
+            @RequestParam(required = false) Long userId,
+            
+            @Parameter(description = "Filter by session ID for guest orders (optional)", example = "guest-session-12345")
+            @RequestParam(required = false) String sessionId,
+            
+            @Parameter(description = "Filter by order code (optional)", example = "ORD-20260115-001")
+            @RequestParam(required = false) String orderCode,
             
             @Parameter(description = "Filter by order state name (optional)", example = "PENDING")
             @RequestParam(required = false) String state,
@@ -502,14 +508,13 @@ public class OrderController {
             @Parameter(description = "Filter by maximum order amount (optional)", example = "1000000")
             @RequestParam(required = false) BigDecimal maxAmount,
             
-            @PageableDefault(page = 0, size = 10, sort = "createdDt", direction = Sort.Direction.DESC) Pageable pageable,
-            Authentication authentication) {
+            @PageableDefault(page = 0, size = 10, sort = "createdDt", direction = Sort.Direction.DESC) Pageable pageable) {
         
         try {
-            logger.info("Get orders request with filters");
+            logger.info("Get orders request with filters - userId: {}, sessionId: {}, orderCode: {}", userId, sessionId, orderCode);
             
             Page<OrderDto> orders = orderService.searchOrders(
-                    null, customerId, state, fromDate, toDate, minAmount, maxAmount, pageable);
+                    null, userId, sessionId, orderCode, state, fromDate, toDate, minAmount, maxAmount, pageable);
             
             return ResponseEntity.ok(BaseResponseDto.success("Orders retrieved successfully", orders));
         } catch (Exception e) {

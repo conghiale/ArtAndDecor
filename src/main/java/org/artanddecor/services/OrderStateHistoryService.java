@@ -14,13 +14,6 @@ import java.util.List;
 public interface OrderStateHistoryService {
 
     /**
-     * Get order state history for specific order (used by OrderController API 9)
-     * @param orderId Order ID
-     * @return List of order state history for specific order
-     */
-    List<OrderStateHistoryDto> getOrderStateHistory(Long orderId);
-
-    /**
      * Create new order state history record
      * @param orderId Order ID
      * @param oldOrderStateId Previous order state ID

@@ -1,6 +1,5 @@
 package org.artanddecor.services;
 
-import org.artanddecor.dto.GroupedProductAttributeDto;
 import org.artanddecor.dto.ProductAttributeDto;
 import org.artanddecor.dto.ProductAttributeRequestDto;
 import org.springframework.data.domain.Page;
@@ -12,7 +11,7 @@ import java.util.Optional;
 
 /**
  * Service interface for ProductAttribute operations
- * Provides CRUD operations for product attribute associations
+ * Manages master attribute definitions with pricing
  */
 public interface ProductAttributeService {
     
@@ -26,29 +25,49 @@ public interface ProductAttributeService {
     Optional<ProductAttributeDto> findProductAttributeById(Long productAttributeId);
     
     /**
+     * Find product attributes by attribute type ID
+     */
+    List<ProductAttributeDto> findAttributesByAttrId(Long attrId);
+    
+    /**
+     * Find product attributes by value
+     */
+    List<ProductAttributeDto> findAttributesByValue(String attributeValue);
+    
+    /**
+     * Find specific attribute by attr ID, value and price
+     */
+    Optional<ProductAttributeDto> findByAttrIdValueAndPrice(Long attrId, String value, BigDecimal price);
+    
+    /**
      * Get product attributes with filtering and pagination
      */
     Page<ProductAttributeDto> getProductAttributesByCriteria(
-            Long productId, Long productAttrId, Boolean enabled, String attributeValue, Pageable pageable);
+            Long attrId, Boolean enabled, String attributeValue, BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable);
+    
+    /**
+     * Get distinct attribute values for an attribute type
+     */
+    List<String> getDistinctValuesByAttrId(Long attrId);
+    
+    /**
+     * Get price range for an attribute type [minPrice, maxPrice]
+     */
+    BigDecimal[] getPriceRangeByAttrId(Long attrId);
     
     // =============================================
     // CRUD OPERATIONS  
     // =============================================
     
     /**
-     * Create new product attribute association using DTO
+     * Create new product attribute definition
      */
     ProductAttributeDto createProductAttribute(ProductAttributeRequestDto requestDto);
     
     /**
-     * Update existing product attribute by ID using DTO
+     * Update existing product attribute by ID
      */
     ProductAttributeDto updateProductAttribute(Long productAttributeId, ProductAttributeRequestDto requestDto);
-    
-    /**
-     * Update product attribute quantity only
-     */
-    ProductAttributeDto updateProductAttributeQuantity(Long productAttributeId, Integer quantity);
     
     /**
      * Delete product attribute by ID
@@ -56,17 +75,8 @@ public interface ProductAttributeService {
     void deleteProductAttribute(Long productAttributeId);
     
     // =============================================
-    // CUSTOM OPERATIONS
+    // BATCH OPERATIONS
     // =============================================
-    
-    /**
-     * Get grouped product attributes by value and price
-     * @param productId Optional filter by product ID
-     * @param productAttrId Optional filter by product attribute ID
-     * @param enabled Optional filter by enabled status
-     * @return List of grouped attribute values with pricing and sample data
-     */
-    List<GroupedProductAttributeDto> getGroupedProductAttributes(Long productId, Long productAttrId, Boolean enabled);
     
     /**
      * Update product attribute prices by attribute values
@@ -97,4 +107,23 @@ public interface ProductAttributeService {
      * @return Number of records deleted
      */
     int deleteByProductAttrId(Long productAttrId);
+    
+    // =============================================
+    // UTILITY OPERATIONS
+    // =============================================
+    
+    /**
+     * Check if attribute combination exists (for validation)
+     */
+    boolean existsAttributeCombination(Long attrId, String value, BigDecimal price);
+    
+    /**
+     * Count attributes by attribute type
+     */
+    Long countByProductAttrId(Long attrId);
+    
+    /**
+     * Find attributes by multiple values
+     */
+    List<ProductAttributeDto> findByAttributeValues(List<String> values);
 }

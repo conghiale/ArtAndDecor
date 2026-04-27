@@ -34,6 +34,10 @@ public class OrderDto {
     // User reference for easy API usage
     private Long userId;
     
+    // Session ID for guest users (from cart session)
+    @Size(max = 100, message = "Session ID must not exceed 100 characters")
+    private String sessionId;
+    
     // Order state reference for easy API usage
     private Long orderStateId;
     private String orderStateName;
@@ -115,16 +119,26 @@ public class OrderDto {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime modifiedDt;
     
+    // Payment information snapshot (từ PAYMENT table tại thời điểm thanh toán)
+    @Size(max = 100, message = "Payment method must not exceed 100 characters")
+    private String paymentMethod;
+    
+    @Size(max = 50, message = "Payment state must not exceed 50 characters")
+    private String paymentState;
+    
+    @Size(max = 100, message = "Transaction ID must not exceed 100 characters")
+    private String transactionId;
+    
+    @Size(max = 256, message = "Payment remark must not exceed 256 characters")
+    private String paymentRemark;
+    
     // =============================================
-    // NESTED DTOs (complete related entity data)
+    // NESTED DTOs (essential related entity data only)
     // =============================================
-    private UserDto user;
     private OrderStateDto orderState;
     
-    // Related data
+    // Related data - only essential lists
     private List<OrderItemDto> orderItems;
-    private List<PaymentDto> payments;
-    private List<ShipmentDto> shipments;
     
     // Computed fields
     private Integer totalItems;
@@ -133,13 +147,17 @@ public class OrderDto {
     private BigDecimal savedAmount;
     
     /**
-     * Generate full name from user object
+     * Check if payment is completed
      */
-    public String generateFullName() {
-        if (user == null) {
-            return "Unknown User";
-        }
-        return user.getFullNameValue();
+    public boolean isPaymentCompleted() {
+        return paymentState != null && "COMPLETED".equalsIgnoreCase(paymentState);
+    }
+    
+    /**
+     * Check if payment is pending
+     */
+    public boolean isPaymentPending() {
+        return paymentState != null && "PENDING".equalsIgnoreCase(paymentState);
     }
     
     /**
@@ -183,6 +201,13 @@ public class OrderDto {
     public boolean isCancelled() {
         return orderState != null && "CANCELLED".equalsIgnoreCase(orderState.getOrderStateName());
     }
+
+    /**
+     * Check if order is returned
+     */
+    public boolean isReturned() {
+        return orderState != null && "RETURNED".equalsIgnoreCase(orderState.getOrderStateName());
+    }
     
     /**
      * Calculate final amount based on database schema
@@ -207,13 +232,10 @@ public class OrderDto {
     /**
      * Generate customer name from user or session
      * Should use USER.USER_NAME if USER_ID exists, otherwise use customerName field
-     */
+    */
     public String getEffectiveCustomerName() {
         if (customerName != null && !customerName.trim().isEmpty()) {
             return customerName;
-        }
-        if (user != null && user.getUserName() != null) {
-            return user.getUserName();
         }
         return "Guest Customer";
     }

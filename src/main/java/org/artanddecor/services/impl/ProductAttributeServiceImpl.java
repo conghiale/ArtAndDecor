@@ -1,13 +1,11 @@
 package org.artanddecor.services.impl;
 
 import lombok.RequiredArgsConstructor;
-import org.artanddecor.dto.GroupedProductAttributeDto;
 import org.artanddecor.dto.ProductAttributeDto;
 import org.artanddecor.dto.ProductAttributeRequestDto;
-import org.artanddecor.model.Product;
+import org.artanddecor.exception.ResourceNotFoundException;
 import org.artanddecor.model.ProductAttr;
 import org.artanddecor.model.ProductAttribute;
-import org.artanddecor.repository.ProductRepository;
 import org.artanddecor.repository.ProductAttrRepository;
 import org.artanddecor.repository.ProductAttributeRepository;
 import org.artanddecor.services.ProductAttributeService;
@@ -21,10 +19,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * ProductAttributeService Implementation 
- * Handles business logic for product attribute associations (PRODUCT_ATTRIBUTE table)
+ * Manages master attribute definitions with pricing
  */
 @Service
 @RequiredArgsConstructor
@@ -34,7 +33,6 @@ public class ProductAttributeServiceImpl implements ProductAttributeService {
     private static final Logger logger = LoggerFactory.getLogger(ProductAttributeServiceImpl.class);
     
     private final ProductAttributeRepository productAttributeRepository;
-    private final ProductRepository productRepository;
     private final ProductAttrRepository productAttrRepository;
 
     // =============================================
@@ -47,16 +45,65 @@ public class ProductAttributeServiceImpl implements ProductAttributeService {
         return productAttributeRepository.findById(productAttributeId)
                 .map(ProductMapperUtil::toProductAttributeDto);
     }
+
+    @Override
+    public List<ProductAttributeDto> findAttributesByAttrId(Long attrId) {
+        logger.debug("Finding attributes by attr ID: {}", attrId);
+        return productAttributeRepository.findByProductAttrId(attrId)
+                .stream()
+                .map(ProductMapperUtil::toProductAttributeDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<ProductAttributeDto> findAttributesByValue(String attributeValue) {
+        logger.debug("Finding attributes by value: {}", attributeValue);
+        return productAttributeRepository.findByProductAttributeValue(attributeValue)
+                .stream()
+                .map(ProductMapperUtil::toProductAttributeDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public Optional<ProductAttributeDto> findByAttrIdValueAndPrice(Long attrId, String value, BigDecimal price) {
+        logger.debug("Finding attribute by attrId: {}, value: {}, price: {}", attrId, value, price);
+        return productAttributeRepository.findByAttrIdValueAndPrice(attrId, value, price)
+                .map(ProductMapperUtil::toProductAttributeDto);
+    }
     
     @Override
     public Page<ProductAttributeDto> getProductAttributesByCriteria(
-            Long productId, Long productAttrId, Boolean enabled, String attributeValue, Pageable pageable) {
-        logger.debug("Getting product attributes with criteria");
+            Long attrId, Boolean enabled, String attributeValue, BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable) {
+        logger.debug("Getting product attributes with criteria - attrId: {}, enabled: {}, value: {}, priceRange: [{}, {}]",
+                    attrId, enabled, attributeValue, minPrice, maxPrice);
         
-        Page<ProductAttribute> productAttributePage = productAttributeRepository.findProductAttributesByCriteriaPaginated(
-                productId, productAttrId, enabled, attributeValue, pageable);
+        Page<ProductAttribute> productAttributePage = productAttributeRepository.findProductAttributesByCriteria(
+                attrId, enabled, attributeValue, minPrice, maxPrice, pageable);
         
         return productAttributePage.map(ProductMapperUtil::toProductAttributeDto);
+    }
+
+    @Override
+    public List<String> getDistinctValuesByAttrId(Long attrId) {
+        logger.debug("Getting distinct values for attr ID: {}", attrId);
+        return productAttributeRepository.findDistinctValuesByAttrId(attrId);
+    }
+
+    @Override
+    public BigDecimal[] getPriceRangeByAttrId(Long attrId) {
+        logger.debug("Getting price range for attr ID: {}", attrId);
+        List<Object[]> results = productAttributeRepository.getPriceRangeByAttrId(attrId);
+        
+        if (results.isEmpty() || results.get(0)[0] == null) {
+            return new BigDecimal[]{BigDecimal.ZERO, BigDecimal.ZERO};
+        }
+        
+        Object[] result = results.get(0);
+        BigDecimal minPrice = (BigDecimal) result[0];
+        BigDecimal maxPrice = (BigDecimal) result[1];
+        
+        return new BigDecimal[]{minPrice != null ? minPrice : BigDecimal.ZERO, 
+                               maxPrice != null ? maxPrice : BigDecimal.ZERO};
     }
 
     // =============================================
@@ -66,49 +113,27 @@ public class ProductAttributeServiceImpl implements ProductAttributeService {
     @Override
     @Transactional
     public ProductAttributeDto createProductAttribute(ProductAttributeRequestDto requestDto) {
-        logger.info("Creating product attribute from DTO: productId={}, attrId={}, value={}, quantity={}", 
-                   requestDto.getProductId(), requestDto.getProductAttrId(), 
-                   requestDto.getProductAttributeValue(), requestDto.getProductAttributeQuantity());
-        
-        // Validate product exists if productId is provided
-        Product product = null;
-        if (requestDto.getProductId() != null) {
-            product = productRepository.findById(requestDto.getProductId())
-                    .orElseThrow(() -> new IllegalArgumentException("Product not found with ID: " + requestDto.getProductId()));
-        }
+        logger.info("Creating product attribute: attrId={}, value={}, displayName={}, price={}", 
+                   requestDto.getProductAttrId(), requestDto.getProductAttributeValue(), 
+                   requestDto.getProductAttributeDisplayName(), requestDto.getProductAttributePrice());
         
         // Validate product attribute exists
         ProductAttr productAttr = productAttrRepository.findById(requestDto.getProductAttrId())
                 .orElseThrow(() -> new IllegalArgumentException("Product attribute not found with ID: " + requestDto.getProductAttrId()));
         
-        // Check unique combination of PRODUCT_ATTRIBUTE_VALUE and PRODUCT_ATTR_ID (always required)
-        if (requestDto.getProductAttributeValue() != null && requestDto.getProductAttrId() != null) {
-            boolean exists = productAttributeRepository.existsByValueAndAttrId(
-                requestDto.getProductAttributeValue(), requestDto.getProductAttrId());
-            if (exists) {
-                throw new IllegalArgumentException(
-                    String.format("Product attribute combination already exists: attrId=%d, value=%s", 
-                                 requestDto.getProductAttrId(), requestDto.getProductAttributeValue()));
-            }
-        }
-        
-        // Check if combination already exists using repository query (only if productId is provided) - Additional fallback validation
-        if (requestDto.getProductId() != null && 
-            productAttributeRepository.findByProductId(requestDto.getProductId())
-                .stream()
-                .anyMatch(pa -> pa.getProductAttr().getProductAttrId().equals(requestDto.getProductAttrId()) && 
-                               pa.getProductAttributeValue().equals(requestDto.getProductAttributeValue()))) {
+        // Check unique combination of PRODUCT_ATTR_ID, PRODUCT_ATTRIBUTE_VALUE, PRODUCT_ATTRIBUTE_PRICE
+        if (productAttributeRepository.existsByValueAttrIdAndPrice(
+                requestDto.getProductAttributeValue(), requestDto.getProductAttrId(), requestDto.getProductAttributePrice())) {
             throw new IllegalArgumentException(
-                String.format("Product attribute combination already exists: product=%d, attr=%d, value=%s", 
-                             requestDto.getProductId(), requestDto.getProductAttrId(), requestDto.getProductAttributeValue()));
+                String.format("Product attribute combination already exists: attrId=%d, value=%s, price=%s", 
+                             requestDto.getProductAttrId(), requestDto.getProductAttributeValue(), requestDto.getProductAttributePrice()));
         }
         
-        // Create new product attribute association
+        // Create new product attribute
         ProductAttribute productAttribute = new ProductAttribute();
-        productAttribute.setProduct(product); // Can be null for global attributes
         productAttribute.setProductAttr(productAttr);
         productAttribute.setProductAttributeValue(requestDto.getProductAttributeValue());
-        productAttribute.setProductAttributeQuantity(requestDto.getProductAttributeQuantity() != null ? requestDto.getProductAttributeQuantity() : 0);
+        productAttribute.setProductAttributeDisplayName(requestDto.getProductAttributeDisplayName());
         productAttribute.setProductAttributePrice(requestDto.getProductAttributePrice());
         productAttribute.setProductAttributeEnabled(requestDto.getProductAttributeEnabled() != null ? requestDto.getProductAttributeEnabled() : true);
         
@@ -117,54 +142,41 @@ public class ProductAttributeServiceImpl implements ProductAttributeService {
         
         return ProductMapperUtil.toProductAttributeDto(savedProductAttribute);
     }
-
+    
     @Override
     @Transactional
     public ProductAttributeDto updateProductAttribute(Long productAttributeId, ProductAttributeRequestDto requestDto) {
-        logger.info("Updating product attribute ID: {} from request DTO", productAttributeId);
+        logger.info("Updating product attribute ID: {}", productAttributeId);
         
         ProductAttribute existingProductAttribute = productAttributeRepository.findById(productAttributeId)
-                .orElseThrow(() -> new IllegalArgumentException("Product attribute not found with ID: " + productAttributeId));
+                .orElseThrow(() -> new ResourceNotFoundException("Product attribute not found with ID: " + productAttributeId));
         
-        // Check unique combination of PRODUCT_ATTRIBUTE_VALUE and PRODUCT_ATTR_ID if being updated (always required)
+        // Check unique combination if critical fields are being updated
         Long newAttrId = requestDto.getProductAttrId() != null ? requestDto.getProductAttrId() : existingProductAttribute.getProductAttr().getProductAttrId();
         String newValue = requestDto.getProductAttributeValue() != null ? requestDto.getProductAttributeValue() : existingProductAttribute.getProductAttributeValue();
+        BigDecimal newPrice = requestDto.getProductAttributePrice() != null ? requestDto.getProductAttributePrice() : existingProductAttribute.getProductAttributePrice();
         
-        if (newValue != null && newAttrId != null) {
-            boolean exists = productAttributeRepository.existsByValueAndAttrIdExcludingId(
-                newValue, newAttrId, productAttributeId);
-            if (exists) {
-                throw new IllegalArgumentException(
-                    String.format("Product attribute combination already exists: attrId=%d, value=%s", 
-                                 newAttrId, newValue));
-            }
-        }
-        
-        // Validate and update product if changed (can be null)
-        if (requestDto.getProductId() != null && 
-            (existingProductAttribute.getProduct() == null || 
-             !requestDto.getProductId().equals(existingProductAttribute.getProduct().getProductId()))) {
-            Product newProduct = productRepository.findById(requestDto.getProductId())
-                    .orElseThrow(() -> new IllegalArgumentException("Product not found with ID: " + requestDto.getProductId()));
-            existingProductAttribute.setProduct(newProduct);
-        } else if (requestDto.getProductId() == null) {
-            // Set product to null if explicitly requesting to remove product association
-            existingProductAttribute.setProduct(null);
+        if (productAttributeRepository.existsByValueAttrIdAndPriceExcludingId(
+                newValue, newAttrId, newPrice, productAttributeId)) {
+            throw new IllegalArgumentException(
+                String.format("Product attribute combination already exists: attrId=%d, value=%s, price=%s", 
+                             newAttrId, newValue, newPrice));
         }
         
         // Validate and update product attr if changed
-        if (requestDto.getProductAttrId() != null && !requestDto.getProductAttrId().equals(existingProductAttribute.getProductAttr().getProductAttrId())) {
+        if (requestDto.getProductAttrId() != null && 
+            !requestDto.getProductAttrId().equals(existingProductAttribute.getProductAttr().getProductAttrId())) {
             ProductAttr newProductAttr = productAttrRepository.findById(requestDto.getProductAttrId())
                     .orElseThrow(() -> new IllegalArgumentException("Product attribute not found with ID: " + requestDto.getProductAttrId()));
             existingProductAttribute.setProductAttr(newProductAttr);
         }
         
-        // Update fields
+        // Update other fields
         if (requestDto.getProductAttributeValue() != null) {
             existingProductAttribute.setProductAttributeValue(requestDto.getProductAttributeValue());
         }
-        if (requestDto.getProductAttributeQuantity() != null) {
-            existingProductAttribute.setProductAttributeQuantity(requestDto.getProductAttributeQuantity());
+        if (requestDto.getProductAttributeDisplayName() != null) {
+            existingProductAttribute.setProductAttributeDisplayName(requestDto.getProductAttributeDisplayName());
         }
         if (requestDto.getProductAttributePrice() != null) {
             existingProductAttribute.setProductAttributePrice(requestDto.getProductAttributePrice());
@@ -173,80 +185,28 @@ public class ProductAttributeServiceImpl implements ProductAttributeService {
             existingProductAttribute.setProductAttributeEnabled(requestDto.getProductAttributeEnabled());
         }
         
-        ProductAttribute updatedProductAttribute = productAttributeRepository.save(existingProductAttribute);
-        logger.info("Product attribute updated successfully with ID: {}", updatedProductAttribute.getProductAttributeId());
+        ProductAttribute savedProductAttribute = productAttributeRepository.save(existingProductAttribute);
+        logger.info("Product attribute updated successfully");
         
-        return ProductMapperUtil.toProductAttributeDto(updatedProductAttribute);
-    }
-    
-    @Override
-    @Transactional
-    public ProductAttributeDto updateProductAttributeQuantity(Long productAttributeId, Integer quantity) {
-        logger.info("Updating product attribute quantity: ID={}, newQuantity={}", productAttributeId, quantity);
-        
-        ProductAttribute productAttribute = productAttributeRepository.findById(productAttributeId)
-                .orElseThrow(() -> new IllegalArgumentException("Product attribute not found with ID: " + productAttributeId));
-        
-        productAttribute.setProductAttributeQuantity(quantity != null ? quantity : 0);
-        
-        ProductAttribute updatedProductAttribute = productAttributeRepository.save(productAttribute);
-        logger.info("Product attribute quantity updated successfully");
-        
-        return ProductMapperUtil.toProductAttributeDto(updatedProductAttribute);
+        return ProductMapperUtil.toProductAttributeDto(savedProductAttribute);
     }
     
     @Override
     @Transactional
     public void deleteProductAttribute(Long productAttributeId) {
-        logger.info("Deleting product attribute by ID: {}", productAttributeId);
+        logger.info("Deleting product attribute ID: {}", productAttributeId);
         
         if (!productAttributeRepository.existsById(productAttributeId)) {
-            throw new IllegalArgumentException("Product attribute not found with ID: " + productAttributeId);
+            throw new ResourceNotFoundException("Product attribute not found with ID: " + productAttributeId);
         }
         
         productAttributeRepository.deleteById(productAttributeId);
         logger.info("Product attribute deleted successfully");
     }
-    
+
     // =============================================
-    // CUSTOM OPERATIONS
+    // BATCH OPERATIONS
     // =============================================
-    
-    @Override
-    public List<GroupedProductAttributeDto> getGroupedProductAttributes(Long productId, Long productAttrId, Boolean enabled) {
-        logger.debug("Getting grouped product attributes with filters - productId: {}, productAttrId: {}, enabled: {}", 
-                    productId, productAttrId, enabled);
-        
-        List<ProductAttribute> allAttributes = productAttributeRepository.findGroupedProductAttributes(
-                productId, productAttrId, enabled);
-        
-        // Group by value and price, keep one sample per unique combination
-        Map<String, GroupedProductAttributeDto> groupedMap = new LinkedHashMap<>();
-        
-        for (ProductAttribute attribute : allAttributes) {
-            String key = attribute.getProductAttributeValue() + "_" + attribute.getProductAttributePrice();
-            
-            if (!groupedMap.containsKey(key)) {
-                GroupedProductAttributeDto groupedDto = GroupedProductAttributeDto.builder()
-                        .productAttributeId(attribute.getProductAttributeId())
-                        .productId(attribute.getProduct().getProductId())
-                        .productAttrId(attribute.getProductAttr().getProductAttrId())
-                        .productAttributeValue(attribute.getProductAttributeValue())
-                        .productAttributePrice(attribute.getProductAttributePrice())
-                        .productAttributeEnabled(attribute.getProductAttributeEnabled())
-                        .productAttributeQuantity(attribute.getProductAttributeQuantity())
-                        .modifiedDt(attribute.getModifiedDt())
-                        .build();
-                
-                groupedMap.put(key, groupedDto);
-            }
-        }
-        
-        List<GroupedProductAttributeDto> result = new ArrayList<>(groupedMap.values());
-        logger.debug("Found {} unique combinations from {} total attributes", result.size(), allAttributes.size());
-        
-        return result;
-    }
     
     @Override
     @Transactional
@@ -258,7 +218,7 @@ public class ProductAttributeServiceImpl implements ProductAttributeService {
         }
         
         if (productAttributePrice == null || productAttributePrice.compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException("Product attribute price must be positive");
+            throw new IllegalArgumentException("Product attribute price must be non-negative");
         }
         
         int updatedCount = productAttributeRepository.updatePricesByAttributeValues(productAttributeValues, productAttributePrice);
@@ -280,11 +240,6 @@ public class ProductAttributeServiceImpl implements ProductAttributeService {
             throw new IllegalArgumentException("Request DTO cannot be null");
         }
         
-        // Validate product exists if productId is provided
-        if (requestDto.getProductId() != null && !productRepository.existsById(requestDto.getProductId())) {
-            throw new IllegalArgumentException("Product not found with ID: " + requestDto.getProductId());
-        }
-        
         // Validate product attribute exists if productAttrId is provided
         if (requestDto.getProductAttrId() != null && !productAttrRepository.existsById(requestDto.getProductAttrId())) {
             throw new IllegalArgumentException("Product attribute not found with ID: " + requestDto.getProductAttrId());
@@ -292,9 +247,7 @@ public class ProductAttributeServiceImpl implements ProductAttributeService {
         
         int updatedCount = productAttributeRepository.updateByAttributeValues(
                 productAttributeValues,
-                requestDto.getProductId(),
                 requestDto.getProductAttrId(),
-                requestDto.getProductAttributeQuantity(),
                 requestDto.getProductAttributePrice(),
                 requestDto.getProductAttributeEnabled()
         );
@@ -331,5 +284,28 @@ public class ProductAttributeServiceImpl implements ProductAttributeService {
         logger.info("Deleted {} product attribute records by product attr ID: {}", deletedCount, productAttrId);
         
         return deletedCount;
+    }
+
+    // =============================================
+    // UTILITY OPERATIONS
+    // =============================================
+
+    @Override
+    public boolean existsAttributeCombination(Long attrId, String value, BigDecimal price) {
+        return productAttributeRepository.existsByValueAttrIdAndPrice(value, attrId, price);
+    }
+
+    @Override
+    public Long countByProductAttrId(Long attrId) {
+        return productAttributeRepository.countByProductAttrId(attrId);
+    }
+
+    @Override
+    public List<ProductAttributeDto> findByAttributeValues(List<String> values) {
+        logger.debug("Finding attributes by values: {}", values);
+        return productAttributeRepository.findByAttributeValues(values)
+                .stream()
+                .map(ProductMapperUtil::toProductAttributeDto)
+                .collect(Collectors.toList());
     }
 }

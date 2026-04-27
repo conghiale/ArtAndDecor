@@ -77,6 +77,14 @@ public interface PaymentService {
     Map<String, BigDecimal> getTotalAmountByState();
     
     /**
+     * Update payment status by changing payment state ID
+     * @param paymentId Payment ID to update
+     * @param paymentStateId New payment state ID
+     * @return Updated payment DTO
+     */
+    PaymentDto updatePaymentStatus(Long paymentId, Long paymentStateId);
+    
+    /**
      * Generate QR code for payment
      * @param request Payment QR request containing order code and amount
      * @return QR code image as byte array

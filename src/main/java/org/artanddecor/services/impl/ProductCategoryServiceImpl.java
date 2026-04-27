@@ -67,6 +67,7 @@ public class ProductCategoryServiceImpl implements ProductCategoryService {
             null,           // visible (null to get both visible and invisible)
             productTypeId,  // productTypeId (can be null for all types)
             null,           // parentCategoryId
+            null,           // productCategorySlug
             PageRequest.of(0, Integer.MAX_VALUE, 
                 Sort.by("productCategoryName"))
         );
@@ -89,9 +90,9 @@ public class ProductCategoryServiceImpl implements ProductCategoryService {
     @Override
     public Page<ProductCategoryDto> getProductCategoriesByCriteria(String textSearch, Boolean enabled, Boolean visible, 
                                                                  Long productTypeId, Long parentCategoryId, Boolean rootOnly, 
-                                                                 Pageable pageable) {
-        logger.debug("Getting product categories with enhanced criteria - textSearch: {}, enabled: {}, visible: {}, productTypeId: {}, parentCategoryId: {}, rootOnly: {}", 
-                    textSearch, enabled, visible, productTypeId, parentCategoryId, rootOnly);
+                                                                 String productCategorySlug, Pageable pageable) {
+        logger.debug("Getting product categories with enhanced criteria - textSearch: {}, enabled: {}, visible: {}, productTypeId: {}, parentCategoryId: {}, rootOnly: {}, productCategorySlug: {}", 
+                    textSearch, enabled, visible, productTypeId, parentCategoryId, rootOnly, productCategorySlug);
         
         // Handle rootOnly logic by converting to parentCategoryId = -1
         Long effectiveParentCategoryId = parentCategoryId;
@@ -100,7 +101,7 @@ public class ProductCategoryServiceImpl implements ProductCategoryService {
         }
         
         Page<ProductCategory> productCategoryPage = productCategoryRepository.findProductCategoriesByCriteriaPaginated(
-            textSearch, enabled, visible, productTypeId, effectiveParentCategoryId, pageable);
+            textSearch, enabled, visible, productTypeId, effectiveParentCategoryId, productCategorySlug, pageable);
         
         return productCategoryPage.map(this::convertToDto);
     }

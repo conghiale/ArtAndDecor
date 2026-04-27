@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.artanddecor.dto.BaseResponseDto;
 import org.artanddecor.dto.ContactDto;
 import org.artanddecor.dto.ContactRequest;
+import org.artanddecor.dto.CustomerContactRequestDto;
 import org.artanddecor.services.ContactService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -118,6 +119,52 @@ public class ContactController {
             logger.error("Error searching contacts: {}", e.getMessage(), e);
             return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(
                     "Failed to search contacts: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * Send customer contact email
+     * Public access for customers to send contact information to admin/managers
+     */
+    @Operation(
+        summary = "Send customer contact email", 
+        description = "Allows customers to send their contact information and message to all enabled contact addresses. No authentication required."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Contact email sent successfully",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "400", description = "Validation error or invalid request data",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "500", description = "Internal server error - Failed to send email",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class)))
+    })
+    @PostMapping("/send-contact-email")
+    public ResponseEntity<BaseResponseDto<Void>> sendCustomerContactEmail(
+        @Parameter(description = "Customer contact information and message", required = true)
+        @Valid @RequestBody CustomerContactRequestDto customerContactRequest) {
+        
+        logger.info("Received customer contact email request from: {} - {}", 
+                   customerContactRequest.getCustomerName(), customerContactRequest.getCustomerEmail());
+        
+        try {
+            contactService.sendCustomerContactEmail(customerContactRequest);
+            
+            logger.info("Customer contact email sent successfully from: {}", customerContactRequest.getCustomerEmail());
+            return ResponseEntity.ok(BaseResponseDto.success(
+                    "Email liên hệ đã được gửi thành công. Chúng tôi sẽ liên hệ lại với bạn trong thời gian sớm nhất."));
+                    
+        } catch (RuntimeException e) {
+            logger.error("Failed to send customer contact email from {}: {}", 
+                        customerContactRequest.getCustomerEmail(), e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(BaseResponseDto.serverError(
+                            "Không thể gửi email liên hệ: " + e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Unexpected error processing customer contact email from {}: {}", 
+                        customerContactRequest.getCustomerEmail(), e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(BaseResponseDto.serverError(
+                            "Lỗi hệ thống. Vui lòng thử lại sau."));
         }
     }
     
@@ -401,5 +448,4 @@ public class ContactController {
         }
     }
     
-
 }

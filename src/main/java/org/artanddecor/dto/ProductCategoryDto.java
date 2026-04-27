@@ -39,7 +39,7 @@ public class ProductCategoryDto {
 
     private Boolean productCategoryVisible;
 
-    private Long seoMetaId;
+    private SeoMetaDto seoMeta;
 
     private Long productTypeId;
 

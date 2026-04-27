@@ -5,6 +5,7 @@ import org.artanddecor.services.PolicyService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.mail.MailProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -38,6 +39,12 @@ public class MailConfiguration {
 
     private final MailProperties mailProperties;
     private final PolicyService policyService;
+    
+    @Value("${app.environment:prod}")
+    private String appEnvironment;
+    
+    @Value("${app.mail.debug.enabled:false}")
+    private boolean mailDebugEnabled;
 
     public MailConfiguration(
             MailProperties mailProperties,
@@ -72,6 +79,7 @@ public class MailConfiguration {
     @Bean
     @Primary
     public JavaMailSender javaMailSender() {
+        logger.info("=== CREATING JAVAMAIL SENDER BEAN ===" );
         JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
         
         try {
@@ -79,23 +87,33 @@ public class MailConfiguration {
             Properties emailConfig = getPolicyEmailConfiguration();
             
             if (emailConfig != null && !emailConfig.isEmpty()) {
-                logger.info("Configuring mail sender from POLICY table settings");
+                logger.info("✓ Configuring mail sender from POLICY table settings");
                 configureFromPolicy(mailSender, emailConfig);
+                logger.info("✓ JavaMailSender configured successfully from POLICY table");
             } else {
-                logger.info("POLICY email configuration not available, using application.properties fallback");
+                logger.info("✗ POLICY email configuration not available, using application.properties fallback");
                 configureFromProperties(mailSender);
+                logger.info("✓ JavaMailSender configured successfully from application.properties");
             }
             
         } catch (Exception e) {
-            logger.warn("Failed to configure mail from POLICY table, using application.properties: {}", e.getMessage());
+            logger.warn("✗ Failed to configure mail from POLICY table, using application.properties: {}", e.getMessage());
             configureFromProperties(mailSender);
+            logger.info("✓ JavaMailSender configured from application.properties (fallback)");
         }
+        
+        // Log final configuration for verification (only in dev/test)
+        if (isMailDebugAllowed()) {
+            logFinalMailConfiguration(mailSender);
+        }
+        logger.info("=== JAVAMAIL SENDER BEAN CREATION COMPLETED ===");
         
         return mailSender;
     }
 
     /**
      * Configure mail sender from POLICY table settings
+     * Enhanced for Gmail SMTP compatibility
      */
     private void configureFromPolicy(JavaMailSenderImpl mailSender, Properties config) {
         // Basic settings
@@ -109,25 +127,48 @@ public class MailConfiguration {
         mailSender.setUsername(username);
         mailSender.setPassword(password);
 
-        // Properties - Enhanced with new configuration
+        logger.info("Basic SMTP config - Host: {}, Port: {}, Username: {}, Password: {}", 
+                   host, portStr, username, password != null ? "***SET***" : "***NOT SET***");
+
+        // Properties - Enhanced for Gmail compatibility
         Properties props = mailSender.getJavaMailProperties();
         props.put("mail.transport.protocol", "smtp");
         props.put("mail.smtp.auth", config.getProperty(SMTP_AUTH, "true"));
         props.put("mail.smtp.starttls.enable", config.getProperty(SMTP_STARTTLS_ENABLE, "true"));
         props.put("mail.smtp.starttls.required", config.getProperty(SMTP_STARTTLS_REQUIRED, "true"));
-        props.put("mail.smtp.ssl.trust", config.getProperty(SMTP_SSL_TRUST, "*"));
-        props.put("mail.smtp.ssl.protocols", config.getProperty(SMTP_SSL_PROTOCOLS, "TLSv1.2"));
+        
+        // Gmail-specific SSL/TLS optimization
+        String sslTrust = config.getProperty(SMTP_SSL_TRUST, "*");
+        if ("*".equals(sslTrust) && "smtp.gmail.com".equals(host)) {
+            logger.info("Optimizing SSL trust for Gmail: setting to smtp.gmail.com instead of *");
+            props.put("mail.smtp.ssl.trust", "smtp.gmail.com");
+        } else {
+            props.put("mail.smtp.ssl.trust", sslTrust);
+        }
+        
+        props.put("mail.smtp.ssl.protocols", config.getProperty(SMTP_SSL_PROTOCOLS, "TLSv1.2 TLSv1.3"));
+        
+        // Additional Gmail-specific properties for reliability
+        if ("smtp.gmail.com".equals(host)) {
+            logger.info("Applying Gmail-specific SMTP optimizations");
+            props.put("mail.smtp.ssl.checkserveridentity", "true");
+            props.put("mail.smtp.ssl.enable", "false"); // Use STARTTLS instead
+            props.put("mail.smtp.socketFactory.fallback", "false");
+        }
         
         // Timeout configurations
-        props.put("mail.smtp.connectiontimeout", config.getProperty(SMTP_CONNECTIONTIMEOUT, "5000"));
-        props.put("mail.smtp.timeout", config.getProperty(SMTP_TIMEOUT, "5000"));
-        props.put("mail.smtp.writetimeout", config.getProperty(SMTP_WRITETIMEOUT, "5000"));
+        props.put("mail.smtp.connectiontimeout", config.getProperty(SMTP_CONNECTIONTIMEOUT, "10000"));
+        props.put("mail.smtp.timeout", config.getProperty(SMTP_TIMEOUT, "10000"));
+        props.put("mail.smtp.writetimeout", config.getProperty(SMTP_WRITETIMEOUT, "10000"));
         
         // Debug configuration
         props.put("mail.debug", config.getProperty(SMTP_DEBUG, "false"));
 
-        logger.info("Mail configured from POLICY - Host: {}, Port: {}, Username: {}, SSL Trust: {}", 
-                   host, portStr, username, config.getProperty(SMTP_SSL_TRUST, "*"));
+        logger.info("SMTP Properties configured - Auth: {}, STARTTLS: {}, SSL Trust: {}, SSL Protocols: {}", 
+                   props.getProperty("mail.smtp.auth"),
+                   props.getProperty("mail.smtp.starttls.enable"),
+                   props.getProperty("mail.smtp.ssl.trust"),
+                   props.getProperty("mail.smtp.ssl.protocols"));
     }
 
     /**
@@ -361,6 +402,83 @@ public class MailConfiguration {
      */
     public String getSystemSupportPhone() {
         return getEmailConfigValue(SYSTEM_SUPPORT_PHONE, DEFAULT_SUPPORT_PHONE);
+    }
+
+    /**
+     * Log final JavaMailSender configuration after creation
+     * Only logs in dev/test environments
+     */
+    private void logFinalMailConfiguration(JavaMailSenderImpl mailSender) {
+        try {
+            logger.info("--- Final JavaMailSender Configuration ---");
+            logger.debug("Host: {} | Port: {} | Username: {} | Password: {}",
+                       mailSender.getHost(), 
+                       mailSender.getPort(), 
+                       mailSender.getUsername(),
+                       mailSender.getPassword() != null ? "***CONFIGURED***" : "***NOT SET***");
+            
+            Properties props = mailSender.getJavaMailProperties();
+            logger.debug("Critical SMTP Properties:");
+            logger.debug("  mail.smtp.auth: {}", props.getProperty("mail.smtp.auth"));
+            logger.debug("  mail.smtp.starttls.enable: {}", props.getProperty("mail.smtp.starttls.enable"));
+            logger.debug("  mail.smtp.ssl.trust: {}", props.getProperty("mail.smtp.ssl.trust"));
+            logger.debug("  mail.smtp.ssl.protocols: {}", props.getProperty("mail.smtp.ssl.protocols"));
+            logger.debug("  mail.debug: {}", props.getProperty("mail.debug"));
+            logger.info("--- End Configuration ---");
+        } catch (Exception e) {
+            logger.warn("Failed to log final mail configuration: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Debug method for troubleshooting mail configuration issues
+     * Only works in dev/test environments
+     */
+    public void debugMailConfiguration() {
+        // Only debug in dev/test environments, never in production
+        if (!isMailDebugAllowed()) {
+            logger.debug("Mail debug is disabled in {} environment", appEnvironment);
+            return;
+        }
+
+        try {
+            logger.info("=== MAIL CONFIGURATION DEBUG ===" );
+            logger.info("Environment: {} | Debug Enabled: {}", appEnvironment, mailDebugEnabled);
+            
+            // Show current POLICY configuration
+            Properties policyProps = getPolicyEmailConfiguration();
+            if (policyProps != null) {
+                logger.info("POLICY Configuration:");
+                logger.info("  Host: {}", policyProps.getProperty(SMTP_HOST));
+                logger.info("  Port: {}", policyProps.getProperty(SMTP_PORT));
+                logger.info("  Username: {}", policyProps.getProperty(SMTP_USERNAME));
+                logger.info("  Password: {}", policyProps.getProperty(SMTP_PASSWORD) != null ? "***SET***" : "***NOT SET***");
+                logger.info("  Auth: {}", policyProps.getProperty(SMTP_AUTH));
+                logger.info("  STARTTLS Enable: {}", policyProps.getProperty(SMTP_STARTTLS_ENABLE));
+                logger.info("  SSL Trust: {}", policyProps.getProperty(SMTP_SSL_TRUST));
+                logger.info("  SSL Protocols: {}", policyProps.getProperty(SMTP_SSL_PROTOCOLS));
+            } else {
+                logger.info("No POLICY configuration available");
+            }
+            
+            logger.info("=== END DEBUG ===");
+        } catch (Exception e) {
+            logger.error("Failed to debug mail configuration: {}", e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Check if mail debug is allowed based on environment and configuration
+     * @return true if debug is allowed, false otherwise
+     */
+    private boolean isMailDebugAllowed() {
+        // Never debug in production
+        if ("prod".equalsIgnoreCase(appEnvironment) || "production".equalsIgnoreCase(appEnvironment)) {
+            return false;
+        }
+        
+        // Only debug if explicitly enabled and in dev/test environment
+        return mailDebugEnabled && ("dev".equalsIgnoreCase(appEnvironment) || "test".equalsIgnoreCase(appEnvironment));
     }
 
     // Default values constants

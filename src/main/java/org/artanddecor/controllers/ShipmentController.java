@@ -467,4 +467,33 @@ public class ShipmentController {
             return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to update shipment: " + e.getMessage()));
         }
     }
+
+    /**
+     * Update shipment status
+     * Role: ADMIN only
+     */
+    @PatchMapping("/{shipmentId}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+        summary = "Update shipment status",
+        description = "Update shipment status by changing the shipment state ID. Admin access required."
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<BaseResponseDto<ShipmentDto>> updateShipmentStatus(
+            @Parameter(description = "Shipment ID")
+            @PathVariable Long shipmentId,
+            
+            @Parameter(description = "New shipment state ID")
+            @RequestParam Long shipmentStateId) {
+
+        logger.info("Updating shipment status - shipmentId: {}, newStateId: {}", shipmentId, shipmentStateId);
+
+        try {
+            ShipmentDto updatedShipment = shipmentService.updateShipmentState(shipmentId, shipmentStateId, "Status updated by admin");
+            return ResponseEntity.ok(BaseResponseDto.success("Shipment status updated successfully", updatedShipment));
+        } catch (Exception e) {
+            logger.error("Error updating shipment status: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to update shipment status: " + e.getMessage()));
+        }
+    }
 }

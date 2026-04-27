@@ -40,12 +40,13 @@ public interface ProductCategoryService {
      * @param productTypeId Filter by product type ID
      * @param parentCategoryId Filter by parent category ID (null for all)
      * @param rootOnly Filter only root categories (cannot be used with parentCategoryId)
+     * @param productCategorySlug Filter by product category slug
      * @param pageable Pagination and sorting information
      * @return Page of ProductCategoryDto matching criteria
      */
     Page<ProductCategoryDto> getProductCategoriesByCriteria(String textSearch, Boolean enabled, Boolean visible, 
                                                            Long productTypeId, Long parentCategoryId, Boolean rootOnly, 
-                                                           Pageable pageable);
+                                                           String productCategorySlug, Pageable pageable);
 
     // =============================================
     // CRUD OPERATIONS

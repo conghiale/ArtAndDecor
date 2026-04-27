@@ -81,11 +81,11 @@ public class ProductRequestDto {
     private Long primaryImageId;
     
     /**
-     * List of product attributes to associate with this product
-     * Each attribute contains productAttrId (SIZE, COLOR, etc), value, and quantity
-     * These will be saved to PRODUCT_ATTRIBUTE table
-     * Optional - product can be created without attributes
+     * List of product variants to associate with this product
+     * Each variant contains productAttributeId (from PRODUCT_ATTRIBUTE table), quantity, and enabled status
+     * These will be saved to PRODUCT_VARIANT table
+     * Optional - product can be created without variants
      */
     @Valid
-    private List<ProductAttributeRequestDto> productAttributes;
+    private List<ProductVariantRequestDto> productVariants;
 }

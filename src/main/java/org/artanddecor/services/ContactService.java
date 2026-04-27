@@ -2,6 +2,8 @@ package org.artanddecor.services;
 
 import org.artanddecor.dto.ContactDto;
 import org.artanddecor.dto.ContactRequest;
+import org.artanddecor.dto.CustomerContactRequestDto;
+import org.artanddecor.dto.SeoMetaRequestDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import java.util.List;
@@ -47,7 +49,7 @@ public interface ContactService {
     
     /**
      * Create new contact
-     * @param contactRequest the contact request data
+     * @param contactRequest the contact request data (includes optional SEO meta)
      * @return created ContactDto with ID
      * @throws IllegalArgumentException if validation fails or contact already exists
      */
@@ -56,7 +58,7 @@ public interface ContactService {
     /**
      * Update existing contact
      * @param contactId the contact ID to update
-     * @param contactRequest the contact request data with updated values
+     * @param contactRequest the contact request data with updated values (includes optional SEO meta)
      * @return updated ContactDto
      * @throws IllegalArgumentException if contact not found or validation fails
      */
@@ -85,4 +87,11 @@ public interface ContactService {
      * @return total count of contacts in database
      */
     long getTotalContactCount();
+    
+    /**
+     * Send customer contact email to all enabled contact addresses
+     * @param customerContactRequest the customer contact request data
+     * @throws RuntimeException if email sending fails
+     */
+    void sendCustomerContactEmail(CustomerContactRequestDto customerContactRequest);
 }

@@ -8,15 +8,17 @@ import org.artanddecor.model.Order;
 import org.artanddecor.model.OrderItem;
 import org.artanddecor.model.OrderState;
 import org.artanddecor.model.OrderStateHistory;
+import org.artanddecor.model.Payment;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
 /**
  * Unified Order Mapper Utility for converting between Entity and DTO
  * Consolidates all Order-related mappers into single class for efficiency
- * Version: 8.0 - DISCOUNT functionality removed
+ * Version: 10.0 - Payment snapshot integration (no relationship mapping)
  */
 @Component
 public class OrderMapperUtil {
@@ -38,6 +40,7 @@ public class OrderMapperUtil {
         dto.setOrderCode(order.getOrderCode());
         dto.setOrderSlug(order.getOrderSlug());
         dto.setUserId(order.getUser() != null ? order.getUser().getUserId() : null);
+        dto.setSessionId(order.getSessionId());
         dto.setCustomerName(order.getCustomerName());
         dto.setCustomerPhoneNumber(order.getCustomerPhoneNumber());
         dto.setCustomerEmail(order.getCustomerEmail());
@@ -69,12 +72,32 @@ public class OrderMapperUtil {
         dto.setDiscountType(order.getDiscountType());
         dto.setDiscountValue(order.getDiscountValue());
 
+        // Set payment snapshot values from Payment entities (latest payment)
+        if (order.getPayments() != null && !order.getPayments().isEmpty()) {
+            // Get the latest payment (most recent one)
+            Payment latestPayment = order.getPayments().stream()
+                    .max((p1, p2) -> p1.getCreatedDt().compareTo(p2.getCreatedDt()))
+                    .orElse(null);
+            
+            if (latestPayment != null) {
+                dto.setPaymentMethod(latestPayment.getPaymentMethod() != null ? 
+                    latestPayment.getPaymentMethod().getPaymentMethodName() : null);
+                dto.setPaymentState(latestPayment.getPaymentState() != null ? 
+                    latestPayment.getPaymentState().getPaymentStateName() : null);
+                dto.setTransactionId(latestPayment.getTransactionId());
+                dto.setPaymentRemark(latestPayment.getPaymentRemark());
+            }
+        }
+
         // Map OrderItems if loaded
         if (order.getOrderItems() != null && !order.getOrderItems().isEmpty()) {
             dto.setOrderItems(order.getOrderItems().stream()
                     .map(this::mapToDto)
                     .collect(java.util.stream.Collectors.toList()));
         }
+
+        // Compute additional fields for complete OrderDto response
+        computeAdditionalFields(dto, order);
 
         return dto;
     }
@@ -93,6 +116,7 @@ public class OrderMapperUtil {
         entity.setOrderId(orderDto.getOrderId());
         entity.setOrderCode(orderDto.getOrderCode());
         entity.setOrderSlug(orderDto.getOrderSlug());
+        entity.setSessionId(orderDto.getSessionId());
         entity.setCustomerName(orderDto.getCustomerName());
         entity.setCustomerPhoneNumber(orderDto.getCustomerPhoneNumber());
         entity.setCustomerEmail(orderDto.getCustomerEmail());
@@ -119,6 +143,39 @@ public class OrderMapperUtil {
     }
 
     /**
+     * Compute additional fields for OrderDto based on Order entity data
+     * @param dto OrderDto to populate computed fields
+     * @param order Order entity with source data
+     */
+    private void computeAdditionalFields(OrderDto dto, Order order) {
+        // Compute hasValidDiscount: true if discount code exists and discount amount > 0
+        dto.setHasValidDiscount(
+            order.getDiscountCode() != null && 
+            !order.getDiscountCode().trim().isEmpty() &&
+            order.getDiscountAmount() != null &&
+            order.getDiscountAmount().compareTo(BigDecimal.ZERO) > 0
+        );
+
+        // Compute currentOrderStatus from orderState
+        if (order.getOrderState() != null) {
+            dto.setCurrentOrderStatus(order.getOrderState().getOrderStateName());
+        }
+
+        // Compute savedAmount: equals to discountAmount (amount saved through discount)
+        dto.setSavedAmount(order.getDiscountAmount() != null ? order.getDiscountAmount() : BigDecimal.ZERO);
+        
+        // Compute totalItems: sum of all order item quantities
+        if (order.getOrderItems() != null && !order.getOrderItems().isEmpty()) {
+            Integer totalItems = order.getOrderItems().stream()
+                    .mapToInt(OrderItem::getQuantity)
+                    .sum();
+            dto.setTotalItems(totalItems);
+        } else {
+            dto.setTotalItems(0);
+        }
+    }
+
+    /**
      * Map Order entity to OrderDto without loading OrderItems (for performance)
      * @param order Order entity
      * @return OrderDto without order items
@@ -133,6 +190,7 @@ public class OrderMapperUtil {
         dto.setOrderCode(order.getOrderCode());
         dto.setOrderSlug(order.getOrderSlug());
         dto.setUserId(order.getUser() != null ? order.getUser().getUserId() : null);
+        dto.setSessionId(order.getSessionId());
         dto.setCustomerName(order.getCustomerName());
         dto.setCustomerPhoneNumber(order.getCustomerPhoneNumber());
         dto.setCustomerEmail(order.getCustomerEmail());
@@ -163,6 +221,26 @@ public class OrderMapperUtil {
         dto.setDiscountCode(order.getDiscountCode());
         dto.setDiscountType(order.getDiscountType());
         dto.setDiscountValue(order.getDiscountValue());
+
+        // Set payment snapshot values from Payment entities (latest payment)
+        if (order.getPayments() != null && !order.getPayments().isEmpty()) {
+            // Get the latest payment (most recent one)
+            Payment latestPayment = order.getPayments().stream()
+                    .max((p1, p2) -> p1.getCreatedDt().compareTo(p2.getCreatedDt()))
+                    .orElse(null);
+            
+            if (latestPayment != null) {
+                dto.setPaymentMethod(latestPayment.getPaymentMethod() != null ? 
+                    latestPayment.getPaymentMethod().getPaymentMethodName() : null);
+                dto.setPaymentState(latestPayment.getPaymentState() != null ? 
+                    latestPayment.getPaymentState().getPaymentStateName() : null);
+                dto.setTransactionId(latestPayment.getTransactionId());
+                dto.setPaymentRemark(latestPayment.getPaymentRemark());
+            }
+        }
+
+        // Compute additional fields
+        computeAdditionalFields(dto, order);
 
         // Skip OrderItems loading for performance
         dto.setOrderItems(null);

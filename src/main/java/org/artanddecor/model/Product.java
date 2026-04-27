@@ -86,7 +86,7 @@ public class Product {
 
     @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @ToString.Exclude
-    private List<ProductAttribute> productAttributes;
+    private List<ProductVariant> productVariants;
 
     @OneToMany(mappedBy = "product", fetch = FetchType.LAZY)
     @ToString.Exclude

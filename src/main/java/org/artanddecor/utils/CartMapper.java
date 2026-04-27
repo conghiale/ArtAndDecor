@@ -77,6 +77,7 @@ public class CartMapper {
         CartItemDto dto = new CartItemDto();
         dto.setCartItemId(cartItem.getCartItemId());
         dto.setQuantity(cartItem.getCartItemQuantity());
+        dto.setCartItemUnitPrice(cartItem.getCartItemUnitPrice()); // Frontend-provided unit price
         dto.setTotalPrice(cartItem.getCartItemTotalPrice());
         dto.setCreatedDt(cartItem.getCreatedDt());
         dto.setModifiedDt(cartItem.getModifiedDt());

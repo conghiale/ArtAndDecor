@@ -28,16 +28,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     Optional<Product> findByProductSlug(String productSlug);
 
     /**
-     * Find product by name
-     */
-    Optional<Product> findByProductName(String productName);
-
-    /**
-     * Find product by code
-     */
-    Optional<Product> findByProductCode(String productCode);
-
-    /**
      * Check if slug exists (for validation)
      */
     boolean existsByProductSlug(String productSlug);
@@ -57,7 +47,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     // =============================================
 
     /**
-     * Search products by multiple criteria with pagination
+     * Search products by multiple criteria with pagination including slug filtering
      */
     @Query("SELECT p FROM Product p " +
            "WHERE (:textSearch IS NULL OR (" +
@@ -76,6 +66,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
            "AND (:productCode IS NULL OR LOWER(p.productCode) LIKE LOWER(CONCAT('%', :productCode, '%'))) " +
            "AND (:featured IS NULL OR p.productFeatured = :featured) " +
            "AND (:highlighted IS NULL OR p.productHighlighted = :highlighted) " +
+           "AND (:productCategorySlug IS NULL OR p.productCategory.productCategorySlug = :productCategorySlug) " +
+           "AND (:productTypeSlug IS NULL OR p.productCategory.productType.productTypeSlug = :productTypeSlug) " +
            "ORDER BY p.createdDt DESC")
     Page<Product> findProductsByCriteriaPaginated(
         @Param("textSearch") String textSearch,
@@ -89,68 +81,10 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         @Param("productCode") String productCode,
         @Param("featured") Boolean featured,
         @Param("highlighted") Boolean highlighted,
+        @Param("productCategorySlug") String productCategorySlug,
+        @Param("productTypeSlug") String productTypeSlug,
         Pageable pageable
     );
-
-    /**
-     * Find all enabled products
-     */
-    @Query("SELECT p FROM Product p WHERE p.productEnabled = true ORDER BY p.productName ASC")
-    List<Product> findAllEnabledProducts();
-
-    /**
-     * Find products by category
-     */
-    @Query("SELECT p FROM Product p " +
-           "WHERE p.productCategory.productCategoryId = :categoryId " +
-           "AND p.productEnabled = true " +
-           "ORDER BY p.productName ASC")
-    List<Product> findByProductCategoryId(@Param("categoryId") Long categoryId);
-
-    /**
-     * Find enabled products by category slug
-     */
-    @Query("SELECT p FROM Product p " +
-           "WHERE p.productCategory.productCategorySlug = :categorySlug " +
-           "AND p.productEnabled = true " +
-           "ORDER BY p.productName ASC")
-    List<Product> findEnabledProductsByCategorySlug(@Param("categorySlug") String categorySlug);
-
-    /**
-     * Find enabled products by category slug with pagination
-     */
-    @Query("SELECT p FROM Product p " +
-           "WHERE p.productCategory.productCategorySlug = :categorySlug " +
-           "AND p.productEnabled = true " +
-           "ORDER BY p.createdDt DESC, p.productName ASC")
-    Page<Product> findEnabledProductsByCategorySlugPaginated(@Param("categorySlug") String categorySlug, Pageable pageable);
-
-    /**
-     * Find enabled products by type slug
-     */
-    @Query("SELECT p FROM Product p " +
-           "WHERE p.productCategory.productType.productTypeSlug = :typeSlug " +
-           "AND p.productEnabled = true " +
-           "ORDER BY p.productName ASC")
-    List<Product> findEnabledProductsByTypeSlug(@Param("typeSlug") String typeSlug);
-
-    /**
-     * Find enabled products by type slug with pagination
-     */
-    @Query("SELECT p FROM Product p " +
-           "WHERE p.productCategory.productType.productTypeSlug = :typeSlug " +
-           "AND p.productEnabled = true " +
-           "ORDER BY p.createdDt DESC, p.productName ASC")
-    Page<Product> findEnabledProductsByTypeSlugPaginated(@Param("typeSlug") String typeSlug, Pageable pageable);
-
-    /**
-     * Find products by state
-     */
-    @Query("SELECT p FROM Product p " +
-           "WHERE p.productState.productStateId = :stateId " +
-           "AND p.productEnabled = true " +
-           "ORDER BY p.productName ASC")
-    List<Product> findByProductStateId(@Param("stateId") Long stateId);
 
     /**
      * Find products in stock
@@ -172,40 +106,24 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     Page<Product> findTopSellingProducts(Pageable pageable);
 
     /**
-     * Find featured products
+     * Find products by image IDs with optional selling status filter
+     * @param imageIds List of image IDs to search for
+     * @param isSelling Filter for selling products (enabled, active state, in stock)
+     * @param pageable Pagination information
+     * @return Page of products matching criteria
      */
-    @Query("SELECT p FROM Product p " +
-           "WHERE p.productEnabled = true " +
-           "AND p.productFeatured = true " +
+    @Query("SELECT DISTINCT p FROM Product p " +
+           "JOIN p.productImages pi " +
+           "WHERE pi.image.imageId IN :imageIds " +
+           "AND (:isSelling IS NULL OR (" +
+           "    :isSelling = true AND p.productEnabled = true AND p.productState.productStateId = 1 AND p.stockQuantity > 0" +
+           ") OR (" +
+           "    :isSelling = false AND (p.productEnabled = false OR p.productState.productStateId != 1 OR p.stockQuantity = 0)" +
+           ")) " +
            "ORDER BY p.createdDt DESC")
-    List<Product> findFeaturedProducts();
-
-    /**
-     * Find highlighted products
-     */
-    @Query("SELECT p FROM Product p " +
-           "WHERE p.productEnabled = true " +
-           "AND p.productHighlighted = true " +
-           "ORDER BY p.createdDt DESC")
-    List<Product> findHighlightedProducts();
-
-    /**
-     * Find latest products (most recently created)
-     */
-    @Query("SELECT p FROM Product p " +
-           "WHERE p.productEnabled = true " +
-           "ORDER BY p.createdDt DESC")
-    Page<Product> findLatestProducts(Pageable pageable);
-
-    /**
-     * Get product count by category
-     */
-    @Query("SELECT COUNT(p) FROM Product p WHERE p.productCategory.productCategoryId = :categoryId AND p.productEnabled = true")
-    Long countByProductCategoryId(@Param("categoryId") Long categoryId);
-
-    /**
-     * Get product count by state
-     */
-    @Query("SELECT COUNT(p) FROM Product p WHERE p.productState.productStateId = :stateId AND p.productEnabled = true")
-    Long countByProductStateId(@Param("stateId") Long stateId);
+    Page<Product> findProductsByImageIdsWithSellingFilter(
+        @Param("imageIds") List<Long> imageIds,
+        @Param("isSelling") Boolean isSelling,
+        Pageable pageable
+    );
 }

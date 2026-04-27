@@ -44,6 +44,9 @@ public class CartItem {
     @Column(name = "CART_ITEM_QUANTITY", nullable = false)
     private Integer cartItemQuantity = 1;
 
+    @Column(name = "CART_ITEM_UNIT_PRICE", precision = 15, scale = 2)
+    private BigDecimal cartItemUnitPrice;
+
     @Column(name = "CART_ITEM_TOTAL_PRICE", nullable = false, precision = 15, scale = 2)
     private BigDecimal cartItemTotalPrice;
 
@@ -78,15 +81,20 @@ public class CartItem {
     }
 
     /**
-     * Calculate unit price based on product and selected attributes
-     * Uses the highest productAttributePrice from selected attributes, 
-     * or falls back to product price if no attributes have prices > 0
+     * Calculate unit price with simplified logic for entity level
+     * Priority: 1) cartItemUnitPrice (from frontend/service), 2) Max attribute price, 3) Product price
+     * Note: Policy-based pricing is handled at service layer before setting cartItemUnitPrice
      * @return Unit price for this cart item
      */
     public BigDecimal calculateUnitPrice() {
-        BigDecimal maxAttributePrice = BigDecimal.ZERO;
+        // Priority 1: If cartItemUnitPrice is set (from frontend/service), use it
+        if (cartItemUnitPrice != null && cartItemUnitPrice.compareTo(BigDecimal.ZERO) > 0) {
+            logger.debug("Using set unit price {} for cart item {}", cartItemUnitPrice, cartItemId);
+            return cartItemUnitPrice;
+        }
         
-        // Check selected attributes for prices
+        // Priority 2: Fallback to maximum attribute price (legacy logic)
+        BigDecimal maxAttributePrice = BigDecimal.ZERO;
         if (cartItemAttributes != null && !cartItemAttributes.isEmpty()) {
             for (CartItemAttribute cartItemAttribute : cartItemAttributes) {
                 if (cartItemAttribute.getProductAttribute() != null) {
@@ -100,11 +108,13 @@ public class CartItem {
             }
         }
         
-        // Use attribute price if found, otherwise use product price
         if (maxAttributePrice.compareTo(BigDecimal.ZERO) > 0) {
-            logger.debug("Using attribute price {} for cart item {}", maxAttributePrice, cartItemId);
+            logger.debug("Using max attribute price {} for cart item {}", maxAttributePrice, cartItemId);
             return maxAttributePrice;
-        } else if (product != null && product.getProductPrice() != null) {
+        }
+        
+        // Priority 3: Fallback to product price
+        if (product != null && product.getProductPrice() != null) {
             logger.debug("Using product price {} for cart item {}", product.getProductPrice(), cartItemId);
             return product.getProductPrice();
         }
@@ -169,5 +179,22 @@ public class CartItem {
      */
     public boolean hasAttributes() {
         return cartItemAttributes != null && !cartItemAttributes.isEmpty();
+    }
+    
+    /**
+     * Set unit price (from frontend calculation)
+     * @param cartItemUnitPrice Unit price calculated on frontend
+     */
+    public void setCartItemUnitPrice(BigDecimal cartItemUnitPrice) {
+        this.cartItemUnitPrice = cartItemUnitPrice;
+        logger.debug("Set cart item unit price to {} for cart item {}", cartItemUnitPrice, cartItemId);
+    }
+    
+    /**
+     * Get unit price
+     * @return Unit price for this cart item
+     */
+    public BigDecimal getCartItemUnitPrice() {
+        return cartItemUnitPrice;
     }
 }

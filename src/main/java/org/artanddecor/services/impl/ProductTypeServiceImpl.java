@@ -48,11 +48,11 @@ public class ProductTypeServiceImpl implements ProductTypeService {
     }
 
     @Override
-    public Page<ProductTypeDto> getProductTypesByCriteria(String textSearch, Boolean enabled, Pageable pageable) {
-        logger.debug("Getting product types with criteria - textSearch: {}, enabled: {}", textSearch, enabled);
+    public Page<ProductTypeDto> getProductTypesByCriteria(String textSearch, Boolean enabled, String productTypeSlug, Pageable pageable) {
+        logger.debug("Getting product types with criteria - textSearch: {}, enabled: {}, productTypeSlug: {}", textSearch, enabled, productTypeSlug);
         
         Page<ProductType> productTypePage = productTypeRepository.findProductTypesByCriteriaPaginated(
-            textSearch, enabled, pageable);
+            textSearch, enabled, productTypeSlug, pageable);
         
         return productTypePage.map(this::convertToDto);
     }

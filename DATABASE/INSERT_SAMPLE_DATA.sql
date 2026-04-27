@@ -14,22 +14,14 @@ USE `ART_AND_DECOR`;
 
 -- Insert Policy Data
 INSERT INTO `POLICY` (`POLICY_NAME`, `POLICY_SLUG`, `POLICY_VALUE`, `POLICY_DISPLAY_NAME`, `POLICY_REMARK`, `POLICY_ENABLED`) VALUES
-('FAVICON', 'favicon', 'favicon.ico', 'Favicon file name', 'Tên file favicon', TRUE),
-('SOCIAL_IMAGE', 'social-image', 'social-image.jpg', 'Social image file name', 'Tên file ảnh mạng xã hội', TRUE),
-('MENU_HEADER_TEXT_03', 'menu-header-text-03', 'Shops', 'Shops menu text', 'Text menu cửa hàng', TRUE),
+('PAYMENT_BANK_INFO', 'payment-bank-info', 'bank.name=Vietcombank
+		bank.account.name=NGUYEN VAN A
+		bank.account.number=123456789
+		bank.branch=Chi nhanh Nam Sai Gon
+		bank.bin=
+		bank.qr.code=https://img.vietqr.io/image/970436-123456789-compact.png', 'Thông Tin Ngân Hàng Thanh Toán', 'Configuration for payment bank information used in QR code generation. Contains bank details, account info, and payment templates.', TRUE),
 ('STORAGE_PATH', 'storage-path', '/home/maison-art/storage/uploads/', 'Storage path', 'Đường dẫn lưu trữ', TRUE),
-('MENU_HEADER_TEXT_05', 'menu-header-text-05', 'Liên hệ', 'Contact menu text', 'Text menu liên hệ', TRUE),
-('HERO_SECTION_TITLE', 'hero-section-title', 'Lorem Ipsum', 'Hero section main title', 'Tiêu đề chính của hero section', TRUE),
-('HERO_SECTION_SUBTITLE', 'hero-section-subtitle', 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Faucibus in libero risus semper habitant arcu eget.', 'Hero section subtitle', 'Phụ đề của hero section', TRUE),
-('SECTION_TITLE', 'section-title', 'LOREM', 'General section title', 'Tiêu đề section chung', TRUE),
-('SECTION_SUBTITLE', 'section-subtitle', 'LOREM IPSUM DOLOR SIT AMET.', 'General section subtitle', 'Phụ đề section chung', TRUE),
-('SECTION_IMAGE_01', 'section-image-01', 'pho-co-hoi-an.jpg', 'First section image filename', 'Tên file ảnh section thứ nhất', TRUE),
-('SECTION_IMAGE_02', 'section-image-02', 'nui-phu-si.jpg', 'Second section image filename', 'Tên file ảnh section thứ hai', TRUE),
-('SECTION_DESCRIPTION_01', 'section-description-01', 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Faucibus in libero risus 01...', 'First section description', 'Mô tả section thứ nhất', TRUE),
-('SECTION_DESCRIPTION_02', 'section-description-02', 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Faucibus in libero risus 02...', 'Second section description', 'Mô tả section thứ hai', TRUE),
-('WEBSITE_LOGO_ALT_TEXT', 'website-logo-alt-text', 'Maison Art', 'Website logo alt text', 'Alt text cho logo website', TRUE),
-('FOOTER_ABOUT_TEXT', 'footer-about-text', 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean commodo ligula eget dolor.', 'Footer about text', 'Text giới thiệu ở footer', TRUE),
-('FOOTER_COPYRIGHT_TEXT', 'footer-copyright-text', '© 2025 Palette & Co. Giữ toàn quyền.', 'Footer copyright text', 'Text bản quyền ở footer', TRUE),
+('AI_IMAGE_SEARCH_HOST', 'ai-image-search-host', 'http://ai-service:8000', 'AI Image Search Host', 'Hostname của service AI tìm kiếm hình ảnh', TRUE),
 
 -- Email Configuration Policy
 ('EMAIL_CONFIG', 'email-config', 'mail.smtp.ssl.protocols=TLSv1.2
@@ -55,7 +47,15 @@ mail.support.address=support@artanddecor.com
 
 system.name=Art and Decor E-commerce Platform
 system.website=https://artanddecor.com
-system.support.phone=+84-123-456-789', 'Email Configuration', 'Consolidated email configuration containing SMTP settings, sender info, and system details. Format: key=value separated by newlines.', TRUE);
+system.support.phone=+84-123-456-789', 'Email Configuration', 'Consolidated email configuration containing SMTP settings, sender info, and system details. Format: key=value separated by newlines.', TRUE),
+
+-- Product Attribute Price Mapping Policy
+('PRODUCT_ATTRIBUTE_PRICE_MAPPING', 'product-attribute-price-mapping', '30x40,vang=450000
+50x60,red,nhom=520000  
+blue,M=350000
+Canvas,Warm Colors,40x60=680000
+Paper,Cool Colors,20x30=280000
+Wood,Natural,50x70=750000', 'Product Attribute Price Mapping', 'Maps combinations of product attributes to their corresponding prices. Format: attribute1,attribute2=price (one per line). All listed attributes must be selected to match the price.', TRUE);
 
 -- Insert SEO Meta Data
 INSERT INTO `SEO_META`(`SEO_META_TITLE`, `SEO_META_DESCRIPTION`, `SEO_META_KEYWORDS`, `SEO_META_INDEX`, `SEO_META_FOLLOW`, `SEO_META_CANONICAL_URL`, `SEO_META_IMAGE_NAME`, `SEO_META_SCHEMA_TYPE`, `SEO_META_CUSTOM_JSON`, `SEO_META_ENABLED`) VALUES
@@ -254,10 +254,10 @@ INSERT INTO `BLOG` (`BLOG_CATEGORY_ID`, `BLOG_TITLE`, `BLOG_SLUG`, `BLOG_CONTENT
 
 -- INSERT SAMPLE USERS
 INSERT INTO `USER` (`USER_PROVIDER_ID`, `USER_ROLE_ID`, `USER_ENABLED`, `USER_NAME`, `PASSWORD`, `FIRST_NAME`, `LAST_NAME`, `PHONE_NUMBER`, `EMAIL`, `IMAGE_AVATAR_NAME`, `SOCIAL_MEDIA`, `LAST_LOGIN_DT`) VALUES
-(1, 2, TRUE, 'admin', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqyPw5TCGb2/nX8stqZqIvK', 'Admin', 'System', '0901234567', 'admin@artdecor.com', 'A1B2C3D4E5F6789012345678901234567890ABCD', '{"facebook": "admin.artdecor", "instagram": "artdecor_admin"}', '2026-01-21 09:15:00'),
-(1, 1, TRUE, 'customer01', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqyPw5TCGb2/nX8stqZqIvK', 'Nguyen', 'Van A', '0904567890', 'customer1@gmail.com', 'D4E5F6789012345678901234567890ABCDEF12', '{"instagram": "nguyenvana_art"}', '2026-01-19 16:20:00'),
-(1, 1, TRUE, 'customer02', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqyPw5TCGb2/nX8stqZqIvK', 'Tran', 'Thi B', '0905678901', 'customer2@gmail.com', 'E5F6789012345678901234567890ABCDEF123', NULL, '2026-01-19 11:10:00'),
-(2, 1, TRUE, 'google_user01', NULL, 'Alice', 'Johnson', NULL, 'alice.johnson@gmail.com', 'F6789012345678901234567890ABCDEF1234', '{"google": "alice.johnson.art"}', '2026-01-18 20:15:00'),
+(1, 2, TRUE, 'admin', '$2a$10$0lglb2AWikPFm2bi1/qkE.3J6f7MpkanMlxKnkm5ATgQ/p.iW6Ata', 'Admin', 'System', '0901234567', 'admin@artdecor.com', 'A1B2C3D4E5F6789012345678901234567890ABCD', '{"facebook": "admin.artdecor", "instagram": "artdecor_admin"}', '2026-01-21 09:15:00'),
+(1, 1, TRUE, 'Anh Đức', '$2a$10$eV8biMmMvLE9.E53P0l/Ju1./cYRQa5fuKeOskAi4lANLs06wuu3.', 'Đức', 'Ngáo', '0939652411', 'ABCDA@gmail.com', 'D4E5F6789012345678901234567890ABCDEF12', '{"instagram": "nguyenvana_art"}', '2026-01-19 16:20:00'),
+(1, 1, TRUE, 'hongquan', '$2a$10$0mRGdvLgZ.gGpEFUL3.w9.tXu7Qv4133u0B8GSjmJPZrmIWqPL5am', 'Nguyễn Hồng', 'Quân', '0367532567', 'hongquan@gmail.com', 'E5F6789012345678901234567890ABCDEF123', NULL, '2026-01-19 11:10:00'),
+(2, 2, TRUE, 'conghiale', '$2a$10$0lglb2AWikPFm2bi1/qkE.3J6f7MpkanMlxKnkm5ATgQ/p.iW6Ata', 'Le', 'Cong Nghia', 0826611778, 'legend.mighty28102002@gmail.com', 'F6789012345678901234567890ABCDEF1234', '{"google": "alice.johnson.art"}', '2026-01-18 20:15:00'),
 (3, 1, TRUE, 'facebook_user01', NULL, 'Bob', 'Smith', NULL, 'bob.smith@facebook.com', '789012345678901234567890ABCDEF12345', '{"facebook": "bob.smith.artist"}', '2026-01-18 08:30:00'),
 (1, 1, TRUE, 'customer03', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqyPw5TCGb2/nX8stqZqIvK', 'Le', 'Van C', '0906789012', 'customer3@yahoo.com', '89012345678901234567890ABCDEF123456', NULL, '2026-01-17 16:25:00');
 
@@ -296,93 +296,152 @@ INSERT INTO `PRODUCT_IMAGE` (`PRODUCT_ID`, `IMAGE_ID`, `PRODUCT_IMAGE_PRIMARY`) 
 (11, 3, TRUE),
 (12, 4, TRUE);
 
--- INSERT SAMPLE PRODUCT ATTRIBUTES WITH QUANTITIES
-INSERT INTO `PRODUCT_ATTRIBUTE` (`PRODUCT_ID`, `PRODUCT_ATTR_ID`, `PRODUCT_ATTRIBUTE_VALUE`, `PRODUCT_ATTRIBUTE_QUANTITY`, `PRODUCT_ATTRIBUTE_PRICE`) VALUES
+-- INSERT SAMPLE PRODUCT ATTRIBUTES (Master attribute definitions with pricing)
+INSERT INTO `PRODUCT_ATTRIBUTE` (`PRODUCT_ATTR_ID`, `PRODUCT_ATTRIBUTE_VALUE`, `PRODUCT_ATTRIBUTE_DISPLAY_NAME`, `PRODUCT_ATTRIBUTE_PRICE`) VALUES
+
+-- Size attributes
+(1, '40x60cm', 'Kích thước 40x60cm', 1500000.00),          -- Size 40x60cm with price 1.5M VND
+(1, '30x40cm', 'Kích thước 30x40cm', 1200000.00),          -- Size 30x40cm with price 1.2M VND
+(1, '50x70cm', 'Kích thước 50x70cm', 2000000.00),          -- Size 50x70cm with price 2M VND
+(1, '60x80cm', 'Kích thước 60x80cm', 2500000.00),          -- Size 60x80cm with price 2.5M VND
+(1, '50x60cm', 'Kích thước 50x60cm', 1800000.00),          -- Size 50x60cm with price 1.8M VND
+(1, '40x50cm', 'Kích thước 40x50cm', 1400000.00),          -- Size 40x50cm with price 1.4M VND
+(1, 'Large', 'Kích thước lớn', 3000000.00),                -- Large size with price 3M VND
+(1, 'Medium', 'Kích thước vừa', 2200000.00),               -- Medium size with price 2.2M VND
+(1, '25x35cm', 'Kích thước 25x35cm', 1400000.00),          -- Size 25x35cm with price 1.4M VND
+(1, '25x35cm', 'Kích thước 25x35cm (Cao cấp)', 1500000.00),          -- Size 25x35cm with price 1.5M VND (different price for product 8)
+(1, 'Large (40x60cm)', 'Kích thước lớn (40x60cm)', 2800000.00),  -- Large size (40x60cm) with price 2.8M VND
+(1, 'Medium (30x45cm)', 'Kích thước vừa (30x45cm)', 2000000.00), -- Medium size (30x45cm) with price 2M VND
+(1, '35x50cm', 'Kích thước 35x50cm', 2200000.00),          -- Size 35x50cm with price 2.2M VND
+(1, '25x35cm', 'Kích thước 25x35cm (Đặc biệt)', 1600000.00),          -- Size 25x35cm with price 1.6M VND (different price for product 10)
+(1, '24-piece set', 'Bộ 24 món', 850000.00),               -- 24-piece set with price 850K VND
+(1, '12-piece set', 'Bộ 12 món', 500000.00),               -- 12-piece set with price 500K VND
+(1, 'A3 (297x420mm)', 'Khổ A3 (297x420mm)', 350000.00),   -- A3 size with price 350K VND
+(1, 'A4 (210x297mm)', 'Khổ A4 (210x297mm)', 250000.00),   -- A4 size with price 250K VND
+(1, '30x40cm', 'Kích thước 30x40cm (Khung)', 600000.00),           -- Size 30x40cm with price 600K VND (different price for frames)
+(1, '40x60cm', 'Kích thước 40x60cm (Khung)', 750000.00),           -- Size 40x60cm with price 750K VND (different price for frames)
+(1, '50x70cm', 'Kích thước 50x70cm (Khung)', 950000.00),           -- Size 50x70cm with price 950K VND (different price for frames)
+(1, '40x60cm', 'Kích thước 40x60cm (Khung cao cấp)', 800000.00),           -- Size 40x60cm with price 800K VND (different price for frames)
+(1, 'Standard size', 'Kích thước tiêu chuẩn', 1200000.00),    -- Standard size with price 1.2M VND
+
+-- Color/Style attributes  
+(2, 'Warm colors', 'Màu ấm áp', 200000.00),                -- Warm colors with price 200K VND
+(2, 'Cool colors', 'Màu lạnh', 200000.00),                 -- Cool colors with price 200K VND
+(2, 'Colorful', 'Đầy màu sắc', 350000.00),                 -- Colorful with price 350K VND
+(2, 'Monochrome', 'Đơn sắc', 250000.00),                   -- Monochrome with price 250K VND
+(2, 'Bright colors', 'Màu tươi sáng', 300000.00),          -- Bright colors with price 300K VND
+(2, 'Classic style', 'Phong cách cổ điển', 250000.00),     -- Classic style with price 250K VND
+(2, 'Modern style', 'Phong cách hiện đại', 300000.00),     -- Modern style with price 300K VND
+(2, 'Classical tones', 'Tông màu cổ điển', 400000.00),     -- Classical tones with price 400K VND
+(2, 'Modern style', 'Phong cách hiện đại (Cao cấp)', 450000.00),     -- Modern style with price 450K VND (different price for product 8)
+(2, 'Sacred colors', 'Màu thiêng liêng', 500000.00),       -- Sacred colors with price 500K VND
+(2, 'Multi-color', 'Nhiều màu', 150000.00),                -- Multi-color with price 150K VND
+(2, 'Silver', 'Màu bạc', 200000.00),                       -- Silver color with price 200K VND
+(2, 'Black', 'Màu đen', 180000.00),                        -- Black color with price 180K VND
+(2, 'Warm white', 'Ánh sáng ấm', 300000.00),               -- Warm white with price 300K VND
+(2, 'Cool white', 'Ánh sáng lạnh', 300000.00),             -- Cool white with price 300K VND
+
+-- Material attributes
+(3, 'Canvas', 'Vải canvas', 300000.00),                    -- Canvas material with price 300K VND
+(3, 'Premium material', 'Chất liệu cao cấp', 800000.00),   -- Premium material with price 800K VND
+(3, 'High-grade resin', 'Nhựa cao cấp', 900000.00),        -- High-grade resin with price 900K VND
+(3, '100% Cotton', 'Cotton 100%', 180000.00),              -- 100% Cotton with price 180K VND
+(3, 'Cotton blend', 'Cotton pha', 150000.00),              -- Cotton blend with price 150K VND
+(3, 'Natural oak', 'Gỗ sồi tự nhiên', 300000.00),          -- Natural oak with price 300K VND
+(3, 'Pine wood', 'Gỗ thông', 250000.00),                   -- Pine wood with price 250K VND
+(3, 'Aluminum', 'Nhôm', 350000.00),                        -- Aluminum with price 350K VND
+(3, 'LED + Metal', 'LED + Kim loại', 500000.00),           -- LED + Metal with price 500K VND
+
+-- Brand attributes
+(4, 'Faber-Castell', 'Thương hiệu Faber-Castell', 200000.00);     -- Faber-Castell brand with price 200K VND
+
+-- INSERT SAMPLE PRODUCT VARIANTS (Maps products to attributes with stock)
+INSERT INTO `PRODUCT_VARIANT` (`PRODUCT_ID`, `PRODUCT_ATTRIBUTE_ID`, `PRODUCT_VARIANT_STOCK`) VALUES
 
 -- Product 1: Tranh phong cảnh hoàng hôn trên biển (Total: 50)
-(1, 1, '40x60cm', 25, 1500000.00),        -- Size 40x60cm: 25 pieces, price 1.5M VND
-(1, 1, '30x40cm', 25, 1200000.00),        -- Size 30x40cm: 25 pieces, price 1.2M VND
-(1, 2, 'Warm colors', 30, 200000.00),     -- Warm color variant: 30 pieces, price 200K VND
-(1, 2, 'Cool colors', 20, 200000.00),     -- Cool color variant: 20 pieces, price 200K VND
-(1, 3, 'Canvas', 50, 300000.00),          -- Material Canvas: 50 pieces, price 300K VND
+(1, 1, 25),    -- Size 40x60cm: 25 pieces
+(1, 2, 25),    -- Size 30x40cm: 25 pieces  
+(1, 24, 30),   -- Warm colors: 30 pieces
+(1, 25, 20),   -- Cool colors: 20 pieces
+(1, 40, 50),   -- Canvas: 50 pieces
 
 -- Product 2: Tranh núi non hùng vĩ (Total: 35)
-(2, 1, '50x70cm', 20, 2000000.00),        -- Size 50x70cm: 20 pieces, price 2M VND
-(2, 1, '40x60cm', 15, 1500000.00),        -- Size 40x60cm: 15 pieces, price 1.5M VND
-(2, 3, 'Canvas', 35, 300000.00),          -- Material Canvas: 35 pieces, price 300K VND
+(2, 3, 20),    -- Size 50x70cm: 20 pieces
+(2, 1, 15),    -- Size 40x60cm: 15 pieces
+(2, 40, 35),   -- Canvas: 35 pieces
 
 -- Product 3: Tranh nghệ thuật trừu tượng hiện đại (Total: 40)
-(3, 1, '60x80cm', 25, 2500000.00),        -- Size 60x80cm: 25 pieces, price 2.5M VND
-(3, 1, '50x70cm', 15, 2000000.00),        -- Size 50x70cm: 15 pieces, price 2M VND
-(3, 2, 'Colorful', 22, 350000.00),        -- Colorful variant: 22 pieces, price 350K VND
-(3, 2, 'Monochrome', 18, 250000.00),      -- Monochrome variant: 18 pieces, price 250K VND
+(3, 4, 25),    -- Size 60x80cm: 25 pieces
+(3, 3, 15),    -- Size 50x70cm: 15 pieces
+(3, 26, 22),   -- Colorful: 22 pieces
+(3, 27, 18),   -- Monochrome: 18 pieces
 
 -- Product 4: Tranh nghệ thuật hiện đại (Total: 20)
-(4, 1, '50x60cm', 12, 1800000.00),        -- Size 50x60cm: 12 pieces, price 1.8M VND
-(4, 1, '40x50cm', 8, 1400000.00),         -- Size 40x50cm: 8 pieces, price 1.4M VND
-(4, 2, 'Bright colors', 20, 300000.00),   -- Bright colors: 20 pieces, price 300K VND
+(4, 5, 12),    -- Size 50x60cm: 12 pieces
+(4, 6, 8),     -- Size 40x50cm: 8 pieces
+(4, 28, 20),   -- Bright colors: 20 pieces
 
 -- Product 5: Trang trí nội thất cao cấp (Total: 15)
-(5, 1, 'Large', 8, 3000000.00),           -- Large size: 8 pieces, price 3M VND
-(5, 1, 'Medium', 7, 2200000.00),          -- Medium size: 7 pieces, price 2.2M VND
-(5, 3, 'Premium material', 15, 800000.00), -- Premium material: 15 pieces, price 800K VND
+(5, 7, 8),     -- Large size: 8 pieces
+(5, 8, 7),     -- Medium size: 7 pieces
+(5, 41, 15),   -- Premium material: 15 pieces
 
 -- Product 6: Tranh trang trí treo tường (Total: 60)
-(6, 1, '40x50cm', 35, 1600000.00),        -- Size 40x50cm: 35 pieces, price 1.6M VND
-(6, 1, '30x40cm', 25, 1200000.00),        -- Size 30x40cm: 25 pieces, price 1.2M VND
-(6, 2, 'Classic style', 30, 250000.00),   -- Classic style: 30 pieces, price 250K VND
-(6, 2, 'Modern style', 30, 300000.00),    -- Modern style: 30 pieces, price 300K VND
+(6, 20, 35),   -- Size 40x50cm: 35 pieces (using frame price)
+(6, 2, 25),    -- Size 30x40cm: 25 pieces
+(6, 29, 30),   -- Classic style: 30 pieces
+(6, 30, 30),   -- Modern style: 30 pieces
 
 -- Product 7: Chân dung người phụ nữ cổ điển (Total: 12)
-(7, 1, '30x40cm', 8, 1800000.00),         -- Size 30x40cm: 8 pieces, price 1.8M VND
-(7, 1, '25x35cm', 4, 1400000.00),         -- Size 25x35cm: 4 pieces, price 1.4M VND
-(7, 2, 'Classical tones', 12, 400000.00), -- Classical tones: 12 pieces, price 400K VND
+(7, 2, 8),     -- Size 30x40cm: 8 pieces
+(7, 9, 4),     -- Size 25x35cm: 4 pieces
+(7, 31, 12),   -- Classical tones: 12 pieces
 
 -- Product 8: Chân dung người đàn ông nghệ thuật (Total: 8)
-(8, 1, '30x40cm', 5, 1900000.00),         -- Size 30x40cm: 5 pieces, price 1.9M VND
-(8, 1, '25x35cm', 3, 1500000.00),         -- Size 25x35cm: 3 pieces, price 1.5M VND
-(8, 2, 'Modern style', 8, 450000.00),     -- Modern style: 8 pieces, price 450K VND
+(8, 2, 5),     -- Size 30x40cm: 5 pieces
+(8, 10, 3),    -- Size 25x35cm: 3 pieces
+(8, 32, 8),    -- Modern style: 8 pieces
 
 -- Product 9: Tượng Phật trang nghiêm (Total: 25)
-(9, 1, 'Large (40x60cm)', 15, 2800000.00), -- Large size: 15 pieces, price 2.8M VND
-(9, 1, 'Medium (30x45cm)', 10, 2000000.00), -- Medium size: 10 pieces, price 2M VND
-(9, 3, 'High-grade resin', 25, 900000.00), -- High-grade resin: 25 pieces, price 900K VND
+(9, 11, 15),   -- Large (40x60cm): 15 pieces
+(9, 12, 10),   -- Medium (30x45cm): 10 pieces
+(9, 42, 25),   -- High-grade resin: 25 pieces
 
 -- Product 10: Tranh Chúa Giê-su tâm linh (Total: 18)
-(10, 1, '35x50cm', 12, 2200000.00),       -- Size 35x50cm: 12 pieces, price 2.2M VND
-(10, 1, '25x35cm', 6, 1600000.00),        -- Size 25x35cm: 6 pieces, price 1.6M VND
-(10, 2, 'Sacred colors', 18, 500000.00),  -- Sacred colors: 18 pieces, price 500K VND
+(10, 13, 12),  -- Size 35x50cm: 12 pieces
+(10, 14, 6),   -- Size 25x35cm: 6 pieces
+(10, 33, 18),  -- Sacred colors: 18 pieces
 
 -- Product 11: Bút vẽ chuyên nghiệp Faber-Castell (Total: 100)
-(11, 1, '24-piece set', 60, 850000.00),   -- 24-piece set: 60 sets, price 850K VND
-(11, 1, '12-piece set', 40, 500000.00),   -- 12-piece set: 40 sets, price 500K VND
-(11, 2, 'Multi-color', 100, 150000.00),   -- Multi-color: 100 sets, price 150K VND
-(11, 4, 'Faber-Castell', 100, 200000.00), -- Brand Faber-Castell: 100 sets, price 200K VND
+(11, 15, 60),  -- 24-piece set: 60 sets
+(11, 16, 40),  -- 12-piece set: 40 sets
+(11, 34, 100), -- Multi-color: 100 sets
+(11, 47, 100), -- Brand Faber-Castell: 100 sets
 
 -- Product 12: Giấy vẽ canvas cao cấp (Total: 80)
-(12, 1, 'A3 (297x420mm)', 60, 350000.00), -- A3 size: 60 packs, price 350K VND
-(12, 1, 'A4 (210x297mm)', 20, 250000.00), -- A4 size: 20 packs, price 250K VND
-(12, 3, '100% Cotton', 40, 180000.00),     -- 100% Cotton: 40 packs, price 180K VND
-(12, 3, 'Cotton blend', 40, 150000.00),    -- Cotton blend: 40 packs, price 150K VND
+(12, 17, 60),  -- A3 size: 60 packs
+(12, 18, 20),  -- A4 size: 20 packs
+(12, 43, 40),  -- 100% Cotton: 40 packs
+(12, 44, 40),  -- Cotton blend: 40 packs
 
 -- Product 13: Khung tranh gỗ tự nhiên (Total: 50)
-(13, 1, '40x60cm', 30, 750000.00),       -- Size 40x60cm: 30 pieces, price 750K VND
-(13, 1, '30x40cm', 20, 600000.00),       -- Size 30x40cm: 20 pieces, price 600K VND
-(13, 3, 'Natural oak', 25, 300000.00),   -- Natural oak: 25 pieces, price 300K VND
-(13, 3, 'Pine wood', 25, 250000.00),     -- Pine wood: 25 pieces, price 250K VND
+(13, 20, 30),  -- Size 40x60cm: 30 pieces
+(13, 19, 20),  -- Size 30x40cm: 20 pieces
+(13, 45, 25),  -- Natural oak: 25 pieces
+(13, 46, 25),  -- Pine wood: 25 pieces
 
 -- Product 14: Khung tranh kim loại hiện đại (Total: 35)
-(14, 1, '50x70cm', 20, 950000.00),       -- Size 50x70cm: 20 pieces, price 950K VND
-(14, 1, '40x60cm', 15, 800000.00),       -- Size 40x60cm: 15 pieces, price 800K VND
-(14, 2, 'Silver', 18, 200000.00),        -- Silver color: 18 pieces, price 200K VND
-(14, 2, 'Black', 17, 180000.00),         -- Black color: 17 pieces, price 180K VND
-(14, 3, 'Aluminum', 35, 350000.00),      -- Aluminum material: 35 pieces, price 350K VND
+(14, 21, 20),  -- Size 50x70cm: 20 pieces
+(14, 22, 15),  -- Size 40x60cm: 15 pieces
+(14, 35, 18),  -- Silver: 18 pieces
+(14, 36, 17),  -- Black: 17 pieces
+(14, 47, 35),  -- Aluminum: 35 pieces
 
 -- Product 15: Đèn trang trí nghệ thuật LED (Total: 30)
-(15, 1, 'Standard size', 30, 1200000.00), -- Standard size: 30 pieces, price 1.2M VND
-(15, 2, 'Warm white', 20, 300000.00),     -- Warm white: 20 pieces, price 300K VND
-(15, 2, 'Cool white', 10, 300000.00),     -- Cool white: 10 pieces, price 300K VND
-(15, 3, 'LED + Metal', 30, 500000.00);    -- LED + Metal: 30 pieces, price 500K VND
+(15, 23, 30),  -- Standard size: 30 pieces
+(15, 37, 20),  -- Warm white: 20 pieces
+(15, 38, 10),  -- Cool white: 10 pieces
+(15, 48, 30);  -- LED + Metal: 30 pieces
 
 -- INSERT SAMPLE REVIEWS
 INSERT INTO `REVIEW` (`USER_ID`, `PRODUCT_ID`, `PARENT_REVIEW_ID`, `ROOT_REVIEW_ID`, `REVIEW_LEVEL`, `RATING`, `REVIEW_CONTENT`, `COUNT_LIKE`, `IS_VISIBLE`, `IS_DELETED`) VALUES
@@ -471,13 +530,13 @@ INSERT INTO `CART` (`USER_ID`, `SESSION_ID`, `CART_SLUG`, `CART_STATE_ID`, `TOTA
 (2, 'session_user2_20260118_004', 'cart-user2-20260118-004', 1, 1, TRUE);
 
 -- INSERT SAMPLE CART ITEMS
-INSERT INTO `CART_ITEM` (`CART_ID`, `PRODUCT_ID`, `CART_ITEM_QUANTITY`, `CART_ITEM_TOTAL_PRICE`, `CART_ITEM_STATE_ID`) VALUES
-(1, 1, 1, 450000.00, 1),
-(1, 4, 1, 320000.00, 1),
-(2, 2, 1, 520000.00, 1),
-(2, 6, 1, 750000.00, 1),
-(2, 8, 1, 350000.00, 1),
-(4, 3, 1, 680000.00, 1);
+INSERT INTO `CART_ITEM` (`CART_ID`, `PRODUCT_ID`, `CART_ITEM_QUANTITY`, `CART_ITEM_UNIT_PRICE`, `CART_ITEM_TOTAL_PRICE`, `CART_ITEM_STATE_ID`) VALUES
+(1, 1, 1, 450000.00, 450000.00, 1),
+(1, 4, 1, 320000.00, 320000.00, 1),
+(2, 2, 1, 520000.00, 520000.00, 1),
+(2, 6, 1, 750000.00, 750000.00, 1),
+(2, 8, 1, 350000.00, 350000.00, 1),
+(4, 3, 1, 680000.00, 680000.00, 1);
 
 -- INSERT SAMPLE CART ITEM ATTRIBUTES (simplified mapping between cart items and their selected product attributes)
 INSERT INTO `CART_ITEM_ATTRIBUTE` (`CART_ITEM_ID`, `PRODUCT_ATTRIBUTE_ID`) VALUES
@@ -513,10 +572,10 @@ INSERT INTO `SHIPPING_FEE` (`SHIPPING_FEE_TYPE_ID`, `MIN_ORDER_PRICE`, `MAX_ORDE
 (2, 0.00, 499999.99, 30000.00, 'Phí vận chuyển cố định', 'Phí vận chuyển cố định 30k cho đơn hàng dưới 500k', TRUE);
 
 -- INSERT SAMPLE ORDERS
-INSERT INTO `ORDERS` (`USER_ID`, `ORDER_CODE`, `ORDER_SLUG`, `ORDER_STATE_ID`, `DISCOUNT_CODE`, `DISCOUNT_TYPE`, `DISCOUNT_VALUE`, `CUSTOMER_NAME`, `CUSTOMER_PHONE_NUMBER`, `CUSTOMER_EMAIL`, `CUSTOMER_ADDRESS`, `RECEIVER_NAME`, `RECEIVER_PHONE`, `RECEIVER_EMAIL`, `ADDRESS_LINE`, `CITY`, `WARD`, `COUNTRY`, `SUBTOTAL_AMOUNT`, `DISCOUNT_AMOUNT`, `SHIPPING_FEE_AMOUNT`, `TOTAL_AMOUNT`, `ORDER_NOTE`) VALUES
-(4, 'ORD-20260115-001', 'ord-20260115-001', 5, 'WELCOME2026', 'PERCENTAGE', 10.00, 'Nguyen Van A', '0904567890', 'customer1@gmail.com', '789 Đường Lê Lợi, Phường Bến Nghé, Quận 1, TP.HCM', 'Alice Johnson', '0904567890', 'alice.johnson@gmail.com', '123 Đường ABC', 'TP.HCM', 'Phường XYZ, Quận 1', 'Vietnam', 1200000.00, 30000.00, 0.00, 1170000.00, 'Giao hàng trong giờ hành chính'),
-(5, 'ORD-20260116-002', 'ord-20260116-002', 3, 'ARTLOVER50', 'FIXED_AMOUNT', 50000.00, 'Tran Thi B', '0905678901', 'customer2@gmail.com', '456 Đường Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP.HCM', 'Tran Thi B', '0905678901', 'customer2@gmail.com', '456 Đường DEF', 'TP.HCM', 'Phường UVW, Quận 2', 'Vietnam', 1620000.00, 50000.00, 0.00, 1570000.00, 'Gọi điện truớc khi giao'),
-(6, 'ORD-20260117-003', 'ord-20260117-003', 2, NULL, NULL, NULL, 'Le Van C', '0906789012', 'customer3@yahoo.com', '321 Đường Đồng Khởi, Phường Bến Nghé, Quận 1, TP.HCM', 'Le Van C', '0906789012', 'customer3@yahoo.com', '789 Đường GHI', 'TP.HCM', 'Phường RST, Quận 3', 'Vietnam', 770000.00, 0.00, 0.00, 770000.00, 'Để hàng ở bảo vệ nếu không có người');
+INSERT INTO `ORDERS` (`USER_ID`, `SESSION_ID`, `ORDER_CODE`, `ORDER_SLUG`, `ORDER_STATE_ID`, `DISCOUNT_CODE`, `DISCOUNT_TYPE`, `DISCOUNT_VALUE`, `CUSTOMER_NAME`, `CUSTOMER_PHONE_NUMBER`, `CUSTOMER_EMAIL`, `CUSTOMER_ADDRESS`, `RECEIVER_NAME`, `RECEIVER_PHONE`, `RECEIVER_EMAIL`, `ADDRESS_LINE`, `CITY`, `WARD`, `COUNTRY`, `SUBTOTAL_AMOUNT`, `DISCOUNT_AMOUNT`, `SHIPPING_FEE_AMOUNT`, `TOTAL_AMOUNT`, `ORDER_NOTE`) VALUES
+(4, NULL, 'ORD-20260115-001', 'ord-20260115-001', 5, 'WELCOME2026', 'PERCENTAGE', 10.00, 'Nguyen Van A', '0904567890', 'customer1@gmail.com', '789 Đường Lê Lợi, Phường Bến Nghé, Quận 1, TP.HCM', 'Alice Johnson', '0904567890', 'alice.johnson@gmail.com', '123 Đường ABC', 'TP.HCM', 'Phường XYZ, Quận 1', 'Vietnam', 1200000.00, 30000.00, 0.00, 1170000.00, 'Giao hàng trong giờ hành chính'),
+(5, NULL, 'ORD-20260116-002', 'ord-20260116-002', 3, 'ARTLOVER50', 'FIXED_AMOUNT', 50000.00, 'Tran Thi B', '0905678901', 'customer2@gmail.com', '456 Đường Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP.HCM', 'Tran Thi B', '0905678901', 'customer2@gmail.com', '456 Đường DEF', 'TP.HCM', 'Phường UVW, Quận 2', 'Vietnam', 1620000.00, 50000.00, 0.00, 1570000.00, 'Gọi điện truớc khi giao'),
+(NULL, 'guest-session-20260117-12345', 'ORD-20260117-003', 'ord-20260117-003', 2, NULL, NULL, NULL, 'Le Van C', '0906789012', 'customer3@yahoo.com', '321 Đường Đồng Khởi, Phường Bến Nghé, Quận 1, TP.HCM', 'Le Van C', '0906789012', 'customer3@yahoo.com', '789 Đường GHI', 'TP.HCM', 'Phường RST, Quận 3', 'Vietnam', 770000.00, 0.00, 0.00, 770000.00, 'Để hàng ở bảo vệ nếu không có người');
 
 -- INSERT ORDER ITEMS
 INSERT INTO `ORDER_ITEM` (`ORDER_ID`, `PRODUCT_ID`, `PRODUCT_NAME`, `PRODUCT_CODE`, `PRODUCT_CATEGORY_NAME`, `PRODUCT_TYPE_NAME`, `PRODUCT_ATTR_JSON`, `UNIT_PRICE`, `QUANTITY`, `TOTAL_PRICE`) VALUES

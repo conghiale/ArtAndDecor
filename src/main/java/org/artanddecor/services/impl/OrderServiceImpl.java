@@ -11,7 +11,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -55,9 +54,6 @@ public class OrderServiceImpl implements OrderService {
     private OrderItemRepository orderItemRepository;
     
     @Autowired
-    private ProductRepository productRepository;
-    
-    @Autowired
     private CartItemRepository cartItemRepository;
     
     @Autowired
@@ -71,6 +67,18 @@ public class OrderServiceImpl implements OrderService {
     
     @Autowired
     private CartRepository cartRepository;
+    
+    @Autowired
+    private PaymentMethodService paymentMethodService;
+    
+    @Autowired 
+    private PaymentMethodRepository paymentMethodRepository;
+    
+    @Autowired
+    private PaymentStateRepository paymentStateRepository;
+    
+    @Autowired
+    private PaymentRepository paymentRepository;
 
     // ===== NEW APIS =====
     
@@ -149,7 +157,11 @@ public class OrderServiceImpl implements OrderService {
         String discountMessage = "No discount applied";
         
         // Auto-select best discount for subtotal amount (enabled discounts only)
-        DiscountDto bestDiscount = findBestDiscountForOrder(subtotalAmount);
+        AutoDiscountResult autoDiscountResult = applyBestAvailableDiscount(subtotalAmount);
+        appliedDiscount = autoDiscountResult.appliedDiscount;
+        discountAmount = autoDiscountResult.discountAmount;
+
+        /*DiscountDto bestDiscount = findBestDiscountForOrder(subtotalAmount);
         if (bestDiscount != null) {
             try {
                 appliedDiscount = bestDiscount;
@@ -161,7 +173,7 @@ public class OrderServiceImpl implements OrderService {
                 logger.warn("Failed to apply auto discount: {}", e.getMessage());
                 warnings.add("Could not apply best available discount: " + e.getMessage());
             }
-        }
+        }*/
         
         // Calculate shipping fee
         BigDecimal shippingFeeAmount = BigDecimal.ZERO;
@@ -367,24 +379,9 @@ public class OrderServiceImpl implements OrderService {
             }
         } else {
             // AUTO-SELECT BEST DISCOUNT (giá được giảm nhiều nhất cho khách hàng)
-            appliedDiscount = findBestDiscountForOrder(subtotalAmount);
-            if (appliedDiscount != null) {
-                try {
-                    // Calculate discount amount based on type
-                    if ("PERCENTAGE".equals(appliedDiscount.getDiscountType())) {
-                        discountAmount = subtotalAmount.multiply(appliedDiscount.getDiscountValue())
-                            .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-                    } else if ("FIXED".equals(appliedDiscount.getDiscountType())) {
-                        discountAmount = appliedDiscount.getDiscountValue();
-                    }
-                    logger.info("Auto discount applied - Code: {}, Type: {}, Amount: {}", 
-                        appliedDiscount.getDiscountCode(), appliedDiscount.getDiscountType(), discountAmount);
-                } catch (Exception e) {
-                    logger.warn("Failed to calculate auto discount: {}", e.getMessage());
-                    appliedDiscount = null;
-                    discountAmount = BigDecimal.ZERO;
-                }
-            }
+            AutoDiscountResult autoDiscountResult = applyBestAvailableDiscount(subtotalAmount);
+            appliedDiscount = autoDiscountResult.appliedDiscount;
+            discountAmount = autoDiscountResult.discountAmount;
         }
         
         // AUTO-CALCULATE OPTIMAL SHIPPING FEE (phí ship tối ưu cho khách hàng)
@@ -408,6 +405,12 @@ public class OrderServiceImpl implements OrderService {
         order.setOrderCode(generateOrderCode());
         order.setOrderSlug(generateOrderSlug());
         order.setUser(user); // Can be null for guest orders
+        
+        // Set sessionId for guest orders (from cart sessionId)
+        if (user == null && cart.getSessionId() != null) {
+            order.setSessionId(cart.getSessionId());
+            logger.info("Order will use sessionId: {} (from cart for guest order)", cart.getSessionId());
+        }
         
         // Set order state to PENDING (initial state)
         OrderState newState = orderStateRepository.findByOrderStateName("PENDING")
@@ -469,6 +472,58 @@ public class OrderServiceImpl implements OrderService {
                    savedOrder.getOrderId(), 
                    savedOrder.getUser() != null ? savedOrder.getUser().getUserId() : "NULL (Guest Order)",
                    savedOrder.getUser() != null ? "USER ORDER" : "GUEST ORDER");
+        
+        // Create initial payment record with PENDING state for order tracking
+        try {
+            Payment initialPayment = new Payment();
+            initialPayment.setOrder(savedOrder);
+            initialPayment.setAmount(savedOrder.getTotalAmount());
+            
+            // Set payment method from request
+            if (request.getPaymentMethodId() != null) {
+                try {
+                    PaymentMethod paymentMethod = paymentMethodRepository.findById(request.getPaymentMethodId())
+                            .orElseThrow(() -> new ResourceNotFoundException("Payment method not found with ID: " + request.getPaymentMethodId()));
+                    initialPayment.setPaymentMethod(paymentMethod);
+                    logger.info("Payment method resolved for order {}: ID={}, Name={}", 
+                               savedOrder.getOrderId(), request.getPaymentMethodId(), paymentMethod.getPaymentMethodName());
+                } catch (Exception e) {
+                    logger.warn("Failed to resolve payment method ID: {}, will use default. Error: {}", 
+                               request.getPaymentMethodId(), e.getMessage());
+                    // Use default payment method (COD)
+                    PaymentMethod defaultPaymentMethod = paymentMethodRepository.findByPaymentMethodName("COD")
+                            .orElseThrow(() -> new ResourceNotFoundException("Default COD payment method not found"));
+                    initialPayment.setPaymentMethod(defaultPaymentMethod);
+                }
+            } else {
+                // Use default payment method (COD) if not specified
+                PaymentMethod defaultPaymentMethod = paymentMethodRepository.findByPaymentMethodName("COD")
+                        .orElseThrow(() -> new ResourceNotFoundException("Default COD payment method not found"));
+                initialPayment.setPaymentMethod(defaultPaymentMethod);
+            }
+            
+            // Set default PENDING payment state
+            PaymentState pendingState = paymentStateRepository.findByPaymentStateName("PENDING")
+                    .orElseThrow(() -> new ResourceNotFoundException("PENDING payment state not found"));
+            initialPayment.setPaymentState(pendingState);
+            
+            // Generate payment slug and transaction ID for tracking
+            String paymentSlug = "PAY-" + savedOrder.getOrderCode() + "-" + System.currentTimeMillis();
+            initialPayment.setPaymentSlug(paymentSlug);
+            
+            String transactionId = "TXN-" + savedOrder.getOrderCode() + "-" + System.currentTimeMillis();
+            initialPayment.setTransactionId(transactionId);
+            initialPayment.setPaymentRemark("Initial payment record for order " + savedOrder.getOrderCode());
+            
+            // Save payment record
+            paymentRepository.save(initialPayment);
+            logger.info("Initial payment record created for order {} with payment ID: {}", 
+                       savedOrder.getOrderId(), initialPayment.getPaymentId());
+            
+        } catch (Exception e) {
+            logger.error("Failed to create initial payment record for order {}: {}", savedOrder.getOrderId(), e.getMessage());
+            // Don't fail order creation due to payment record creation failure
+        }
         
         // Create order items
         for (CartItem cartItem : cartItems) {
@@ -562,11 +617,6 @@ public class OrderServiceImpl implements OrderService {
             orderItemRepository.save(orderItem);
         }
         
-        // NOTE: OrderStateHistory is NOT created for new orders
-        // It will be created only when there is an actual state transition (PENDING → CONFIRMED, etc.)
-        // This aligns with database constraint: OLD_STATE_ID NOT NULL
-        // State transitions are tracked in updateOrderState() method
-        
         // Clear cart after successful checkout (hard delete)
         try {
             if (clearEntireCart) {
@@ -591,7 +641,14 @@ public class OrderServiceImpl implements OrderService {
         
         logger.info("Order created successfully - ID: {}, Code: {}", savedOrder.getOrderId(), savedOrder.getOrderCode());
         
-        return orderMapperUtil.mapToDto(savedOrder);
+        // Reload order from database to ensure Payment relationship is loaded for proper snapshot
+        Order finalOrder = orderRepository.findById(savedOrder.getOrderId())
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found after creation: " + savedOrder.getOrderId()));
+        
+        logger.debug("Order reloaded with {} payments for proper snapshot mapping", 
+                    finalOrder.getPayments() != null ? finalOrder.getPayments().size() : 0);
+        
+        return orderMapperUtil.mapToDto(finalOrder);
     }
     
     // REMOVED: Legacy checkoutSelectedCartItems method with single userId parameter
@@ -604,8 +661,6 @@ public class OrderServiceImpl implements OrderService {
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found with ID: " + orderId));
         return orderMapperUtil.mapToDto(order);
     }
-
-
 
     @Override
     public OrderDto updateOrderState(Long orderId, Long newOrderStateId, Long changedByUserId) {
@@ -743,147 +798,18 @@ public class OrderServiceImpl implements OrderService {
         Page<Order> ordersPage = orderRepository.findUserOrdersWithFiltering(
                 userId, state, fromDateTime, toDateTime, pageable);
         
-        return ordersPage.map(orderMapperUtil::mapToDtoWithoutItems);
+        return ordersPage.map(orderMapperUtil::mapToDto);
     }
     
     // REMOVED: adminSearchOrders method - not used by OrderController
     // All admin search functionality is handled by searchOrders method
-    
-    @Override
-    public OrderDto adminCreateOrder(
-            Long customerId, 
-            Long shippingAddressId, 
-            String discountCode,
-            List<CreateOrderItemRequest> orderItems, 
-            Long createdByUserId) {
         
-        Order order = new Order();
-        order.setOrderCode(generateOrderCode());
-        order.setCreatedDt(LocalDateTime.now());
-        order.setModifiedDt(LocalDateTime.now());
-        
-        // Set default state to PENDING
-        OrderState newState = orderStateRepository.findByOrderStateName("PENDING")
-                .orElseGet(() -> {
-                    // Fallback to first available state if PENDING not found
-                    List<OrderState> allStates = orderStateRepository.findAll();
-                    if (allStates.isEmpty()) {
-                        throw new RuntimeException("No order states found in database");
-                    }
-                    logger.warn("PENDING state not found, using first available state: {}", allStates.get(0).getOrderStateName());
-                    return allStates.get(0);
-                });
-        order.setOrderState(newState);
-        
-        // Apply discount information if provided (snapshot only)
-        if (discountCode != null && !discountCode.trim().isEmpty()) {
-            try {
-                DiscountDto discount = discountService.getValidDiscountByCode(discountCode);
-                if (discount != null && discountService.canUseDiscount(discount.getDiscountId())) {
-                    // Store discount snapshot in order
-                    order.setDiscountCode(discount.getDiscountCode());
-                    order.setDiscountType(discount.getDiscountType() != null ? 
-                            discount.getDiscountType().getDiscountTypeName() : null);
-                    order.setDiscountValue(discount.getDiscountValue());
-                }
-            } catch (Exception e) {
-                // Ignore invalid discount codes
-            }
-        }
-        
-        // Save order first to get ID
-        Order savedOrder = orderRepository.save(order);
-        logger.info("Admin order saved successfully with ID: {}", savedOrder.getOrderId());
-        
-        // Create order items and calculate totals
-        BigDecimal subtotalAmount = BigDecimal.ZERO;
-        
-        for (CreateOrderItemRequest itemRequest : orderItems) {
-            Product product = productRepository.findById(itemRequest.getProductId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Product not found with ID: " + itemRequest.getProductId()));
-            
-            OrderItem orderItem = new OrderItem();
-            orderItem.setOrder(savedOrder);
-            orderItem.setProduct(product);
-            orderItem.setQuantity(itemRequest.getQuantity());
-            
-            // Set snapshot product information
-            orderItem.setProductName(product.getProductName());
-            orderItem.setProductCode(product.getProductCode());
-            orderItem.setProductCategoryName(product.getProductCategory().getProductCategoryName());
-            
-            // Set product type name from relationship: Product -> ProductCategory -> ProductType
-            String productTypeName = "GENERAL"; // Default value
-            if (product.getProductCategory() != null && product.getProductCategory().getProductType() != null) {
-                productTypeName = product.getProductCategory().getProductType().getProductTypeName();
-            }
-            orderItem.setProductTypeName(productTypeName);
-            
-            // Set item details
-            BigDecimal unitPrice = product.getProductPrice() != null ? product.getProductPrice() : BigDecimal.ZERO;
-            orderItem.setUnitPrice(unitPrice);
-            
-            BigDecimal totalPrice = unitPrice.multiply(BigDecimal.valueOf(itemRequest.getQuantity()));
-            orderItem.setTotalPrice(totalPrice);
-            
-            orderItem.setCreatedDt(LocalDateTime.now());
-            orderItem.setModifiedDt(LocalDateTime.now());
-            
-            orderItemRepository.save(orderItem);
-            subtotalAmount = subtotalAmount.add(totalPrice);
-        }
-        
-        // Calculate discount amount if discount was applied
-        BigDecimal discountAmount = BigDecimal.ZERO;
-        if (order.getDiscountCode() != null && !order.getDiscountCode().trim().isEmpty()) {
-            try {
-                DiscountDto discount = discountService.getValidDiscountByCode(order.getDiscountCode());
-                if (discount != null) {
-                    discountAmount = discountService.calculateDiscountAmount(
-                            discount.getDiscountId(), subtotalAmount);
-                }
-            } catch (Exception e) {
-                logger.warn("Failed to calculate discount for code {}: {}", order.getDiscountCode(), e.getMessage());
-            }
-        }
-        
-        // Calculate shipping fee
-        BigDecimal shippingFeeAmount = BigDecimal.ZERO;
-        try {
-            ShippingFeeDto shippingFee = shippingFeeService.calculateShippingFee(subtotalAmount);
-            if (shippingFee != null && shippingFee.getShippingFeeValue() != null) {
-                shippingFeeAmount = shippingFee.getShippingFeeValue();
-            }
-        } catch (Exception e) {
-            // Use default shipping fee if calculation fails
-            shippingFeeAmount = DEFAULT_SHIPPING_FEE; 
-            logger.error("Failed to calculate shipping fee for admin order, using default {}: {}", shippingFeeAmount, e.getMessage());
-        }
-        
-        // Update order with calculated amounts
-        savedOrder.setSubtotalAmount(subtotalAmount);
-        savedOrder.setDiscountAmount(discountAmount);
-        savedOrder.setShippingFeeAmount(shippingFeeAmount);
-        savedOrder.setTotalAmount(subtotalAmount.subtract(discountAmount).add(shippingFeeAmount));
-        savedOrder.setModifiedDt(LocalDateTime.now());
-        
-        Order finalOrder = orderRepository.save(savedOrder);
-        logger.info("Final order update saved successfully with ID: {}", finalOrder.getOrderId());
-        
-        // NOTE: OrderStateHistory is NOT created for new admin orders
-        // It will be created only when there is an actual state transition
-        // This aligns with database constraint: OLD_STATE_ID NOT NULL
-        logger.info("Admin order created with initial state: {}. State history will be created on first state transition.", newState.getOrderStateName());
-        
-        // DISCOUNT functionality removed
-        
-        return orderMapperUtil.mapToDto(finalOrder);
-    }
-    
     @Override
     public Page<OrderDto> searchOrders(
             Long orderId,
-            Long customerId,
+            Long userId,
+            String sessionId,
+            String orderCode,
             String state,
             LocalDate fromDate,
             LocalDate toDate,
@@ -907,8 +833,9 @@ public class OrderServiceImpl implements OrderService {
         // Use repository method to search orders with proper parameters
         Page<Order> ordersPage = orderRepository.findOrdersByCriteria(
                 orderId,           // orderId
-                null,              // orderCode  
-                customerId,        // userId (customer)
+                orderCode,         // orderCode  
+                userId,            // userId (formerly customerId)
+                sessionId,         // sessionId for guest orders
                 null,              // customerName
                 null,              // customerPhone
                 null,              // customerEmail
@@ -928,7 +855,7 @@ public class OrderServiceImpl implements OrderService {
                 null,              // textSearch
                 pageable);         // pageable
 
-        return ordersPage.map(orderMapperUtil::mapToDtoWithoutItems);
+        return ordersPage.map(orderMapperUtil::mapToDto);
     }
     
     @Override
@@ -1005,6 +932,46 @@ public class OrderServiceImpl implements OrderService {
         return updatedOrder;
     }
 
+    /**
+     * Auto-select and apply best discount for the given order amount
+     * Uses same logic as previewOrder for consistency
+     * @param orderAmount The order amount to calculate discount for
+     * @return AutoDiscountResult containing applied discount and calculated amount
+     */
+    private AutoDiscountResult applyBestAvailableDiscount(BigDecimal orderAmount) {
+        AutoDiscountResult result = new AutoDiscountResult();
+        
+        DiscountDto bestDiscount = findBestDiscountForOrder(orderAmount);
+        if (bestDiscount != null) {
+            try {
+                result.appliedDiscount = bestDiscount;
+                result.discountAmount = discountService.calculateDiscountAmount(bestDiscount.getDiscountId(), orderAmount);
+                result.success = true;
+                logger.info("Auto-applied best discount {} with amount {} for order amount {}", 
+                        bestDiscount.getDiscountCode(), result.discountAmount, orderAmount);
+            } catch (Exception e) {
+                logger.warn("Failed to apply auto discount: {}", e.getMessage());
+                result.success = false;
+                result.errorMessage = e.getMessage();
+                // Keep discount amount as 0 and appliedDiscount as null
+            }
+        } else {
+            logger.debug("No applicable discount found for order amount: {}", orderAmount);
+        }
+        
+        return result;
+    }
+    
+    /**
+     * Inner class to hold auto discount processing result
+     */
+    private static class AutoDiscountResult {
+        DiscountDto appliedDiscount = null;
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        boolean success = false;
+        String errorMessage = null;
+    }
+    
     /**
      * Find the best discount for given order amount
      * Selects discount that provides maximum savings while meeting eligibility criteria

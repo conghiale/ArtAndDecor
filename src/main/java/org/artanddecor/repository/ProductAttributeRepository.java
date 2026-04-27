@@ -14,7 +14,8 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * ProductAttribute Repository for database operations
+ * ProductAttribute Repository for master attribute definitions with pricing
+ * Manages the catalog of available attribute values and their prices
  */
 @Repository
 public interface ProductAttributeRepository extends JpaRepository<ProductAttribute, Long> {
@@ -24,54 +25,61 @@ public interface ProductAttributeRepository extends JpaRepository<ProductAttribu
     // =============================================
 
     /**
-     * Find product attributes by product ID
-     */
-    @Query("SELECT pa FROM ProductAttribute pa " +
-           "WHERE pa.product.productId = :productId " +
-           "AND pa.productAttributeEnabled = true " +
-           "ORDER BY pa.productAttr.productAttrName ASC")
-    List<ProductAttribute> findByProductId(@Param("productId") Long productId);
-
-    /**
-     * Find product attributes by attribute ID
+     * Find product attributes by attribute ID (e.g., all size options)
      */
     @Query("SELECT pa FROM ProductAttribute pa " +
            "WHERE pa.productAttr.productAttrId = :attrId " +
            "AND pa.productAttributeEnabled = true " +
-           "ORDER BY pa.product.productName ASC")
+           "ORDER BY pa.productAttributeValue ASC, pa.productAttributePrice ASC")
     List<ProductAttribute> findByProductAttrId(@Param("attrId") Long attrId);
 
     /**
-     * Find specific product attribute by product and attribute ID
+     * Find product attributes by attribute value (e.g., all "40x60cm" options)
      */
     @Query("SELECT pa FROM ProductAttribute pa " +
-           "WHERE pa.product.productId = :productId " +
-           "AND pa.productAttr.productAttrId = :attrId")
-    Optional<ProductAttribute> findByProductIdAndAttrId(@Param("productId") Long productId, @Param("attrId") Long attrId);
-
-    /**
-     * Check if product-attribute combination exists
-     */
-    boolean existsByProductProductIdAndProductAttrProductAttrId(Long productId, Long attrId);
-
-    /**
-     * Check if product attribute value and attribute ID combination exists
-     */
-    @Query("SELECT COUNT(pa) > 0 FROM ProductAttribute pa " +
            "WHERE pa.productAttributeValue = :value " +
-           "AND pa.productAttr.productAttrId = :attrId")
-    boolean existsByValueAndAttrId(@Param("value") String productAttributeValue, @Param("attrId") Long productAttrId);
-    
+           "AND pa.productAttributeEnabled = true " +
+           "ORDER BY pa.productAttr.productAttrName ASC, pa.productAttributePrice ASC")
+    List<ProductAttribute> findByProductAttributeValue(@Param("value") String productAttributeValue);
+
     /**
-     * Check if product attribute value and attribute ID combination exists excluding specific ID
+     * Find specific attribute by attr ID, value and price combination
+     */
+    @Query("SELECT pa FROM ProductAttribute pa " +
+           "WHERE pa.productAttr.productAttrId = :attrId " +
+           "AND pa.productAttributeValue = :value " +
+           "AND pa.productAttributePrice = :price")
+    Optional<ProductAttribute> findByAttrIdValueAndPrice(@Param("attrId") Long attrId, 
+                                                        @Param("value") String value, 
+                                                        @Param("price") BigDecimal price);
+
+    // =============================================
+    // VALIDATION & CONSTRAINTS
+    // =============================================
+
+    /**
+     * Check if attribute value and attribute ID combination exists (for unique constraint)
      */
     @Query("SELECT COUNT(pa) > 0 FROM ProductAttribute pa " +
            "WHERE pa.productAttributeValue = :value " +
            "AND pa.productAttr.productAttrId = :attrId " +
+           "AND pa.productAttributePrice = :price")
+    boolean existsByValueAttrIdAndPrice(@Param("value") String productAttributeValue, 
+                                       @Param("attrId") Long productAttrId, 
+                                       @Param("price") BigDecimal price);
+    
+    /**
+     * Check if combination exists excluding specific ID (for updates)
+     */
+    @Query("SELECT COUNT(pa) > 0 FROM ProductAttribute pa " +
+           "WHERE pa.productAttributeValue = :value " +
+           "AND pa.productAttr.productAttrId = :attrId " +
+           "AND pa.productAttributePrice = :price " +
            "AND pa.productAttributeId != :excludeId")
-    boolean existsByValueAndAttrIdExcludingId(@Param("value") String productAttributeValue, 
-                                             @Param("attrId") Long productAttrId, 
-                                             @Param("excludeId") Long productAttributeId);
+    boolean existsByValueAttrIdAndPriceExcludingId(@Param("value") String productAttributeValue, 
+                                                  @Param("attrId") Long productAttrId, 
+                                                  @Param("price") BigDecimal price,
+                                                  @Param("excludeId") Long productAttributeId);
 
     // =============================================
     // SEARCH OPERATIONS
@@ -81,43 +89,42 @@ public interface ProductAttributeRepository extends JpaRepository<ProductAttribu
      * Search product attributes by multiple criteria with pagination
      */
     @Query("SELECT pa FROM ProductAttribute pa " +
-           "WHERE (:productId IS NULL OR pa.product.productId = :productId) " +
-           "AND (:attrId IS NULL OR pa.productAttr.productAttrId = :attrId) " +
+           "WHERE (:attrId IS NULL OR pa.productAttr.productAttrId = :attrId) " +
            "AND (:enabled IS NULL OR pa.productAttributeEnabled = :enabled) " +
            "AND (:attrValue IS NULL OR LOWER(pa.productAttributeValue) LIKE LOWER(CONCAT('%', :attrValue, '%'))) " +
-           "ORDER BY pa.product.productName ASC, pa.productAttr.productAttrName ASC")
-    Page<ProductAttribute> findProductAttributesByCriteriaPaginated(
-        @Param("productId") Long productId,
+           "AND (:minPrice IS NULL OR pa.productAttributePrice >= :minPrice) " +
+           "AND (:maxPrice IS NULL OR pa.productAttributePrice <= :maxPrice) " +
+           "ORDER BY pa.productAttr.productAttrName ASC, pa.productAttributeValue ASC, pa.productAttributePrice ASC")
+    Page<ProductAttribute> findProductAttributesByCriteria(
         @Param("attrId") Long attrId,
         @Param("enabled") Boolean enabled,
         @Param("attrValue") String attrValue,
+        @Param("minPrice") BigDecimal minPrice,
+        @Param("maxPrice") BigDecimal maxPrice,
         Pageable pageable
     );
 
     /**
-     * Count attributes for product
+     * Get distinct attribute values for an attribute type
      */
-    @Query("SELECT COUNT(pa) FROM ProductAttribute pa " +
-           "WHERE pa.product.productId = :productId " +
-           "AND pa.productAttributeEnabled = true")
-    Long countByProductId(@Param("productId") Long productId);
-    
+    @Query("SELECT DISTINCT pa.productAttributeValue FROM ProductAttribute pa " +
+           "WHERE pa.productAttr.productAttrId = :attrId " +
+           "AND pa.productAttributeEnabled = true " +
+           "ORDER BY pa.productAttributeValue ASC")
+    List<String> findDistinctValuesByAttrId(@Param("attrId") Long attrId);
+
+    /**
+     * Get price range for an attribute type
+     */
+    @Query("SELECT MIN(pa.productAttributePrice), MAX(pa.productAttributePrice) FROM ProductAttribute pa " +
+           "WHERE pa.productAttr.productAttrId = :attrId " +
+           "AND pa.productAttributeEnabled = true " +
+           "AND pa.productAttributePrice IS NOT NULL")
+    List<Object[]> getPriceRangeByAttrId(@Param("attrId") Long attrId);
+
     // =============================================
     // CUSTOM OPERATIONS
     // =============================================
-    
-    /**
-     * Get grouped product attributes by value and price with optional filters
-     * Returns one sample record per unique combination of value and price
-     */
-    @Query("SELECT pa FROM ProductAttribute pa " +
-           "WHERE (:productId IS NULL OR pa.product.productId = :productId) " +
-           "AND (:productAttrId IS NULL OR pa.productAttr.productAttrId = :productAttrId) " +
-           "AND (:enabled IS NULL OR pa.productAttributeEnabled = :enabled) " +
-           "ORDER BY pa.productAttributeValue ASC, pa.productAttributePrice ASC")
-    List<ProductAttribute> findGroupedProductAttributes(@Param("productId") Long productId,
-                                                       @Param("productAttrId") Long productAttrId,
-                                                       @Param("enabled") Boolean enabled);
     
     /**
      * Update product attribute prices by attribute values
@@ -133,16 +140,12 @@ public interface ProductAttributeRepository extends JpaRepository<ProductAttribu
      */
     @Modifying  
     @Query("UPDATE ProductAttribute pa " +
-           "SET pa.product = CASE WHEN :productId IS NOT NULL THEN (SELECT p FROM Product p WHERE p.productId = :productId) ELSE pa.product END, " +
-           "    pa.productAttr = CASE WHEN :productAttrId IS NOT NULL THEN (SELECT attr FROM ProductAttr attr WHERE attr.productAttrId = :productAttrId) ELSE pa.productAttr END, " +
-           "    pa.productAttributeQuantity = CASE WHEN :quantity IS NOT NULL THEN :quantity ELSE pa.productAttributeQuantity END, " +
+           "SET pa.productAttr = CASE WHEN :productAttrId IS NOT NULL THEN (SELECT attr FROM ProductAttr attr WHERE attr.productAttrId = :productAttrId) ELSE pa.productAttr END, " +
            "    pa.productAttributePrice = CASE WHEN :price IS NOT NULL THEN :price ELSE pa.productAttributePrice END, " +
            "    pa.productAttributeEnabled = CASE WHEN :enabled IS NOT NULL THEN :enabled ELSE pa.productAttributeEnabled END " +
            "WHERE pa.productAttributeValue IN :values")
     int updateByAttributeValues(@Param("values") List<String> values,
-                               @Param("productId") Long productId,
                                @Param("productAttrId") Long productAttrId,
-                               @Param("quantity") Integer quantity,
                                @Param("price") BigDecimal price,
                                @Param("enabled") Boolean enabled);
                                
@@ -163,6 +166,16 @@ public interface ProductAttributeRepository extends JpaRepository<ProductAttribu
     /**
      * Find product attributes by attribute values
      */
-    @Query("SELECT pa FROM ProductAttribute pa WHERE pa.productAttributeValue IN :values")
+    @Query("SELECT pa FROM ProductAttribute pa " +
+           "WHERE pa.productAttributeValue IN :values " +
+           "ORDER BY pa.productAttr.productAttrName ASC, pa.productAttributeValue ASC")
     List<ProductAttribute> findByAttributeValues(@Param("values") List<String> values);
+    
+    /**
+     * Count attributes by attribute type
+     */
+    @Query("SELECT COUNT(pa) FROM ProductAttribute pa " +
+           "WHERE pa.productAttr.productAttrId = :attrId " +
+           "AND pa.productAttributeEnabled = true")
+    Long countByProductAttrId(@Param("attrId") Long attrId);
 }

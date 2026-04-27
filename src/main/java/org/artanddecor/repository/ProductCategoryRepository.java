@@ -59,6 +59,7 @@ public interface ProductCategoryRepository extends JpaRepository<ProductCategory
            "AND (:visible IS NULL OR pc.productCategoryVisible = :visible) " +
            "AND (:productTypeId IS NULL OR pc.productType.productTypeId = :productTypeId) " +
            "AND (:parentCategoryId IS NULL OR (:parentCategoryId = -1 AND pc.parentCategory IS NULL) OR pc.parentCategory.productCategoryId = :parentCategoryId) " +
+           "AND (:productCategorySlug IS NULL OR LOWER(pc.productCategorySlug) = LOWER(:productCategorySlug)) " +
            "ORDER BY pc.createdDt DESC")
     Page<ProductCategory> findProductCategoriesByCriteriaPaginated(
         @Param("textSearch") String textSearch,
@@ -66,6 +67,7 @@ public interface ProductCategoryRepository extends JpaRepository<ProductCategory
         @Param("visible") Boolean visible,
         @Param("productTypeId") Long productTypeId,
         @Param("parentCategoryId") Long parentCategoryId, // Use -1 for root categories, specific ID for children
+        @Param("productCategorySlug") String productCategorySlug,
         Pageable pageable
     );
 

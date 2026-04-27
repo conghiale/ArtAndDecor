@@ -7,9 +7,12 @@ import org.artanddecor.model.Cart;
 import org.artanddecor.model.CartItem;
 import org.artanddecor.model.CartItemAttribute;
 import org.artanddecor.model.CartItemState;
+import org.artanddecor.model.Policy;
 import org.artanddecor.model.Product;
 import org.artanddecor.model.ProductAttribute;
 import org.artanddecor.repository.CartItemAttributeRepository;
+import org.artanddecor.repository.PolicyRepository;
+import org.artanddecor.repository.ProductVariantRepository;
 import org.artanddecor.repository.CartItemRepository;
 import org.artanddecor.repository.CartRepository;
 import org.artanddecor.repository.CartItemStateRepository;
@@ -18,12 +21,14 @@ import org.artanddecor.repository.ProductRepository;
 import org.artanddecor.services.CartItemService;
 import org.artanddecor.services.CartService;
 import org.artanddecor.utils.CartMapper;
+import org.artanddecor.utils.ProductAttributePriceCalculator;
 import org.artanddecor.exception.ResourceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -44,8 +49,11 @@ public class CartItemServiceImpl implements CartItemService {
     private final CartItemStateRepository cartItemStateRepository;
     private final ProductRepository productRepository;
     private final ProductAttributeRepository productAttributeRepository;
+    private final ProductVariantRepository productVariantRepository;
+    private final PolicyRepository policyRepository;
     private final CartService cartService;
     private final CartMapper cartMapper;
+    private final ProductAttributePriceCalculator priceCalculator;
 
     /**
 
@@ -156,13 +164,23 @@ public class CartItemServiceImpl implements CartItemService {
             // Check current state
             if (removedState.isPresent() && 
                 cartItem.getCartItemState().getCartItemStateId().equals(removedState.get().getCartItemStateId())) {
-                // Item was removed, now reactivate with new quantity
+                // Item was removed, now reactivate with new quantity and price
                 cartItem.setCartItemQuantity(request.getQuantity());
                 cartItem.setCartItemState(activeState);
+                // Update unit price if provided from frontend
+                if (request.getCartItemUnitPrice() != null) {
+                    cartItem.setCartItemUnitPrice(request.getCartItemUnitPrice());
+                    logger.info("Updated cart item unit price from frontend: {}", request.getCartItemUnitPrice());
+                }
                 logger.info("Reactivated removed cart item with quantity {}", request.getQuantity());
             } else {
                 // Item is active, increase quantity
                 cartItem.setCartItemQuantity(cartItem.getCartItemQuantity() + request.getQuantity());
+                // Update unit price if provided from frontend (overwrites existing)
+                if (request.getCartItemUnitPrice() != null) {
+                    cartItem.setCartItemUnitPrice(request.getCartItemUnitPrice());
+                    logger.info("Updated existing cart item unit price from frontend: {}", request.getCartItemUnitPrice());
+                }
                 logger.info("Updated existing cart item quantity to: {}", cartItem.getCartItemQuantity());
             }
             cartItem.calculateTotalPrice();
@@ -173,6 +191,13 @@ public class CartItemServiceImpl implements CartItemService {
             cartItem.setProduct(product);
             cartItem.setCartItemQuantity(request.getQuantity());
             cartItem.setCartItemState(activeState);
+            
+            // Set unit price if provided from frontend
+            if (request.getCartItemUnitPrice() != null) {
+                cartItem.setCartItemUnitPrice(request.getCartItemUnitPrice());
+                logger.info("Set new cart item unit price from frontend: {}", request.getCartItemUnitPrice());
+            }
+            
             cartItem.calculateTotalPrice();
             logger.info("Created new cart item");
         }
@@ -184,13 +209,26 @@ public class CartItemServiceImpl implements CartItemService {
             addAttributesToCartItem(savedCartItem.getCartItemId(), request.getSelectedAttributeIds());
             logger.info("Added {} attributes to cart item", request.getSelectedAttributesCount());
             
-            // Recalculate price after adding attributes (they may affect unit price)
+            // Reload cart item with attributes for price recalculation
             savedCartItem = cartItemRepository.findById(savedCartItem.getCartItemId())
                 .orElseThrow(() -> new ResourceNotFoundException("Cart item not found after save"));
-            savedCartItem.calculateTotalPrice();
-            savedCartItem = cartItemRepository.save(savedCartItem);
-            logger.info("Recalculated total price after adding attributes: {}", savedCartItem.getCartItemTotalPrice());
         }
+        
+        // Recalculate unit price if not provided from frontend
+        if (request.getCartItemUnitPrice() == null) {
+            BigDecimal calculatedUnitPrice = calculateUnitPriceWithPolicy(
+                savedCartItem.getCartItemAttributes(), 
+                savedCartItem.getProduct(), 
+                null
+            );
+            savedCartItem.setCartItemUnitPrice(calculatedUnitPrice);
+            logger.info("Calculated unit price from policy/attributes: {}", calculatedUnitPrice);
+        }
+        
+        // Final recalculation of total price
+        savedCartItem.calculateTotalPrice();
+        savedCartItem = cartItemRepository.save(savedCartItem);
+        logger.info("Final total price after all calculations: {}", savedCartItem.getCartItemTotalPrice());
         
         // Update cart total quantity
         updateCartTotalQuantity(targetCartId);
@@ -238,15 +276,42 @@ public class CartItemServiceImpl implements CartItemService {
             addAttributesToCartItem(cartItemId, request.getSelectedAttributeIds());
             logger.info("Updated {} attributes for cart item", request.getSelectedAttributesCount());
         }
+        
+        // Handle unit price update if provided from frontend
+        if (request.getCartItemUnitPrice() != null) {
+            existingCartItem.setCartItemUnitPrice(request.getCartItemUnitPrice());
+            logger.info("Updated cart item unit price from frontend: {}", request.getCartItemUnitPrice());
+        }
 
-        // Recalculate total price after any changes (quantity or attributes may affect price)
+        // Recalculate total price after any changes (quantity, attributes, or unit price may affect price)
         if (request.getQuantity() != null && request.getQuantity() > 0) {
+            // Recalculate unit price if not provided from frontend but attributes changed
+            if (request.getCartItemUnitPrice() == null && request.hasSelectedAttributes()) {
+                BigDecimal calculatedUnitPrice = calculateUnitPriceWithPolicy(
+                    existingCartItem.getCartItemAttributes(), 
+                    existingCartItem.getProduct(), 
+                    null
+                );
+                existingCartItem.setCartItemUnitPrice(calculatedUnitPrice);
+                logger.info("Recalculated unit price from policy/attributes: {}", calculatedUnitPrice);
+            }
+            
             existingCartItem.calculateTotalPrice();
             logger.info("Recalculated total price after updates: {}", existingCartItem.getCartItemTotalPrice());
-        } else if (request.hasSelectedAttributes()) {
-            // Even if quantity didn't change, attributes might affect price
+        } else if (request.hasSelectedAttributes() || request.getCartItemUnitPrice() != null) {
+            // Even if quantity didn't change, attributes or unit price might affect total price
+            if (request.getCartItemUnitPrice() == null && request.hasSelectedAttributes()) {
+                BigDecimal calculatedUnitPrice = calculateUnitPriceWithPolicy(
+                    existingCartItem.getCartItemAttributes(), 
+                    existingCartItem.getProduct(), 
+                    null
+                );
+                existingCartItem.setCartItemUnitPrice(calculatedUnitPrice);
+                logger.info("Recalculated unit price from policy/attributes: {}", calculatedUnitPrice);
+            }
+            
             existingCartItem.calculateTotalPrice();  
-            logger.info("Recalculated total price after attribute updates: {}", existingCartItem.getCartItemTotalPrice());
+            logger.info("Recalculated total price after attribute/price updates: {}", existingCartItem.getCartItemTotalPrice());
         }
 
         CartItem updatedCartItem = cartItemRepository.save(existingCartItem);
@@ -383,15 +448,17 @@ public class CartItemServiceImpl implements CartItemService {
         cartItemAttributeRepository.deleteByCartItemId(cartItemId);
         logger.debug("Cleared existing attributes for cart item");
 
-        // Add new attributes
+        // Add new attributes - use ProductVariant to validate product-attribute relationship
         for (Long attributeId : attributeIds) {
             ProductAttribute productAttribute = productAttributeRepository.findById(attributeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product attribute not found with ID: " + attributeId));
 
-            // Verify this attribute belongs to the same product
-            if (!productAttribute.getProduct().getProductId().equals(cartItem.getProduct().getProductId())) {
+            // After refactor: ProductAttribute is master catalog, need to check if ProductVariant exists for this product
+            // Validate through ProductVariant that this attribute is available for this product
+            if (!productVariantRepository.existsByProductIdAndProductAttributeId(
+                    cartItem.getProduct().getProductId(), attributeId)) {
                 throw new IllegalArgumentException("Product attribute ID " + attributeId + 
-                    " does not belong to product ID " + cartItem.getProduct().getProductId());
+                    " is not available for product ID " + cartItem.getProduct().getProductId());
             }
 
             // Create cart item attribute
@@ -415,6 +482,52 @@ public class CartItemServiceImpl implements CartItemService {
             cart.setTotalQuantity(totalQuantity != null ? totalQuantity : 0);
             cartRepository.save(cart);
         }
+    }
+
+    /**
+     * Calculate unit price using policy-based pricing with fallback logic
+     * This method provides proper dependency injection for policy-based calculations
+     * @param cartItemAttributes Selected cart item attributes
+     * @param product Product entity
+     * @param frontendUnitPrice Unit price from frontend (if provided)
+     * @return Calculated unit price
+     */
+    public BigDecimal calculateUnitPriceWithPolicy(List<CartItemAttribute> cartItemAttributes, Product product, BigDecimal frontendUnitPrice) {
+        // Priority 1: Use frontend-provided unit price if available
+        if (frontendUnitPrice != null && frontendUnitPrice.compareTo(BigDecimal.ZERO) > 0) {
+            logger.debug("Using frontend-provided unit price: {}", frontendUnitPrice);
+            return frontendUnitPrice;
+        }
+        
+        // Priority 2: Policy-based attribute combination pricing
+        try {
+            Optional<Policy> policyOpt = policyRepository.findByPolicyName("PRODUCT_ATTRIBUTE_PRICE_MAPPING");
+            if (policyOpt.isPresent()) {
+                BigDecimal policyPrice = priceCalculator.calculatePriceFromPolicy(cartItemAttributes, policyOpt.get());
+                if (policyPrice.compareTo(BigDecimal.ZERO) > 0) {
+                    logger.info("Using policy-based price: {}", policyPrice);
+                    return policyPrice;
+                }
+            }
+        } catch (Exception e) {
+            logger.warn("Error calculating policy-based price, falling back to attribute/product price: {}", e.getMessage());
+        }
+        
+        // Priority 3: Maximum attribute price (legacy logic)
+        BigDecimal maxAttributePrice = priceCalculator.getMaxAttributePrice(cartItemAttributes);
+        if (maxAttributePrice.compareTo(BigDecimal.ZERO) > 0) {
+            logger.debug("Using max attribute price: {}", maxAttributePrice);
+            return maxAttributePrice;
+        }
+        
+        // Priority 4: Product price
+        if (product != null && product.getProductPrice() != null) {
+            logger.debug("Using product price: {}", product.getProductPrice());
+            return product.getProductPrice();
+        }
+        
+        logger.warn("No valid price found, using 0");
+        return BigDecimal.ZERO;
     }
 
     /**

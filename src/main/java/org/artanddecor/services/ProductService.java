@@ -6,6 +6,7 @@ import org.artanddecor.dto.ProductImageDto;
 import org.artanddecor.dto.ProductAttributeDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -39,12 +40,14 @@ public interface ProductService {
      * @param productCode Filter by product code (partial match, case-insensitive)
      * @param featured Filter by featured status
      * @param highlighted Filter by highlighted status
+     * @param productCategorySlug Filter by product category slug (URL-friendly identifier)
+     * @param productTypeSlug Filter by product type slug (URL-friendly identifier)
      * @param pageable Pagination and sorting information
      * @return Page of ProductDto matching criteria
      */
     Page<ProductDto> getProductsByCriteria(String textSearch, Boolean enabled, Long categoryId, Long typeId, Long stateId, 
                                          BigDecimal minPrice, BigDecimal maxPrice, Boolean inStock, String productCode, 
-                                         Boolean featured, Boolean highlighted, Pageable pageable);
+                                         Boolean featured, Boolean highlighted, String productCategorySlug, String productTypeSlug, Pageable pageable);
 
     // =============================================
     // ADMIN-FOCUSED OPERATIONS (ID > name > slug priority)
@@ -54,16 +57,6 @@ public interface ProductService {
      * Find product by ID for admin management
      */
     Optional<ProductDto> findProductById(Long productId);
-
-    /**
-     * Find product by name
-     */
-    Optional<ProductDto> findProductByName(String productName);
-
-    /**
-     * Find product by code
-     */
-    Optional<ProductDto> findProductByCode(String productCode);
 
     // =============================================
     // CRUD OPERATIONS
@@ -89,24 +82,9 @@ public interface ProductService {
     // =============================================
 
     /**
-     * Add image to product
-     */
-    ProductImageDto addImageToProduct(Long productId, Long imageId, Boolean isPrimary);
-
-    /**
      * Remove image from product
      */
     void removeImageFromProduct(Long productId, Long imageId);
-
-    /**
-     * Get product images
-     */
-    List<ProductImageDto> getProductImages(Long productId);
-
-    /**
-     * Set primary image for product
-     */
-    ProductImageDto setPrimaryImage(Long productId, Long imageId);
 
     // =============================================
     // UTILITY OPERATIONS
@@ -143,14 +121,18 @@ public interface ProductService {
     Page<ProductDto> getTopSellingProducts(Pageable pageable);
 
     /**
-     * Get product count by category
+     * Search products by similar images using AI service
+     * @param imageFile The image file to search for similar images
+     * @param isSelling Filter for selling products (null = no filter, true = selling only, false = non-selling only)
+     * @param pageable Pagination information  
+     * @return Page of products with similar images
+     * @throws Exception if AI service call fails or configuration is invalid
      */
-    Long getProductCountByCategoryId(Long categoryId);
-
-    /**
-     * Get product count by state
-     */
-    Long getProductCountByStateId(Long stateId);
+    Page<ProductDto> searchProductsBySimilarImage(
+        MultipartFile imageFile, 
+        Boolean isSelling, 
+        Pageable pageable
+    ) throws Exception;
 
     /**
      * Check if slug exists (for validation)

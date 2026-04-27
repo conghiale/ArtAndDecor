@@ -3,6 +3,7 @@ package org.artanddecor.dto;
 import lombok.*;
 import jakarta.validation.constraints.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -30,6 +31,13 @@ public class CartItemRequestDto {
     @Min(value = 1, message = "Quantity must be at least 1")
     @Max(value = 999, message = "Quantity cannot exceed 999")
     private Integer quantity;
+    
+    /**
+     * Unit price calculated on frontend and passed to API
+     * Optional - if not provided, will be calculated based on product/attributes
+     */
+    @DecimalMin(value = "0.0", inclusive = true, message = "Cart item unit price must not be negative")
+    private BigDecimal cartItemUnitPrice;
 
     /**
      * List of selected product attribute IDs for this cart item

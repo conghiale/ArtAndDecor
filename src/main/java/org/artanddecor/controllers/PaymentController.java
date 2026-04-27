@@ -413,6 +413,35 @@ public class PaymentController {
             return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to retrieve payment amounts: " + e.getMessage()));
         }
     }
+
+    /**
+     * Update payment status
+     * Role: ADMIN only
+     */
+    @PatchMapping("/{paymentId}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+        summary = "Update payment status",
+        description = "Update payment status by changing the payment state ID. Admin access required."
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<BaseResponseDto<PaymentDto>> updatePaymentStatus(
+            @Parameter(description = "Payment ID")
+            @PathVariable Long paymentId,
+            
+            @Parameter(description = "New payment state ID")
+            @RequestParam Long paymentStateId) {
+
+        logger.info("Updating payment status - paymentId: {}, newStateId: {}", paymentId, paymentStateId);
+
+        try {
+            PaymentDto updatedPayment = paymentService.updatePaymentStatus(paymentId, paymentStateId);
+            return ResponseEntity.ok(BaseResponseDto.success("Payment status updated successfully", updatedPayment));
+        } catch (Exception e) {
+            logger.error("Error updating payment status: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to update payment status: " + e.getMessage()));
+        }
+    }
     // =============================================
     // PAYMENT QR CODE ENDPOINT
     // =============================================
