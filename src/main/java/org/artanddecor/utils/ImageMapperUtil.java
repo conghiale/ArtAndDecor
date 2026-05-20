@@ -55,28 +55,4 @@ public class ImageMapperUtil {
         return dto;
     }
 
-    // =============================================
-    // VALIDATION HELPER METHODS
-    // =============================================
-
-    /**
-     * Check if Image entity is valid (has basic required fields)
-     */
-    public static boolean isValidImage(Image image) {
-        return image != null && 
-               image.getImageName() != null && 
-               image.getImageSlug() != null &&
-               image.getPathFile() != null;
-    }
-    
-    // =============================================
-    // HELPER METHODS TO GET FOREIGN KEY IDs
-    // =============================================
-    
-    /**
-     * Get image format from ImageDto (stored as string in IMAGE_FORMAT field)
-     */
-    public static String getImageFormat(ImageDto imageDto) {
-        return imageDto != null ? imageDto.getImageFormat() : null;
-    }
 }

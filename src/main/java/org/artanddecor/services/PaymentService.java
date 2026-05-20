@@ -83,6 +83,14 @@ public interface PaymentService {
      * @return Updated payment DTO
      */
     PaymentDto updatePaymentStatus(Long paymentId, Long paymentStateId);
+
+    /**
+     * Update payment status for all payments of an order
+     * @param orderId Order ID whose payments will be updated
+     * @param paymentStateId New payment state ID
+     * @return Updated payment DTO list
+     */
+    List<PaymentDto> updatePaymentStatusByOrderId(Long orderId, Long paymentStateId);
     
     /**
      * Generate QR code for payment

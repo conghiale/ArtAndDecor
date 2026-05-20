@@ -1,38 +1,34 @@
 package org.artanddecor.controllers;
 
-import io.swagger.v3.oas.annotations.media.ArraySchema;
-import lombok.RequiredArgsConstructor;
-import org.artanddecor.dto.BaseResponseDto;
-import org.artanddecor.dto.ImageDto;
-import org.artanddecor.dto.ImageUploadDto;
-import org.artanddecor.dto.ImageUploadResponseDto;
-import org.artanddecor.services.ImageService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-
-import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.web.multipart.MultipartFile;
-import java.io.IOException;
-import java.util.List;
-import java.util.Optional;
+import lombok.RequiredArgsConstructor;
+import org.artanddecor.dto.BaseResponseDto;
+import org.artanddecor.dto.ImageDto;
+import org.artanddecor.dto.ImageUploadDto;
+import org.artanddecor.services.ImageService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * Image Management REST Controller
@@ -122,92 +118,75 @@ public class ImageController {
     }
 
     /**
-     * Upload multiple images with comprehensive metadata processing
-     * Handles batch image upload with SHA-256 hashing, dimension detection, and database persistence
-     * Public endpoint accessible for product and content image uploads
-     * 
-     * @param imageFiles Array of image files to upload
-     * @param imageDisplayNames Optional display names for images
-     * @param imageSizes Optional size metadata for images
-     * @param imageFormats Optional format metadata for images
-     * @param imageRemarks Optional remarks for images
-     * @param imageSlugs Optional slugs for images
-     * @return Upload response with success/failure details and uploaded image information
+     * Upload a single image with metadata.
+     * File is stored with SHA-256 hash-based naming and deduplication.
+     * If the same file content was already uploaded, the existing image record is returned.
      */
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "Upload multiple images with metadata",
-               description = "Upload one or more images with optional metadata. Each image is processed with SHA-256 hashing for unique filename generation, automatic dimension detection, format validation, and comprehensive metadata storage. Supports parallel arrays for batch metadata assignment.")
+    @Operation(summary = "Upload image with metadata",
+               description = "Upload a single image with optional metadata. File is processed with SHA-256 hashing for unique filename generation, automatic dimension detection, format validation, and database persistence. Identical file content returns the existing image record (deduplication).")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Upload completed (may include partial failures)",
-                     content = @Content(schema = @Schema(implementation = ImageUploadResponseDto.class))),
-        @ApiResponse(responseCode = "400", description = "Invalid request data or validation errors"),
-        @ApiResponse(responseCode = "413", description = "File size exceeds maximum limit (50MB per file)"),
-        @ApiResponse(responseCode = "415", description = "Unsupported file format (only image types allowed)"),
-        @ApiResponse(responseCode = "500", description = "Internal server error or file processing failure")
+        @ApiResponse(responseCode = "200", description = "Image uploaded successfully",
+                     content = @Content(schema = @Schema(implementation = ImageDto.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid request or missing file"),
+        @ApiResponse(responseCode = "413", description = "File exceeds maximum size limit (50 MB)"),
+        @ApiResponse(responseCode = "415", description = "Unsupported file format"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    public ResponseEntity<BaseResponseDto<ImageUploadResponseDto>> uploadImages(
-            @Parameter(description = "Image files to upload", required = true,
-                    content = @Content(
-                    mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
-                    array = @ArraySchema(schema = @Schema(type = "string", format = "binary"))
-            ))
-            @RequestPart("imageFiles") MultipartFile[] imageFiles,
-            
-            @Parameter(description = "Optional display names for each image")
-            @RequestPart(value = "imageDisplayNames", required = false) String[] imageDisplayNames,
-            
-            @Parameter(description = "Optional size metadata for each image (e.g., '1920x1080')")
-            @RequestPart(value = "imageSizes", required = false) String[] imageSizes,
-            
-            @Parameter(description = "Optional format metadata for each image (e.g., 'JPG', 'PNG')")
-            @RequestPart(value = "imageFormats", required = false) String[] imageFormats,
-            
-            @Parameter(description = "Optional remarks for each image")
-            @RequestPart(value = "imageRemarks", required = false) String[] imageRemarks,
-            
-            @Parameter(description = "Optional URL-friendly identifiers for each image")
-            @RequestPart(value = "imageSlugs", required = false) String[] imageSlugs) {
-        
-        logger.info("Uploading {} images via API", imageFiles != null ? imageFiles.length : 0);
-        
+    public ResponseEntity<BaseResponseDto<ImageDto>> uploadImage(
+            @Parameter(description = "Image file to upload", required = true,
+                    content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
+                            schema = @Schema(type = "string", format = "binary")))
+            @RequestPart("imageFile") MultipartFile imageFile,
+
+            @Parameter(description = "Optional display name for the image")
+            @RequestPart(value = "imageDisplayName", required = false) String imageDisplayName,
+
+            @Parameter(description = "Optional dimensions, e.g. '1920x1080'")
+            @RequestPart(value = "imageSize", required = false) String imageSize,
+
+            @Parameter(description = "Optional format, e.g. 'JPG', 'PNG'")
+            @RequestPart(value = "imageFormat", required = false) String imageFormat,
+
+            @Parameter(description = "Optional remark")
+            @RequestPart(value = "imageRemark", required = false) String imageRemark,
+
+            @Parameter(description = "Optional URL-friendly slug")
+            @RequestPart(value = "imageSlug", required = false) String imageSlug) {
+
+        logger.info("Uploading image via API");
+
         try {
-            // Validate required parameters
-            if (imageFiles == null || imageFiles.length == 0) {
+            if (imageFile == null || imageFile.isEmpty()) {
                 return ResponseEntity.badRequest()
-                        .body(BaseResponseDto.badRequest("No image files provided"));
+                        .body(BaseResponseDto.badRequest("Image file is required"));
             }
-            
-            // Create ImageUploadDto from parts
+
             ImageUploadDto imageUploadDto = ImageUploadDto.builder()
-                    .imageFiles(imageFiles)
-                    .imageDisplayNames(imageDisplayNames)
-                    .imageSizes(imageSizes)
-                    .imageFormats(imageFormats)
-                    .imageRemarks(imageRemarks)
-                    .imageSlugs(imageSlugs)
+                    .imageFile(imageFile)
+                    .imageDisplayName(imageDisplayName)
+                    .imageSize(imageSize)
+                    .imageFormat(imageFormat)
+                    .imageRemark(imageRemark)
+                    .imageSlug(imageSlug)
                     .build();
-            
-            // Process upload
-            ImageUploadResponseDto response = imageService.uploadImages(imageUploadDto);
-            
-            return ResponseEntity.ok(BaseResponseDto.success(
-                    String.format("Upload completed: %d succeeded, %d failed", 
-                            response.getSuccessCount(), response.getFailureCount()),
-                    response
-            ));
-            
+
+            ImageDto uploadedImage = imageService.uploadImage(imageUploadDto);
+
+            return ResponseEntity.ok(BaseResponseDto.success("Image uploaded successfully", uploadedImage));
+
         } catch (IllegalArgumentException e) {
-            logger.error("Validation error uploading images: {}", e.getMessage());
+            logger.error("Validation error uploading image: {}", e.getMessage());
             return ResponseEntity.badRequest()
                     .body(BaseResponseDto.badRequest("Validation error: " + e.getMessage()));
         } catch (IOException e) {
-            logger.error("IO error uploading images: {}", e.getMessage(), e);
+            logger.error("IO error uploading image: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(BaseResponseDto.serverError("File operation failed: " + e.getMessage()));
         } catch (Exception e) {
-            logger.error("Error uploading images: {}", e.getMessage(), e);
+            logger.error("Error uploading image: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(BaseResponseDto.serverError("Failed to upload images: " + e.getMessage()));
+                    .body(BaseResponseDto.serverError("Failed to upload image: " + e.getMessage()));
         }
     }
 
@@ -272,14 +251,14 @@ public class ImageController {
                         .body(BaseResponseDto.badRequest("Image file is required for update"));
             }
             
-            // Create ImageUploadDto from individual parameters for service layer compatibility
+            // Build DTO and delegate to service
             ImageUploadDto imageUploadDto = ImageUploadDto.builder()
-                    .imageFiles(new MultipartFile[]{imageFile})
-                    .imageDisplayNames(imageDisplayName != null ? new String[]{imageDisplayName} : null)
-                    .imageSizes(imageSize != null ? new String[]{imageSize} : null)
-                    .imageFormats(imageFormat != null ? new String[]{imageFormat} : null)
-                    .imageRemarks(imageRemark != null ? new String[]{imageRemark} : null)
-                    .imageSlugs(imageSlug != null ? new String[]{imageSlug} : null)
+                    .imageFile(imageFile)
+                    .imageDisplayName(imageDisplayName)
+                    .imageSize(imageSize)
+                    .imageFormat(imageFormat)
+                    .imageRemark(imageRemark)
+                    .imageSlug(imageSlug)
                     .build();
             
             // Process update using ImageUploadDto

@@ -207,8 +207,9 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.PUT, "/payments/methods/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/payments/states").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/payments/states/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/payments/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/payments/{paymentId:[\\d+]}").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/payments/*/status").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/payments/order/*/status").hasRole("ADMIN")
                         
                         // Admin-only payment statistics endpoints
                         .requestMatchers(HttpMethod.GET, "/payments/stats/**").hasRole("ADMIN")

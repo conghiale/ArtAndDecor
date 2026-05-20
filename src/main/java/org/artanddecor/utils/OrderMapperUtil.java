@@ -9,11 +9,10 @@ import org.artanddecor.model.OrderItem;
 import org.artanddecor.model.OrderState;
 import org.artanddecor.model.OrderStateHistory;
 import org.artanddecor.model.Payment;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Unified Order Mapper Utility for converting between Entity and DTO
@@ -22,6 +21,9 @@ import java.util.stream.Collectors;
  */
 @Component
 public class OrderMapperUtil {
+
+    @Autowired
+    private PaymentMapperUtil paymentMapperUtil;
 
     // ===== ORDER MAPPING =====
 
@@ -72,22 +74,7 @@ public class OrderMapperUtil {
         dto.setDiscountType(order.getDiscountType());
         dto.setDiscountValue(order.getDiscountValue());
 
-        // Set payment snapshot values from Payment entities (latest payment)
-        if (order.getPayments() != null && !order.getPayments().isEmpty()) {
-            // Get the latest payment (most recent one)
-            Payment latestPayment = order.getPayments().stream()
-                    .max((p1, p2) -> p1.getCreatedDt().compareTo(p2.getCreatedDt()))
-                    .orElse(null);
-            
-            if (latestPayment != null) {
-                dto.setPaymentMethod(latestPayment.getPaymentMethod() != null ? 
-                    latestPayment.getPaymentMethod().getPaymentMethodName() : null);
-                dto.setPaymentState(latestPayment.getPaymentState() != null ? 
-                    latestPayment.getPaymentState().getPaymentStateName() : null);
-                dto.setTransactionId(latestPayment.getTransactionId());
-                dto.setPaymentRemark(latestPayment.getPaymentRemark());
-            }
-        }
+        applyLatestPaymentSnapshot(dto, order);
 
         // Map OrderItems if loaded
         if (order.getOrderItems() != null && !order.getOrderItems().isEmpty()) {
@@ -176,6 +163,30 @@ public class OrderMapperUtil {
     }
 
     /**
+     * Copy the latest payment snapshot into OrderDto when payment data is loaded.
+     * Uses the newest payment by created timestamp.
+     */
+    private void applyLatestPaymentSnapshot(OrderDto dto, Order order) {
+        if (order.getPayments() == null || order.getPayments().isEmpty()) {
+            return;
+        }
+
+        Payment latestPayment = order.getPayments().stream()
+                .max((p1, p2) -> p1.getCreatedDt().compareTo(p2.getCreatedDt()))
+                .orElse(null);
+
+        if (latestPayment == null) {
+            return;
+        }
+
+        dto.setPaymentMethod(latestPayment.getPaymentMethod() != null ?
+                latestPayment.getPaymentMethod().getPaymentMethodName() : null);
+        dto.setPaymentState(paymentMapperUtil.mapPaymentStateToDto(latestPayment.getPaymentState()));
+        dto.setTransactionId(latestPayment.getTransactionId());
+        dto.setPaymentRemark(latestPayment.getPaymentRemark());
+    }
+
+    /**
      * Map Order entity to OrderDto without loading OrderItems (for performance)
      * @param order Order entity
      * @return OrderDto without order items
@@ -222,22 +233,7 @@ public class OrderMapperUtil {
         dto.setDiscountType(order.getDiscountType());
         dto.setDiscountValue(order.getDiscountValue());
 
-        // Set payment snapshot values from Payment entities (latest payment)
-        if (order.getPayments() != null && !order.getPayments().isEmpty()) {
-            // Get the latest payment (most recent one)
-            Payment latestPayment = order.getPayments().stream()
-                    .max((p1, p2) -> p1.getCreatedDt().compareTo(p2.getCreatedDt()))
-                    .orElse(null);
-            
-            if (latestPayment != null) {
-                dto.setPaymentMethod(latestPayment.getPaymentMethod() != null ? 
-                    latestPayment.getPaymentMethod().getPaymentMethodName() : null);
-                dto.setPaymentState(latestPayment.getPaymentState() != null ? 
-                    latestPayment.getPaymentState().getPaymentStateName() : null);
-                dto.setTransactionId(latestPayment.getTransactionId());
-                dto.setPaymentRemark(latestPayment.getPaymentRemark());
-            }
-        }
+        applyLatestPaymentSnapshot(dto, order);
 
         // Compute additional fields
         computeAdditionalFields(dto, order);

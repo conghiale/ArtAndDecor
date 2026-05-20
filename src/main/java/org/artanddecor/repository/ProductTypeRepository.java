@@ -52,11 +52,13 @@ public interface ProductTypeRepository extends JpaRepository<ProductType, Long> 
            "     LOWER(pt.productTypeName) LIKE LOWER(CONCAT('%', :textSearch, '%')) OR " +
            "     LOWER(pt.productTypeSlug) LIKE LOWER(CONCAT('%', :textSearch, '%')) OR " +
            "     LOWER(pt.productTypeDisplayName) LIKE LOWER(CONCAT('%', :textSearch, '%')) OR " +
+            "     pt.productTypeContent LIKE CONCAT('%', :textSearch, '%') OR " +
            "     LOWER(pt.productTypeRemark) LIKE LOWER(CONCAT('%', :textSearch, '%'))" +
            ")) " +
            "AND (:enabled IS NULL OR pt.productTypeEnabled = :enabled) " +
            "AND (:productTypeSlug IS NULL OR LOWER(pt.productTypeSlug) = LOWER(:productTypeSlug)) " +
-           "ORDER BY pt.createdDt DESC")
+           "ORDER BY CASE WHEN pt.productTypeDisplayOrder IS NULL THEN 1 ELSE 0 END ASC, " +
+           "pt.productTypeDisplayOrder ASC, pt.createdDt DESC")
     Page<ProductType> findProductTypesByCriteriaPaginated(
         @Param("textSearch") String textSearch,
         @Param("enabled") Boolean enabled,

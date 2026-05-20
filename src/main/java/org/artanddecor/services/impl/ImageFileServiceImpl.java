@@ -87,7 +87,7 @@ public class ImageFileServiceImpl implements ImageFileService {
         logger.debug("Downloading image file: {}", hashedFilename);
 
         String storagePath = getStoragePath();
-        Path filePath = Paths.get(storagePath).resolve(hashedFilename);
+        Path filePath = resolveStorageRelativePath(storagePath, hashedFilename);
 
         if (!Files.exists(filePath)) {
             logger.warn("Image file not found: {}", hashedFilename);
@@ -107,7 +107,7 @@ public class ImageFileServiceImpl implements ImageFileService {
         logger.info("Deleting image file: {}", hashedFilename);
 
         String storagePath = getStoragePath();
-        Path filePath = Paths.get(storagePath).resolve(hashedFilename);
+        Path filePath = resolveStorageRelativePath(storagePath, hashedFilename);
 
         try {
             if (Files.exists(filePath)) {
@@ -154,8 +154,25 @@ public class ImageFileServiceImpl implements ImageFileService {
         logger.debug("Checking if file exists: {}", hashedFilename);
 
         String storagePath = getStoragePath();
-        Path filePath = Paths.get(storagePath).resolve(hashedFilename);
+        Path filePath = resolveStorageRelativePath(storagePath, hashedFilename);
         return Files.exists(filePath);
+    }
+
+    /**
+     * Resolve a storage-relative image path safely.
+     * Supports values like "hash.jpg", "ab/cd/hash.jpg", or "/ab/cd/hash.jpg".
+     */
+    private Path resolveStorageRelativePath(String storagePath, String imagePath) {
+        if (imagePath == null || imagePath.trim().isEmpty()) {
+            return Paths.get(storagePath);
+        }
+
+        String normalizedRelativePath = imagePath.trim().replace('\\', '/');
+        while (normalizedRelativePath.startsWith("/")) {
+            normalizedRelativePath = normalizedRelativePath.substring(1);
+        }
+
+        return Paths.get(storagePath).resolve(normalizedRelativePath);
     }
 
     /**

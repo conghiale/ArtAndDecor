@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -79,6 +80,18 @@ public class OrderServiceImpl implements OrderService {
     
     @Autowired
     private PaymentRepository paymentRepository;
+
+    @Autowired
+    private ShipmentRepository shipmentRepository;
+
+    @Autowired
+    private ShipmentStateRepository shipmentStateRepository;
+    
+    @Autowired
+    private ContactService contactService;
+    
+    @Autowired
+    private EmailService emailService;
 
     // ===== NEW APIS =====
     
@@ -648,7 +661,19 @@ public class OrderServiceImpl implements OrderService {
         logger.debug("Order reloaded with {} payments for proper snapshot mapping", 
                     finalOrder.getPayments() != null ? finalOrder.getPayments().size() : 0);
         
-        return orderMapperUtil.mapToDto(finalOrder);
+        // Convert to DTO before sending notification email
+        OrderDto orderDto = orderMapperUtil.mapToDto(finalOrder);
+        
+        // Send order notification email to admin contacts
+        try {
+            sendOrderNotificationEmail(orderDto);
+        } catch (Exception e) {
+            // Email failure should not affect order creation success
+            logger.error("Failed to send order notification email for order {}: {}", 
+                        orderDto.getOrderId(), e.getMessage());
+        }
+        
+        return orderDto;
     }
     
     // REMOVED: Legacy checkoutSelectedCartItems method with single userId parameter
@@ -879,42 +904,86 @@ public class OrderServiceImpl implements OrderService {
                     .orElse(null);
             
             if (newOrderState != null && "DELIVERED".equalsIgnoreCase(newOrderState.getOrderStateName())) {
-                // Special handling: When order is DELIVERED, update all associated shipments to DELIVERED
-                logger.info("Order {} marked as DELIVERED, updating associated shipments", orderId);
-                
-                // Check if ShipmentService exists and update shipment statuses
+                logger.info("Order {} marked as DELIVERED, applying shipment/payment completion workflow", orderId);
+
+                // 1) Mark all shipments of this order as DELIVERED
                 try {
-                    // Find all shipments for this order
-                    Order order = orderRepository.findById(orderId).orElse(null);
-                    if (order != null && order.getShipments() != null && !order.getShipments().isEmpty()) {
-                        // Update each shipment to DELIVERED status
-                        for (Shipment shipment : order.getShipments()) {
+                    Optional<ShipmentState> deliveredShipmentStateOpt = shipmentStateRepository.findByShipmentStateName("DELIVERED");
+                    if (deliveredShipmentStateOpt.isEmpty()) {
+                        logger.warn("DELIVERED shipment state not found, skip shipment status update for order {}", orderId);
+                    } else {
+                        ShipmentState deliveredShipmentState = deliveredShipmentStateOpt.get();
+                        List<Shipment> shipments = shipmentRepository.findByOrderOrderIdOrderByCreatedDtDesc(orderId);
+
+                        int updatedShipmentCount = 0;
+                        for (Shipment shipment : shipments) {
                             try {
-                                // You would need to implement or inject ShipmentService here
-                                // shipmentService.updateShipmentStatusToDelivered(shipment.getShipmentId(), changedByUserId);
-                                
-                                // For now, just log the action since we don't have ShipmentService injected
-                                logger.info("Should update shipment {} to DELIVERED status for order {}", 
-                                           shipment.getShipmentId(), orderId);
-                                
-                                // If you have direct access to shipment repository, you can update here:
-                                // Find DELIVERED shipment state and update shipment
-                                // shipment.setShipmentState(deliveredState);
-                                // shipment.setModifiedDt(LocalDateTime.now());
-                                // shipmentRepository.save(shipment);
-                                
+                                shipment.setShipmentState(deliveredShipmentState);
+                                if (shipment.getDeliveredAt() == null) {
+                                    shipment.setDeliveredAt(LocalDateTime.now());
+                                }
+
+                                String autoRemark = "Auto-updated to DELIVERED when order was marked DELIVERED";
+                                if (statusNote != null && !statusNote.trim().isEmpty()) {
+                                    autoRemark = autoRemark + " | Note: " + statusNote.trim();
+                                }
+                                shipment.setShipmentRemark(autoRemark);
+
+                                shipmentRepository.save(shipment);
+                                updatedShipmentCount++;
                             } catch (Exception e) {
-                                logger.warn("Failed to update shipment {} status to DELIVERED: {}", 
+                                logger.warn("Failed to update shipment {} to DELIVERED: {}",
                                            shipment.getShipmentId(), e.getMessage());
                             }
                         }
-                        
-                        logger.info("Completed updating {} shipments for delivered order {}", 
-                                   order.getShipments().size(), orderId);
+
+                        logger.info("Updated {}/{} shipments to DELIVERED for order {}",
+                                   updatedShipmentCount, shipments.size(), orderId);
                     }
                 } catch (Exception e) {
-                    logger.error("Error updating shipment statuses for delivered order {}: {}", orderId, e.getMessage());
-                    // Don't fail the order update if shipment update fails
+                    logger.error("Error updating shipments to DELIVERED for order {}: {}", orderId, e.getMessage(), e);
+                    // Do not fail order status update due to shipment update failure
+                }
+
+                // 2) Mark all payments of this order as COMPLETED
+                try {
+                    Optional<PaymentState> completedPaymentStateOpt = paymentStateRepository.findByPaymentStateName("COMPLETED");
+                    if (completedPaymentStateOpt.isEmpty()) {
+                        logger.warn("COMPLETED payment state not found, skip payment status update for order {}", orderId);
+                    } else {
+                        PaymentState completedPaymentState = completedPaymentStateOpt.get();
+                        List<Payment> payments = paymentRepository.findByOrderOrderId(orderId);
+
+                        int updatedPaymentCount = 0;
+                        for (Payment payment : payments) {
+                            try {
+                                if (payment.getPaymentState() == null
+                                        || !"COMPLETED".equalsIgnoreCase(payment.getPaymentState().getPaymentStateName())) {
+                                    payment.setPaymentState(completedPaymentState);
+
+                                    String existingRemark = payment.getPaymentRemark();
+                                    String autoRemark = "Auto-updated to COMPLETED when order was marked DELIVERED";
+                                    if (existingRemark == null || existingRemark.trim().isEmpty()) {
+                                        payment.setPaymentRemark(autoRemark);
+                                    } else if (!existingRemark.contains(autoRemark)) {
+                                        payment.setPaymentRemark(existingRemark + " | " + autoRemark);
+                                    }
+
+                                    paymentRepository.save(payment);
+                                    updatedPaymentCount++;
+                                }
+                            } catch (Exception e) {
+                                logger.warn("Failed to update payment {} to COMPLETED: {}",
+                                           payment.getPaymentId(), e.getMessage());
+                            }
+                        }
+
+                        logger.info("Updated {}/{} payments to COMPLETED for order {}",
+                                   updatedPaymentCount, payments.size(), orderId);
+                    }
+                } catch (Exception e) {
+                    logger.error("Error updating payments to COMPLETED for order {}: {}", orderId, e.getMessage(), e);
+                    // Do not fail order status update due to payment update failure
                 }
             }
             
@@ -1082,5 +1151,277 @@ public class OrderServiceImpl implements OrderService {
                    .replace("\n", "\\n")    // Escape newlines
                    .replace("\r", "\\r")    // Escape carriage returns
                    .replace("\t", "\\t");   // Escape tabs
+    }
+    
+    /**
+     * Send order notification email to admin contacts
+     * @param order Order details to include in notification
+     */
+    private void sendOrderNotificationEmail(OrderDto order) {
+        logger.info("Sending order notification email for order: {} - {}",
+                order.getOrderId(), order.getOrderCode());
+
+        try {
+            // Gửi cho admin/contact như cũ
+            Pageable pageable = PageRequest.of(0, Integer.MAX_VALUE); // Get all contacts
+            Page<ContactDto> enabledContacts = contactService.findContactsByCriteria(null, true, null, pageable);
+            String subjectAdmin = buildOrderEmailSubject(order);
+            String contentAdmin = buildOrderEmailContent(order);
+            int successCount = 0;
+            int totalCount = 0;
+            if (!enabledContacts.isEmpty()) {
+                for (ContactDto contact : enabledContacts.getContent()) {
+                    if (contact.getContactEmail() != null && !contact.getContactEmail().trim().isEmpty()) {
+                        totalCount++;
+                        try {
+                            emailService.sendNotificationEmail(contact.getContactEmail(), subjectAdmin, contentAdmin);
+                            successCount++;
+                            logger.debug("Sent order notification email to: {}", contact.getContactEmail());
+                        } catch (Exception e) {
+                            logger.error("Failed to send order notification email to {}: {}", contact.getContactEmail(), e.getMessage());
+                        }
+                    }
+                }
+                if (successCount == 0) {
+                    logger.warn("Failed to send order notification email to any contact addresses");
+                } else {
+                    logger.info("Order notification email sent successfully to {}/{} contact addresses", successCount, totalCount);
+                }
+            } else {
+                logger.warn("No enabled contacts found to send order notification email");
+            }
+
+            // Gửi cho khách hàng đặt hàng (nếu có email)
+            if (order.getCustomerEmail() != null && !order.getCustomerEmail().trim().isEmpty()) {
+                String subjectCustomer = buildOrderCustomerEmailSubject(order);
+                String contentCustomer = buildOrderCustomerEmailContent(order);
+                try {
+                    emailService.sendNotificationEmail(order.getCustomerEmail(), subjectCustomer, contentCustomer);
+                    logger.info("Order notification email sent to customer: {}", order.getCustomerEmail());
+                } catch (Exception e) {
+                    logger.error("Failed to send order notification email to customer {}: {}", order.getCustomerEmail(), e.getMessage());
+                }
+            } else {
+                logger.warn("No customer email found to send order notification email");
+            }
+        } catch (Exception e) {
+            logger.error("Unexpected error while sending order notification email: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Build email subject for customer notification
+     */
+    private String buildOrderCustomerEmailSubject(OrderDto order) {
+        return String.format("[Art & Decor] Đặt hàng thành công - %s", order.getOrderCode());
+    }
+
+    /**
+     * Build email content for customer notification
+     */
+    private String buildOrderCustomerEmailContent(OrderDto order) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
+        String orderTime = order.getCreatedDt().format(formatter);
+        StringBuilder itemsBuilder = new StringBuilder();
+        if (order.getOrderItems() != null && !order.getOrderItems().isEmpty()) {
+            for (OrderItemDto item : order.getOrderItems()) {
+                itemsBuilder.append(String.format("    • %s (x%d) - %s\n",
+                        item.getProductName() != null ? item.getProductName() : "Sản phẩm",
+                        item.getQuantity(),
+                        formatCurrency(item.getUnitPrice().multiply(new BigDecimal(item.getQuantity())))));
+            }
+        } else {
+            itemsBuilder.append("    • Thông tin sản phẩm đang được cập nhật\n");
+        }
+        return String.format("""
+            Cảm ơn bạn đã đặt hàng tại Art & Decor!
+            ═══════════════════════════════════════════════════════════════
+        
+            📋 THÔNG TIN ĐƠN HÀNG:
+            • Mã đơn hàng: %s
+            • Thời gian đặt: %s
+            • Trạng thái: %s
+            %s
+        
+            👤 THÔNG TIN KHÁCH HÀNG:
+            • Tên: %s
+            • Email: %s
+            • Số điện thoại: %s
+            • Địa chỉ: %s
+        
+            📦 THÔNG TIN GIAO HÀNG:
+            • Người nhận: %s
+            • Số điện thoại: %s
+            • Email nhận: %s
+            • Địa chỉ giao hàng: %s, %s, %s, %s
+        
+            🛒 CHI TIẾT SẢN PHẨM:
+            %s
+        
+            💰 TỔNG KẾT THANH TOÁN:
+            • Tạm tính: %s
+            • Giảm giá: -%s (%s)
+            • Phí vận chuyển: %s
+            • ───────────────────────────────────────
+            • TỔNG CỘNG: %s
+        
+            📝 GHI CHÚ:
+            %s
+        
+            Nếu bạn có bất kỳ thắc mắc nào về đơn hàng, vui lòng liên hệ với chúng tôi qua email này hoặc hotline hỗ trợ trên website.
+        
+            Trân trọng cảm ơn!
+            Art & Decor
+            """,
+                order.getOrderCode(),
+                orderTime,
+                order.getOrderState() != null ? order.getOrderState().getOrderStateDisplayName() : "Đang xử lý",
+                order.getSessionId() != null ? "\n• Session ID: " + order.getSessionId() : "",
+                order.getCustomerName() != null ? order.getCustomerName() : "Chưa cập nhật",
+                order.getCustomerEmail() != null ? order.getCustomerEmail() : "Chưa cập nhật",
+                order.getCustomerPhoneNumber() != null ? order.getCustomerPhoneNumber() : "Chưa cập nhật",
+                order.getCustomerAddress() != null ? order.getCustomerAddress() : "Chưa cập nhật",
+                order.getReceiverName() != null ? order.getReceiverName() : "Chưa cập nhật",
+                order.getReceiverPhone() != null ? order.getReceiverPhone() : "Chưa cập nhật",
+                order.getReceiverEmail() != null ? order.getReceiverEmail() : "Chưa cập nhật",
+                order.getAddressLine() != null ? order.getAddressLine() : "Chưa cập nhật",
+                order.getWard() != null ? order.getWard() : "",
+                order.getCity() != null ? order.getCity() : "",
+                order.getCountry() != null ? order.getCountry() : "Việt Nam",
+                itemsBuilder.toString(),
+                formatCurrency(order.getSubtotalAmount()),
+                formatCurrency(order.getDiscountAmount()),
+                order.getDiscountCode() != null ? order.getDiscountCode() : "Không có",
+                formatCurrency(order.getShippingFeeAmount()),
+                formatCurrency(order.getTotalAmount()),
+                order.getOrderNote() != null && !order.getOrderNote().trim().isEmpty()
+                        ? order.getOrderNote() : "Không có ghi chú đặc biệt"
+        );
+    }
+    
+    /**
+     * Build email subject for order notification
+     * @param order Order details
+     * @return Email subject
+     */
+    private String buildOrderEmailSubject(OrderDto order) {
+        String orderType = (order.getUserId() != null) ? "KHÁCH HÀNG" : "KHÁCH VÃNG LAI";
+        return String.format("[ĐƠN HÀNG MỚI] %s - %s - %s", 
+                           order.getOrderCode(), 
+                           orderType,
+                           formatCurrency(order.getTotalAmount()));
+    }
+    
+    /**
+     * Build email content for order notification
+     * @param order Order details
+     * @return Email content
+     */
+    private String buildOrderEmailContent(OrderDto order) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
+        String orderTime = order.getCreatedDt().format(formatter);
+        String orderType = (order.getUserId() != null) ? "KHÁCH HÀNG ĐĂNG KÝ" : "KHÁCH VÃNG LAI";
+        
+        // Build order items summary
+        StringBuilder itemsBuilder = new StringBuilder();
+        if (order.getOrderItems() != null && !order.getOrderItems().isEmpty()) {
+            for (OrderItemDto item : order.getOrderItems()) {
+                itemsBuilder.append(String.format("    • %s (x%d) - %s\n",
+                    item.getProductName() != null ? item.getProductName() : "Sản phẩm",
+                    item.getQuantity(),
+                    formatCurrency(item.getUnitPrice().multiply(new BigDecimal(item.getQuantity())))));
+            }
+        } else {
+            itemsBuilder.append("    • Thông tin sản phẩm đang được cập nhật\n");
+        }
+        
+        return String.format("""
+            THÔNG BÁO ĐƠN HÀNG MỚI
+            ═══════════════════════════════════════════════════════════════
+            
+            📋 THÔNG TIN ĐƠN HÀNG:
+            • Mã đơn hàng: %s
+            • Loại khách hàng: %s
+            • Thời gian đặt: %s
+            • Trạng thái: %s
+            %s
+            
+            👤 THÔNG TIN KHÁCH HÀNG:
+            • Tên: %s
+            • Email: %s
+            • Số điện thoại: %s
+            • Địa chỉ: %s
+            
+            📦 THÔNG TIN GIAO HÀNG:
+            • Người nhận: %s
+            • Số điện thoại: %s
+            • Email nhận: %s
+            • Địa chỉ giao hàng: %s, %s, %s, %s
+            
+            🛒 CHI TIẾT SẢN PHẨM:
+            %s
+            
+            💰 TỔNG KẾT THANH TOÁN:
+            • Tạm tính: %s
+            • Giảm giá: -%s (%s)
+            • Phí vận chuyển: %s
+            • ───────────────────────────────────────
+            • TỔNG CỘNG: %s
+            
+            📝 GHI CHÚ:
+            %s
+            
+            🔧 YÊU CẦU XỬ LÝ:
+            • Kiểm tra và xác nhận đơn hàng trong hệ thống
+            • Liên hệ khách hàng để xác nhận thông tin giao hàng
+            • Chuẩn bị hàng hóa và sắp xếp giao hàng
+            • Cập nhật trạng thái đơn hàng trong hệ thống
+            
+            ⚠️ LƯU Ý:
+            • Email này được gửi tự động từ hệ thống Art and Decor
+            • Vui lòng xử lý đơn hàng trong thời gian sớm nhất
+            • Liên hệ khách hàng để xác nhận chi tiết giao hàng
+            
+            ═══════════════════════════════════════════════════════════════
+            Hệ thống Art and Decor - %s
+            """,
+            order.getOrderCode(),
+            orderType,
+            orderTime,
+            order.getOrderState() != null ? order.getOrderState().getOrderStateDisplayName() : "Đang xử lý",
+            order.getSessionId() != null ? "\n• Session ID: " + order.getSessionId() : "",
+            order.getCustomerName() != null ? order.getCustomerName() : "Chưa cập nhật",
+            order.getCustomerEmail() != null ? order.getCustomerEmail() : "Chưa cập nhật", 
+            order.getCustomerPhoneNumber() != null ? order.getCustomerPhoneNumber() : "Chưa cập nhật",
+            order.getCustomerAddress() != null ? order.getCustomerAddress() : "Chưa cập nhật",
+            order.getReceiverName() != null ? order.getReceiverName() : "Chưa cập nhật",
+            order.getReceiverPhone() != null ? order.getReceiverPhone() : "Chưa cập nhật",
+            order.getReceiverEmail() != null ? order.getReceiverEmail() : "Chưa cập nhật",
+            order.getAddressLine() != null ? order.getAddressLine() : "Chưa cập nhật",
+            order.getWard() != null ? order.getWard() : "",
+            order.getCity() != null ? order.getCity() : "",
+            order.getCountry() != null ? order.getCountry() : "Việt Nam",
+            itemsBuilder.toString(),
+            formatCurrency(order.getSubtotalAmount()),
+            formatCurrency(order.getDiscountAmount()),
+            order.getDiscountCode() != null ? order.getDiscountCode() : "Không có",
+            formatCurrency(order.getShippingFeeAmount()),
+            formatCurrency(order.getTotalAmount()),
+            order.getOrderNote() != null && !order.getOrderNote().trim().isEmpty() 
+                ? order.getOrderNote() : "Không có ghi chú đặc biệt",
+            orderTime
+        );
+    }
+    
+    /**
+     * Format currency amount for display in email
+     * @param amount Amount to format
+     * @return Formatted currency string
+     */
+    private String formatCurrency(BigDecimal amount) {
+        if (amount == null) {
+            return "0₫";
+        }
+        return String.format("%,d₫", amount.longValue());
     }
 }

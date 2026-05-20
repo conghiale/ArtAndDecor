@@ -9,56 +9,51 @@ import org.springframework.web.multipart.MultipartFile;
 import jakarta.validation.constraints.NotNull;
 
 /**
- * Image Upload DTO for handling batch file uploads with metadata
- * Receives multiple image files via form-data along with metadata
- * 
- * File name (imageName) is automatically generated via hash + current timestamp (milliseconds)
- * to ensure uniqueness - client does NOT provide this value
- * 
- * Display names are taken from client for user-friendly identification
+ * Image Upload DTO for handling single file upload with metadata.
+ * Used by both upload (POST) and update (PUT) endpoints.
+ *
+ * File name (imageName) is automatically generated via SHA-256 hash of file content.
+ * Display name is taken from client for user-friendly identification.
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class ImageUploadDto {
-    
+
     /**
-     * Array of image files uploaded via form-data
-     * Required for upload operations
+     * Image file uploaded via form-data.
+     * Required for all upload/update operations.
      */
-    @NotNull(message = "Image files are required")
-    private MultipartFile[] imageFiles;
-    
+    @NotNull(message = "Image file is required")
+    private MultipartFile imageFile;
+
     /**
-     * Array of display names corresponding to each file
-     * Optional field - if not provided, will be extracted from original filename
-     * Each represents the user-friendly name for the image
+     * User-friendly display name for the image.
+     * Optional – extracted from original filename when not provided.
      */
-    private String[] imageDisplayNames;
-    
+    private String imageDisplayName;
+
     /**
-     * Array of image sizes (dimensions) - e.g., "2048x1024", "1920x1080", "800x600"
-     * Optional field, if not provided, will be auto-detected from image file
+     * Image dimensions, e.g. "2048x1024", "1920x1080".
+     * Optional – auto-detected from file content when not provided.
      */
-    private String[] imageSizes;
-    
+    private String imageSize;
+
     /**
-     * Array of image formats - e.g., "JPG", "PNG", "WEBP", "GIF"
-     * Optional field, if not provided, will be extracted from file extension
+     * Image format, e.g. "JPG", "PNG", "WEBP".
+     * Optional – extracted from file extension when not provided.
      */
-    private String[] imageFormats;
-    
+    private String imageFormat;
+
     /**
-     * Array of remarks for each image (Vietnamese descriptions)
-     * Optional field
+     * Optional remark / description for the image.
      */
-    private String[] imageRemarks;
-    
+    private String imageRemark;
+
     /**
-     * Array of slugs for each image
-     * If not provided, will be generated from display name
-     * Optional field
+     * URL-friendly slug for the image.
+     * Optional – generated from display name when not provided.
      */
-    private String[] imageSlugs;
+    private String imageSlug;
 }

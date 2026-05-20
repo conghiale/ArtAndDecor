@@ -123,8 +123,7 @@ public class OrderDto {
     @Size(max = 100, message = "Payment method must not exceed 100 characters")
     private String paymentMethod;
     
-    @Size(max = 50, message = "Payment state must not exceed 50 characters")
-    private String paymentState;
+    private PaymentStateDto paymentState;
     
     @Size(max = 100, message = "Transaction ID must not exceed 100 characters")
     private String transactionId;
@@ -150,14 +149,14 @@ public class OrderDto {
      * Check if payment is completed
      */
     public boolean isPaymentCompleted() {
-        return paymentState != null && "COMPLETED".equalsIgnoreCase(paymentState);
+        return paymentState != null && "COMPLETED".equalsIgnoreCase(paymentState.getPaymentStateName());
     }
     
     /**
      * Check if payment is pending
      */
     public boolean isPaymentPending() {
-        return paymentState != null && "PENDING".equalsIgnoreCase(paymentState);
+        return paymentState != null && "PENDING".equalsIgnoreCase(paymentState.getPaymentStateName());
     }
     
     /**

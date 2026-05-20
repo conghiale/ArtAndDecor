@@ -44,8 +44,10 @@ public class ProductMapperUtil {
                 .productTypeName(productType.getProductTypeName())
                 .productTypeSlug(productType.getProductTypeSlug())
                 .productTypeDisplayName(productType.getProductTypeDisplayName())
+                .productTypeContent(productType.getProductTypeContent())
                 .productTypeRemark(productType.getProductTypeRemark())
                 .productTypeEnabled(productType.getProductTypeEnabled())
+                .productTypeDisplayOrder(productType.getProductTypeDisplayOrder())
                 .seoMeta(productType.getSeoMetaId() != null ? fetchSeoMetaDto(productType.getSeoMetaId()) : null)
                 .image(ImageMapperUtil.toBasicDto(productType.getImage()))
                 .createdDt(productType.getCreatedDt())
@@ -65,9 +67,11 @@ public class ProductMapperUtil {
                 .productCategoryName(productCategory.getProductCategoryName())
                 .productCategorySlug(productCategory.getProductCategorySlug())
                 .productCategoryDisplayName(productCategory.getProductCategoryDisplayName())
+                .productCategoryContent(productCategory.getProductCategoryContent())
                 .productCategoryRemark(productCategory.getProductCategoryRemark())
                 .productCategoryEnabled(productCategory.getProductCategoryEnabled())
                 .productCategoryVisible(productCategory.getProductCategoryVisible())
+                .productCategoryDisplayOrder(productCategory.getProductCategoryDisplayOrder())
                 .seoMeta(productCategory.getSeoMetaId() != null ? fetchSeoMetaDto(productCategory.getSeoMetaId()) : null)
                 .productTypeId(productCategory.getProductType() != null ? productCategory.getProductType().getProductTypeId() : null)
                 .parentCategoryId(productCategory.getParentCategory() != null ? productCategory.getParentCategory().getProductCategoryId() : null)
@@ -294,10 +298,6 @@ public class ProductMapperUtil {
         
         product.setModifiedDt(LocalDateTime.now());
     }
-    
-
-
-
 
     // =============================================
     // PRODUCT IMAGE MAPPING METHODS

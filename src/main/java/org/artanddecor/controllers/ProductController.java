@@ -5,6 +5,7 @@ import org.artanddecor.dto.*;
 import org.artanddecor.services.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -201,7 +202,10 @@ public class ProductController {
     @PostMapping(value = "/search-by-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(
         summary = "Search products by similar image using AI service",
-        description = "Upload an image to find products with similar images using AI-powered image similarity search. The system will call an external AI service to find similar images and return matching products with optional filtering for selling status. Requires SIMILAR_IMAGE_CONFIG policy to be configured with host, threshold, and top_k parameters."
+        description = "Upload an image to find products with similar images using AI-powered image similarity search. " +
+                "The system will call an external AI service to find similar images and return matching products with optional filtering for selling status. " +
+                "Requires SIMILAR_IMAGE_CONFIG policy to be configured with host, threshold, and top_k parameters. " +
+                "Use query parameters for isSelling and pagination settings."
     )
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Products with similar images retrieved successfully",
@@ -217,12 +221,12 @@ public class ProductController {
             @RequestPart("imageFile") MultipartFile imageFile,
             
             @Parameter(description = "Filter by selling status: true=only selling products, false=only non-selling products, null=all products",
-                      example = "true")
-            @RequestPart(value = "isSelling", required = false) Boolean isSelling,
+                       example = "true")
+            @RequestParam(value = "isSelling", required = false) Boolean isSelling,
             
             @Parameter(description = "Pagination settings: page number (0-based), size, sort field, and direction")
-            @PageableDefault(page = 0, size = 10, sort = "createdDt", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pageable) {
-        
+            @ParameterObject @PageableDefault(page = 0, size = 10) Pageable pageable) {
+
         logger.info("Searching products by similar image, isSelling: {}, file: {}, size: {} bytes", 
                    isSelling, imageFile.getOriginalFilename(), imageFile.getSize());
         
@@ -239,7 +243,7 @@ public class ProductController {
             
             // Check file type
             String contentType = imageFile.getContentType();
-            if (contentType == null || !contentType.startsWith("image/")) {
+            if (!contentType.startsWith("image/")) {
                 return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Only image files are allowed"));
             }
             

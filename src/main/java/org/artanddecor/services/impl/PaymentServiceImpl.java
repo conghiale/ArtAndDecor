@@ -270,4 +270,36 @@ public class PaymentServiceImpl implements PaymentService {
         
         return paymentMapperUtil.mapPaymentToDto(updatedPayment);
     }
+
+    @Override
+    @Transactional
+    public List<PaymentDto> updatePaymentStatusByOrderId(Long orderId, Long paymentStateId) {
+        logger.info("Updating payment status by order - orderId: {}, newStateId: {}", orderId, paymentStateId);
+
+        if (orderId == null) {
+            throw new IllegalArgumentException("Order ID is required");
+        }
+
+        // Validate payment state exists
+        PaymentState paymentState = paymentStateRepository.findById(paymentStateId)
+                .orElseThrow(() -> new ResourceNotFoundException("Payment state not found with ID: " + paymentStateId));
+
+        // Find all payments of the order
+        List<Payment> payments = paymentRepository.findByOrderOrderId(orderId);
+        if (payments == null || payments.isEmpty()) {
+            throw new ResourceNotFoundException("No payments found for order ID: " + orderId);
+        }
+
+        List<PaymentDto> updatedPayments = new java.util.ArrayList<>();
+        for (Payment payment : payments) {
+            payment.setPaymentState(paymentState);
+            Payment savedPayment = paymentRepository.save(payment);
+            updatedPayments.add(paymentMapperUtil.mapPaymentToDto(savedPayment));
+        }
+
+        logger.info("Updated {} payments for orderId {} to state {}",
+                updatedPayments.size(), orderId, paymentState.getPaymentStateName());
+
+        return updatedPayments;
+    }
 }

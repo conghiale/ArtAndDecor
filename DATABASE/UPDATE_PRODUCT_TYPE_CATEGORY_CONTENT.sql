@@ -1,0 +1,43 @@
+USE `ART_AND_DECOR`;
+
+-- Thêm cột PRODUCT_TYPE_CONTENT nếu chưa tồn tại
+SET @product_type_content_exists = (
+	SELECT COUNT(*)
+	FROM `information_schema`.`COLUMNS`
+	WHERE `TABLE_SCHEMA` = 'ART_AND_DECOR'
+	  AND `TABLE_NAME` = 'PRODUCT_TYPE'
+	  AND `COLUMN_NAME` = 'PRODUCT_TYPE_CONTENT'
+);
+
+SET @sql_product_type_content = IF(
+	@product_type_content_exists = 0,
+	'ALTER TABLE `PRODUCT_TYPE` ADD COLUMN `PRODUCT_TYPE_CONTENT` LONGTEXT NULL DEFAULT NULL AFTER `PRODUCT_TYPE_DISPLAY_NAME`',
+	'SELECT ''PRODUCT_TYPE_CONTENT already exists'''
+);
+
+PREPARE stmt FROM @sql_product_type_content;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Thêm cột PRODUCT_CATEGORY_CONTENT nếu chưa tồn tại
+SET @product_category_content_exists = (
+	SELECT COUNT(*)
+	FROM `information_schema`.`COLUMNS`
+	WHERE `TABLE_SCHEMA` = 'ART_AND_DECOR'
+	  AND `TABLE_NAME` = 'PRODUCT_CATEGORY'
+	  AND `COLUMN_NAME` = 'PRODUCT_CATEGORY_CONTENT'
+);
+
+SET @sql_product_category_content = IF(
+	@product_category_content_exists = 0,
+	'ALTER TABLE `PRODUCT_CATEGORY` ADD COLUMN `PRODUCT_CATEGORY_CONTENT` LONGTEXT NULL DEFAULT NULL AFTER `PRODUCT_CATEGORY_DISPLAY_NAME`',
+	'SELECT ''PRODUCT_CATEGORY_CONTENT already exists'''
+);
+
+PREPARE stmt FROM @sql_product_category_content;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Kiểm tra kết quả sau khi cập nhật
+SHOW COLUMNS FROM `PRODUCT_TYPE` LIKE 'PRODUCT_TYPE_CONTENT';
+SHOW COLUMNS FROM `PRODUCT_CATEGORY` LIKE 'PRODUCT_CATEGORY_CONTENT';

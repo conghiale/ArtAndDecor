@@ -78,8 +78,10 @@ public class ProductTypeServiceImpl implements ProductTypeService {
         productType.setProductTypeName(requestDto.getProductTypeName());
         productType.setProductTypeSlug(requestDto.getProductTypeSlug());
         productType.setProductTypeDisplayName(requestDto.getProductTypeDisplayName());
+        productType.setProductTypeContent(requestDto.getProductTypeContent());
         productType.setProductTypeRemark(requestDto.getProductTypeRemark());
         productType.setProductTypeEnabled(requestDto.getProductTypeEnabled() != null ? requestDto.getProductTypeEnabled() : true);
+        productType.setProductTypeDisplayOrder(requestDto.getProductTypeDisplayOrder());
         
         // Handle image
         if (requestDto.getImageId() != null) {
@@ -122,7 +124,9 @@ public class ProductTypeServiceImpl implements ProductTypeService {
         existingProductType.setProductTypeName(requestDto.getProductTypeName());
         existingProductType.setProductTypeSlug(requestDto.getProductTypeSlug());
         existingProductType.setProductTypeDisplayName(requestDto.getProductTypeDisplayName());
+        existingProductType.setProductTypeContent(requestDto.getProductTypeContent());
         existingProductType.setProductTypeRemark(requestDto.getProductTypeRemark());
+        existingProductType.setProductTypeDisplayOrder(requestDto.getProductTypeDisplayOrder());
         if (requestDto.getProductTypeEnabled() != null) {
             existingProductType.setProductTypeEnabled(requestDto.getProductTypeEnabled());
         }

@@ -54,7 +54,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
            "     LOWER(p.productName) LIKE LOWER(CONCAT('%', :textSearch, '%')) OR " +
            "     LOWER(p.productSlug) LIKE LOWER(CONCAT('%', :textSearch, '%')) OR " +
            "     LOWER(p.productCode) LIKE LOWER(CONCAT('%', :textSearch, '%')) OR " +
-           "     LOWER(p.productDescription) LIKE LOWER(CONCAT('%', :textSearch, '%'))" +
+           "     LOWER(p.productDescription) LIKE LOWER(CONCAT('%', :textSearch, '%')) OR " +
+           "     p.productCategory.productCategoryContent LIKE CONCAT('%', :textSearch, '%') OR " +
+           "     p.productCategory.productType.productTypeContent LIKE CONCAT('%', :textSearch, '%')" +
            ")) " +
            "AND (:enabled IS NULL OR p.productEnabled = :enabled) " +
            "AND (:categoryId IS NULL OR p.productCategory.productCategoryId = :categoryId) " +

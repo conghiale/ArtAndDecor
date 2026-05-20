@@ -1,5 +1,6 @@
 package org.artanddecor.services.impl;
 
+import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import org.artanddecor.config.MailConfiguration;
 import org.artanddecor.services.EmailService;
@@ -7,9 +8,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
@@ -39,13 +42,30 @@ public class EmailServiceImpl implements EmailService {
             String content = buildPasswordResetEmailContent(userName, newPassword);
             String fromAddress = mailConfiguration.getSenderAddress();
 
-            SimpleMailMessage message = new SimpleMailMessage();
+            /*SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom(fromAddress);
             message.setTo(toEmail);
             message.setSubject(subject);
             message.setText(content);
 
-            javaMailSender.send(message);
+            javaMailSender.send(message);*/
+
+            MimeMessage mimeMessage = javaMailSender.createMimeMessage();
+
+            MimeMessageHelper helper = new MimeMessageHelper(
+                    mimeMessage,
+                    false,
+                    StandardCharsets.UTF_8.name()
+            );
+
+            helper.setFrom(fromAddress, "Art and Decor System");
+            helper.setTo(toEmail);
+            helper.setSubject(subject);
+
+            // plain text UTF-8
+            helper.setText(content, false);
+
+            javaMailSender.send(mimeMessage);
             
             logger.info("Password reset email sent successfully to: {}", toEmail);
             
@@ -72,13 +92,30 @@ public class EmailServiceImpl implements EmailService {
         try {
             String fromAddress = mailConfiguration.getSenderAddress();
 
-            SimpleMailMessage message = new SimpleMailMessage();
+            /*SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom(fromAddress);
             message.setTo(toEmail);
             message.setSubject(subject);
             message.setText(content);
 
-            javaMailSender.send(message);
+            javaMailSender.send(message);*/
+
+            MimeMessage mimeMessage = javaMailSender.createMimeMessage();
+
+            MimeMessageHelper helper = new MimeMessageHelper(
+                    mimeMessage,
+                    false,
+                    StandardCharsets.UTF_8.name()
+            );
+
+            helper.setFrom(fromAddress, "Art and Decor System");
+            helper.setTo(toEmail);
+            helper.setSubject(subject);
+
+            // plain text UTF-8
+            helper.setText(content, false);
+
+            javaMailSender.send(mimeMessage);
             
             logger.info("Notification email sent successfully to: {}", toEmail);
             

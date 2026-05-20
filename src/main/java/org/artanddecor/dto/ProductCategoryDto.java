@@ -32,12 +32,16 @@ public class ProductCategoryDto {
     @Size(max = 256, message = "Product category display name must not exceed 256 characters")
     private String productCategoryDisplayName;
 
+    private String productCategoryContent;
+
     @Size(max = 256, message = "Remark must not exceed 256 characters")
     private String productCategoryRemark;
 
     private Boolean productCategoryEnabled;
 
     private Boolean productCategoryVisible;
+
+    private Integer productCategoryDisplayOrder;
 
     private SeoMetaDto seoMeta;
 

@@ -3,8 +3,7 @@ package org.artanddecor.services.impl;
 import lombok.RequiredArgsConstructor;
 import org.artanddecor.dto.ImageDto;
 import org.artanddecor.dto.ImageUploadDto;
-import org.artanddecor.dto.ImageUploadResponseDto;
-import org.artanddecor.dto.ImageUploadErrorDto;
+import org.artanddecor.enums.ImageEmbeddingStatus;
 import org.artanddecor.exception.UnsupportedImageFormatException;
 import org.artanddecor.model.Image;
 import org.artanddecor.model.ImageEmbedding;
@@ -29,7 +28,6 @@ import org.springframework.http.*;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
@@ -83,211 +81,153 @@ public class ImageServiceImpl implements ImageService {
 
     @Override
     @Transactional
-    public ImageUploadResponseDto uploadImages(ImageUploadDto imageUploadDto) {
-        logger.info("Processing {} image files with new workflow", imageUploadDto.getImageFiles().length);
-        
-        List<ImageDto> uploadedImages = new ArrayList<>();
-        List<ImageUploadErrorDto> failedImages = new ArrayList<>();
-        
-        MultipartFile[] imageFiles = imageUploadDto.getImageFiles();
-        String[] displayNames = imageUploadDto.getImageDisplayNames();
-        String[] imageSizes = imageUploadDto.getImageSizes();
-        String[] imageFormats = imageUploadDto.getImageFormats();
-        String[] remarks = imageUploadDto.getImageRemarks();
-        String[] slugs = imageUploadDto.getImageSlugs();
+    public ImageDto uploadImage(ImageUploadDto imageUploadDto) throws IOException {
+        MultipartFile file = imageUploadDto.getImageFile();
 
-        // Process each file with new deduplication logic
-        for (int i = 0; i < imageFiles.length; i++) {
-            try {
-                MultipartFile file = imageFiles[i];
-                String originalFilename = file.getOriginalFilename();
-                
-                // Validate file
-                if (file.isEmpty()) {
-                    throw new IOException("File at index " + i + " is empty");
-                }
-                
-                // Use provided displayName, or extract from original filename
-                String filenameWithoutExt = extractFileNameWithoutExtension(originalFilename);
-                String displayName = (displayNames != null && displayNames.length > i && displayNames[i] != null && !displayNames[i].trim().isEmpty())
-                        ? displayNames[i].trim()
-                        : filenameWithoutExt;
-                
-                // Upload file to storage (with deduplication logic)
-                FileUploadResult uploadResult = imageFileService.uploadImage(file, displayName);
-                
-                ImageDto resultImageDto;
-                
-                if (uploadResult.isAlreadyExists()) {
-                    // File already exists, query database for existing image info
-                    logger.info("File already exists in storage: {}, querying database", uploadResult.getFileName());
-                    
-                    Optional<Image> existingImage = imageRepository.findByImageName(uploadResult.getFileName());
-                    if (existingImage.isPresent()) {
-                        resultImageDto = convertToDto(existingImage.get());
-                        logger.info("Found existing image in database: ID {}", existingImage.get().getImageId());
-                    } else {
-                        // File exists in storage but not in database (data inconsistency)
-                        logger.warn("File exists in storage but not in database: {}, creating new record", uploadResult.getFileName());
-                        resultImageDto = createNewImageRecord(uploadResult, displayName, imageSizes, imageFormats, remarks, slugs, file, i);
-                    }
-                } else {
-                    // New file uploaded, create new database record
-                    logger.info("New file uploaded: {}, creating database record", uploadResult.getFileName());
-                    resultImageDto = createNewImageRecord(uploadResult, displayName, imageSizes, imageFormats, remarks, slugs, file, i);
-                }
-                
-                uploadedImages.add(resultImageDto);
-                
-            } catch (UnsupportedImageFormatException e) {
-                logger.error("Unsupported format for image at index {}: {}", i, e.getMessage(), e);
-                
-                ImageUploadErrorDto errorDto = ImageUploadErrorDto.builder()
-                        .fileIndex(i)
-                        .displayName((displayNames != null && displayNames.length > i) ? displayNames[i] : "Unknown")
-                        .originalFilename(imageFiles[i] != null ? imageFiles[i].getOriginalFilename() : "Unknown")
-                        .errorMessage("Unsupported image format. Only JPG, JPEG, PNG, WEBP, HEIC are allowed")
-                        .errorCode("UNSUPPORTED_FORMAT")
-                        .build();
-                failedImages.add(errorDto);
-                
-            } catch (Exception e) {
-                logger.error("Failed to process image at index {}: {}", i, e.getMessage(), e);
-                
-                ImageUploadErrorDto errorDto = ImageUploadErrorDto.builder()
-                        .fileIndex(i)
-                        .displayName((displayNames != null && displayNames.length > i) ? displayNames[i] : "Unknown")
-                        .originalFilename(imageFiles[i] != null ? imageFiles[i].getOriginalFilename() : "Unknown")
-                        .errorMessage(e.getMessage())
-                        .errorCode("UPLOAD_FAILED")
-                        .build();
-                failedImages.add(errorDto);
-            }
+        if (file == null || file.isEmpty()) {
+            throw new IOException("Image file is required");
         }
-        
-        // Process AI embeddings for successfully uploaded images (async, doesn't affect response)
-        processImageEmbeddingsAsync(uploadedImages);
-        
-        ImageUploadResponseDto response = ImageUploadResponseDto.builder()
-                .uploadedImages(uploadedImages)
-                .failedImages(failedImages)
-                .successCount(uploadedImages.size())
-                .failureCount(failedImages.size())
-                .success(failedImages.isEmpty())
-                .uploadedAt(LocalDateTime.now())
-                .message(String.format("Processed %d image(s): %d succeeded, %d failed", 
-                        imageFiles.length, uploadedImages.size(), failedImages.size()))
-                .build();
-        
-        logger.info("Image upload workflow completed: {} succeeded, {} failed", 
-                uploadedImages.size(), failedImages.size());
-        
-        return response;
+
+        try {
+            String displayName = (imageUploadDto.getImageDisplayName() != null && !imageUploadDto.getImageDisplayName().trim().isEmpty())
+                    ? imageUploadDto.getImageDisplayName().trim()
+                    : extractFileNameWithoutExtension(file.getOriginalFilename());
+
+            FileUploadResult uploadResult = imageFileService.uploadImage(file, displayName);
+            boolean isNewPhysicalUpload = !uploadResult.isAlreadyExists();
+
+            if (uploadResult.isAlreadyExists()) {
+                // Deduplicated: file already exists on disk – return existing DB record if present
+                Optional<Image> existingDbImage = imageRepository.findByImageName(uploadResult.getFileName());
+                if (existingDbImage.isPresent()) {
+                    logger.info("Duplicate file – returning existing image record: ID {}", existingDbImage.get().getImageId());
+                    return convertToDto(existingDbImage.get());
+                }
+                // Disk/DB inconsistency: file on disk but no DB record – fall through to create record
+                logger.warn("File exists on disk but not in database: {}, creating new DB record", uploadResult.getFileName());
+            }
+
+            // New file (or disk/DB inconsistency): create database record
+            String slug = (imageUploadDto.getImageSlug() != null && !imageUploadDto.getImageSlug().trim().isEmpty())
+                    ? imageUploadDto.getImageSlug().trim()
+                    : Utils.generateSlug(displayName);
+
+            String imageSize = (imageUploadDto.getImageSize() != null && !imageUploadDto.getImageSize().trim().isEmpty())
+                    ? imageUploadDto.getImageSize().trim()
+                    : imageFileService.getImageDimensions(file);
+
+            String imageFormat;
+            if (imageUploadDto.getImageFormat() != null && !imageUploadDto.getImageFormat().trim().isEmpty()) {
+                imageFormat = imageUploadDto.getImageFormat().trim().toLowerCase();
+            } else {
+                String fileName = uploadResult.getFileName();
+                imageFormat = fileName.contains(".") ? fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase() : "unknown";
+            }
+
+            Image image = new Image();
+            image.setImageName(uploadResult.getFileName());
+            image.setImageDisplayName(displayName);
+            image.setImageSlug(slug);
+            image.setImageSize(imageSize);
+            image.setImageFormat(imageFormat);
+            image.setPathFile(uploadResult.getPathFile());
+            image.setImageRemark((imageUploadDto.getImageRemark() != null && !imageUploadDto.getImageRemark().trim().isEmpty())
+                    ? imageUploadDto.getImageRemark().trim() : null);
+
+            Image savedImage = imageRepository.save(image);
+            logger.info("Image record created: '{}' ID={} (size: {}, pathFile: {})",
+                       displayName, savedImage.getImageId(), imageSize, uploadResult.getPathFile());
+
+            ImageDto resultDto = convertToDto(savedImage);
+
+            // Trigger AI embedding only when a brand-new file was uploaded to disk
+            if (isNewPhysicalUpload) {
+                processImageEmbeddingsAsync(List.of(resultDto));
+            }
+
+            return resultDto;
+
+        } catch (UnsupportedImageFormatException e) {
+            logger.error("Unsupported format for image upload: {}", e.getMessage(), e);
+            throw new IOException("Unsupported image format. Only JPG, JPEG, PNG, WEBP, HEIC are allowed: " + e.getMessage(), e);
+        } catch (IOException e) {
+            logger.error("Failed to upload image: {}", e.getMessage(), e);
+            throw e;
+        }
     }
 
     @Override
     @Transactional
     public ImageDto updateImage(Long imageId, ImageUploadDto imageUploadDto) throws IOException {
         logger.info("Updating image with file - ID: {}", imageId);
-        
+
         Image existingImage = imageRepository.findById(imageId)
                 .orElseThrow(() -> new IllegalArgumentException("Image not found with ID: " + imageId));
-        
-        // Validate that only one file is provided for update
-        if (imageUploadDto.getImageFiles() == null || imageUploadDto.getImageFiles().length != 1) {
-            throw new IOException("Exactly one file is required for update operation");
-        }
-        
-        MultipartFile imageFile = imageUploadDto.getImageFiles()[0];
-        
-        // Validate file
-        if (imageFile == null || imageFile.isEmpty()) {
-            throw new IOException("File is empty");
-        }
-        
-        try {
-            String originalFilename = imageFile.getOriginalFilename();
-            String filenameWithoutExt = extractFileNameWithoutExtension(originalFilename);
-            
-            // Use provided displayName, or extract from original filename if not provided
-            String displayName = (imageUploadDto.getImageDisplayNames() != null && 
-                                imageUploadDto.getImageDisplayNames().length > 0 &&
-                                imageUploadDto.getImageDisplayNames()[0] != null && 
-                                !imageUploadDto.getImageDisplayNames()[0].trim().isEmpty())
-                    ? imageUploadDto.getImageDisplayNames()[0].trim()
-                    : filenameWithoutExt;
 
-            // Upload new file using new workflow 
+        MultipartFile imageFile = imageUploadDto.getImageFile();
+
+        if (imageFile == null || imageFile.isEmpty()) {
+            throw new IOException("Image file is required for update");
+        }
+
+        try {
+            String displayName = (imageUploadDto.getImageDisplayName() != null && !imageUploadDto.getImageDisplayName().trim().isEmpty())
+                    ? imageUploadDto.getImageDisplayName().trim()
+                    : extractFileNameWithoutExtension(imageFile.getOriginalFilename());
+
             FileUploadResult uploadResult = imageFileService.uploadImage(imageFile, displayName);
-            
-            // Delete old file if it exists and is different from new file
-            if (!existingImage.getImageName().equals(uploadResult.getFileName())) {
+            boolean isNewPhysicalUpload = !uploadResult.isAlreadyExists();
+
+            // Delete old physical file only when a new file is uploaded and the path changes
+            String oldPathFile = existingImage.getPathFile();
+            if (isNewPhysicalUpload && oldPathFile != null && !oldPathFile.equals(uploadResult.getPathFile())) {
                 try {
-                    imageFileService.deleteImage(existingImage.getImageName());
-                    logger.info("Deleted old image file: {}", existingImage.getImageName());
+                    imageFileService.deleteImage(oldPathFile);
+                    logger.info("Deleted old image file: {}", oldPathFile);
                 } catch (IOException e) {
-                    logger.warn("Failed to delete old image file {}: {}", existingImage.getImageName(), e.getMessage());
+                    logger.warn("Failed to delete old image file {}: {}", oldPathFile, e.getMessage());
                 }
             }
-            
-            // Generate slug from displayName or use provided slug
-            String slug = (imageUploadDto.getImageSlugs() != null && 
-                         imageUploadDto.getImageSlugs().length > 0 &&
-                         imageUploadDto.getImageSlugs()[0] != null && 
-                         !imageUploadDto.getImageSlugs()[0].trim().isEmpty())
-                    ? imageUploadDto.getImageSlugs()[0].trim()
+
+            String slug = (imageUploadDto.getImageSlug() != null && !imageUploadDto.getImageSlug().trim().isEmpty())
+                    ? imageUploadDto.getImageSlug().trim()
                     : Utils.generateSlug(displayName);
-            
-            // Get image dimensions from file or use provided size
-            String imageSize;
-            if (imageUploadDto.getImageSizes() != null && 
-                imageUploadDto.getImageSizes().length > 0 &&
-                imageUploadDto.getImageSizes()[0] != null && 
-                !imageUploadDto.getImageSizes()[0].trim().isEmpty()) {
-                imageSize = imageUploadDto.getImageSizes()[0].trim();
-            } else {
-                imageSize = imageFileService.getImageDimensions(imageFile);
-            }
-            
-            // Use provided image format or extract from file extension
+
+            String imageSize = (imageUploadDto.getImageSize() != null && !imageUploadDto.getImageSize().trim().isEmpty())
+                    ? imageUploadDto.getImageSize().trim()
+                    : imageFileService.getImageDimensions(imageFile);
+
             String imageFormat;
-            if (imageUploadDto.getImageFormats() != null && 
-                imageUploadDto.getImageFormats().length > 0 &&
-                imageUploadDto.getImageFormats()[0] != null && 
-                !imageUploadDto.getImageFormats()[0].trim().isEmpty()) {
-                imageFormat = imageUploadDto.getImageFormats()[0].trim().toLowerCase();
+            if (imageUploadDto.getImageFormat() != null && !imageUploadDto.getImageFormat().trim().isEmpty()) {
+                imageFormat = imageUploadDto.getImageFormat().trim().toLowerCase();
             } else {
                 String fileName = uploadResult.getFileName();
-                if (fileName.contains(".")) {
-                    imageFormat = fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase();
-                } else {
-                    imageFormat = "unknown";
-                }
+                imageFormat = fileName.contains(".") ? fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase() : "unknown";
             }
-            
-            // Use provided remark if available
-            String imageRemark = (imageUploadDto.getImageRemarks() != null && 
-                                imageUploadDto.getImageRemarks().length > 0 &&
-                                imageUploadDto.getImageRemarks()[0] != null && 
-                                !imageUploadDto.getImageRemarks()[0].trim().isEmpty())
-                    ? imageUploadDto.getImageRemarks()[0].trim()
-                    : null;
-            
-            // Update image record with new pathFile
+
             existingImage.setImageName(uploadResult.getFileName());
             existingImage.setImageDisplayName(displayName);
             existingImage.setImageSlug(slug);
             existingImage.setImageSize(imageSize);
             existingImage.setImageFormat(imageFormat);
-            existingImage.setPathFile(uploadResult.getPathFile()); // Update pathFile
-            existingImage.setImageRemark(imageRemark);
+            existingImage.setPathFile(uploadResult.getPathFile());
+            existingImage.setImageRemark((imageUploadDto.getImageRemark() != null && !imageUploadDto.getImageRemark().trim().isEmpty())
+                    ? imageUploadDto.getImageRemark().trim() : null);
             existingImage.setModifiedDt(LocalDateTime.now());
-            
+
             Image updatedImage = imageRepository.save(existingImage);
-            logger.info("Image updated successfully: {} (dimensions: {}, pathFile: {})", 
+            logger.info("Image updated successfully: ID={} (size: {}, pathFile: {})",
                        updatedImage.getImageId(), imageSize, uploadResult.getPathFile());
-            return convertToDto(updatedImage);
-            
+
+            ImageDto updatedImageDto = convertToDto(updatedImage);
+
+            // Trigger AI embedding only when a new physical file was uploaded
+            if (isNewPhysicalUpload) {
+                processImageEmbeddingsAsync(List.of(updatedImageDto));
+            }
+
+            return updatedImageDto;
+
         } catch (UnsupportedImageFormatException e) {
             logger.error("Unsupported format for image update - ID: {}: {}", imageId, e.getMessage(), e);
             throw new IOException("Unsupported image format. Only JPG, JPEG, PNG, WEBP, HEIC are allowed: " + e.getMessage(), e);
@@ -380,72 +320,8 @@ public class ImageServiceImpl implements ImageService {
         return ImageMapperUtil.toDetailedDto(image);
     }
 
-    /**
-     * Extract filename without extension from original filename
-     * Example: "image-photo.jpg" -> "image-photo"
-     * @param filename Original filename
-     * @return Filename without extension
-     */
     private String extractFileNameWithoutExtension(String filename) {
         return Utils.extractFileNameWithoutExtension(filename);
-    }
-
-    /**
-     * Create new image record in database
-     * Helper method for uploadImages workflow
-     */
-    private ImageDto createNewImageRecord(FileUploadResult uploadResult, String displayName, 
-                                        String[] imageSizes, String[] imageFormats, String[] remarks, 
-                                        String[] slugs, MultipartFile file, int index) throws IOException {
-        // Generate slug from displayName (or provided slug)
-        String slug = (slugs != null && slugs.length > index && slugs[index] != null) 
-                ? slugs[index] 
-                : Utils.generateSlug(displayName);
-        
-        // Get image dimensions from file (width x height), or use provided size
-        String imageSize;
-        if (imageSizes != null && imageSizes.length > index && 
-            imageSizes[index] != null && !imageSizes[index].trim().isEmpty()) {
-            imageSize = imageSizes[index].trim();
-        } else {
-            imageSize = imageFileService.getImageDimensions(file);
-        }
-        
-        // Create image record
-        Image image = new Image();
-        image.setImageName(uploadResult.getFileName());
-        image.setImageDisplayName(displayName);
-        image.setImageSlug(slug);  
-        image.setImageSize(imageSize);
-        image.setPathFile(uploadResult.getPathFile()); // New field
-        
-        // Use provided image format or extract from file extension
-        String imageFormat;
-        if (imageFormats != null && imageFormats.length > index && 
-            imageFormats[index] != null && !imageFormats[index].trim().isEmpty()) {
-            imageFormat = imageFormats[index].trim().toLowerCase();
-        } else {
-            // Extract file extension for imageFormat
-            String fileName = uploadResult.getFileName();
-            if (fileName.contains(".")) {
-                imageFormat = fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase();
-            } else {
-                imageFormat = "unknown";
-            }
-        }
-        image.setImageFormat(imageFormat);
-        
-        // Set remark if provided
-        image.setImageRemark((remarks != null && remarks.length > index && 
-                             remarks[index] != null && !remarks[index].trim().isEmpty()) 
-                ? remarks[index].trim() 
-                : null);
-        
-        Image savedImage = imageRepository.save(image);
-        logger.info("New image record created: {} with ID: {} (dimensions: {}, pathFile: {})", 
-                   displayName, savedImage.getImageId(), imageSize, uploadResult.getPathFile());
-        
-        return convertToDto(savedImage);
     }
 
     // =============================================
@@ -481,19 +357,35 @@ public class ImageServiceImpl implements ImageService {
      */
     private void processImageEmbedding(Long imageId) {
         try {
-            // Check if embedding already exists with valid data
-            Optional<ImageEmbedding> existingEmbedding = imageEmbeddingRepository.findByImageIdWithEmbedding(imageId);
-            if (existingEmbedding.isPresent()) {
-                logger.debug("Embedding already exists for image ID: {}", imageId);
+            // Check if embedding already exists with completed status
+            Optional<ImageEmbedding> existingEmbedding = imageEmbeddingRepository.findByImageId(imageId);
+            if (existingEmbedding.isPresent() && 
+                existingEmbedding.get().getImageEmbeddingStatus() == ImageEmbeddingStatus.COMPLETED) {
+                logger.debug("Embedding already completed for image ID: {}", imageId);
                 return;
             }
 
-            // If no valid embedding exists, create/update embedding
-            logger.info("Creating/updating embedding for image ID: {}", imageId);
+            // Create or update embedding record with PENDING status
+            ImageEmbedding embedding = existingEmbedding.orElse(new ImageEmbedding());
+            embedding.setImageId(imageId);
+            embedding.setImageEmbeddingStatus(ImageEmbeddingStatus.PENDING);
+            imageEmbeddingRepository.save(embedding);
+            
+            logger.info("Creating/updating embedding for image ID: {} with PENDING status", imageId);
             callAiEmbeddingService(imageId);
             
         } catch (Exception e) {
             logger.error("Error processing embedding for image ID {}: {}", imageId, e.getMessage(), e);
+            // Update status to FAILED if an error occurs
+            try {
+                Optional<ImageEmbedding> embedding = imageEmbeddingRepository.findByImageId(imageId);
+                if (embedding.isPresent()) {
+                    embedding.get().setImageEmbeddingStatus(ImageEmbeddingStatus.FAILED);
+                    imageEmbeddingRepository.save(embedding.get());
+                }
+            } catch (Exception ex) {
+                logger.error("Failed to update embedding status to FAILED for image ID {}: {}", imageId, ex.getMessage());
+            }
         }
     }
 
@@ -507,12 +399,14 @@ public class ImageServiceImpl implements ImageService {
             Properties aiConfig = getAiServiceConfig();
             if (aiConfig == null) {
                 logger.error("AI service configuration not found in policies");
+                updateEmbeddingStatus(imageId, ImageEmbeddingStatus.FAILED);
                 return;
             }
 
             String host = aiConfig.getProperty("host");
             if (host == null || host.trim().isEmpty()) {
                 logger.error("AI service host not configured");
+                updateEmbeddingStatus(imageId, ImageEmbeddingStatus.FAILED);
                 return;
             }
 
@@ -535,33 +429,28 @@ public class ImageServiceImpl implements ImageService {
                     requestEntity,
                     String.class);
             
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+            if (response.getStatusCode().is2xxSuccessful()) {
                 // Parse response
                 JsonNode jsonResponse = objectMapper.readTree(response.getBody());
                 String status = jsonResponse.path("status").asText();
                 
                 if ("success".equals(status)) {
                     logger.info("Embedding created successfully for image ID: {}", imageId);
-                    
-                    // Create or update embedding record in database
-                    ImageEmbedding embedding = imageEmbeddingRepository.findByImageId(imageId)
-                            .orElse(new ImageEmbedding());
-                    embedding.setImageId(imageId);
-                    // Note: The actual embedding data would come from AI service response
-                    // For now, we just mark that embedding process was initiated
-                    imageEmbeddingRepository.save(embedding);
-                    
+                    updateEmbeddingStatus(imageId, ImageEmbeddingStatus.COMPLETED);
                 } else {
-                    logger.warn("AI service returned non-success status for image ID {}: {}", 
+                    logger.error("AI service returned non-success status for image ID {}: {}",
                               imageId, jsonResponse.path("message").asText());
+                    updateEmbeddingStatus(imageId, ImageEmbeddingStatus.FAILED);
                 }
             } else {
                 logger.error("AI service returned error status {} for image ID {}: {}", 
                            response.getStatusCode(), imageId, response.getBody());
+                updateEmbeddingStatus(imageId, ImageEmbeddingStatus.FAILED);
             }
             
         } catch (Exception e) {
             logger.error("Failed to call AI embedding service for image ID {}: {}", imageId, e.getMessage(), e);
+            updateEmbeddingStatus(imageId, ImageEmbeddingStatus.FAILED);
         }
     }
 
@@ -571,15 +460,15 @@ public class ImageServiceImpl implements ImageService {
      */
     private Properties getAiServiceConfig() {
         try {
-            Optional<Policy> aiConfigPolicy = policyRepository.findByPolicyName("AI_IMAGE_SEARCH_CONFIG");
+            Optional<Policy> aiConfigPolicy = policyRepository.findByPolicyName("SIMILAR_IMAGE_CONFIG");
             if (aiConfigPolicy.isEmpty()) {
-                logger.error("AI_IMAGE_SEARCH_CONFIG policy not found");
+                logger.error("SIMILAR_IMAGE_CONFIG policy not found");
                 return null;
             }
 
             String configValue = aiConfigPolicy.get().getPolicyValue();
             if (configValue == null || configValue.trim().isEmpty()) {
-                logger.error("AI_IMAGE_SEARCH_CONFIG policy value is empty");
+                logger.error("SIMILAR_IMAGE_CONFIG policy value is empty");
                 return null;
             }
 
@@ -597,6 +486,26 @@ public class ImageServiceImpl implements ImageService {
         } catch (Exception e) {
             logger.error("Failed to load AI service configuration: {}", e.getMessage(), e);
             return null;
+        }
+    }
+
+    /**
+     * Update embedding status for a specific image
+     * @param imageId Image ID
+     * @param status New status
+     */
+    private void updateEmbeddingStatus(Long imageId, ImageEmbeddingStatus status) {
+        try {
+            Optional<ImageEmbedding> embedding = imageEmbeddingRepository.findByImageId(imageId);
+            if (embedding.isPresent()) {
+                embedding.get().setImageEmbeddingStatus(status);
+                imageEmbeddingRepository.save(embedding.get());
+                logger.debug("Updated embedding status to {} for image ID: {}", status, imageId);
+            } else {
+                logger.warn("Embedding not found for image ID: {} when trying to update status to {}", imageId, status);
+            }
+        } catch (Exception e) {
+            logger.error("Failed to update embedding status to {} for image ID {}: {}", status, imageId, e.getMessage(), e);
         }
     }
 }

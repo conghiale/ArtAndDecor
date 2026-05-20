@@ -129,18 +129,18 @@ INSERT INTO `USER_ROLE` (`USER_ROLE_NAME`, `USER_ROLE_DISPLAY_NAME`, `USER_ROLE_
 ('ADMIN', 'System Administrator', 'Quản trị viên hệ thống', TRUE);
 
 -- Insert Product Types
-INSERT INTO `PRODUCT_TYPE` (`PRODUCT_TYPE_SLUG`, `PRODUCT_TYPE_NAME`, `PRODUCT_TYPE_DISPLAY_NAME`, `PRODUCT_TYPE_REMARK`, `PRODUCT_TYPE_ENABLED`, `SEO_META_ID`, `IMAGE_ID`) VALUES
-('image', 'IMAGE', 'Image products', 'Các sản phẩm hình ảnh', TRUE, 16, NULL),
-('decor', 'DECOR', 'Decoration products', 'Các sản phẩm trang trí', TRUE, 17, NULL),
-('tools', 'TOOLS', 'Drawing tools and equipment', 'Dụng cụ và thiết bị vẽ', TRUE, 18, NULL);
+INSERT INTO `PRODUCT_TYPE` (`PRODUCT_TYPE_SLUG`, `PRODUCT_TYPE_NAME`, `PRODUCT_TYPE_DISPLAY_NAME`, `PRODUCT_TYPE_CONTENT`, `PRODUCT_TYPE_REMARK`, `PRODUCT_TYPE_ENABLED`, `PRODUCT_TYPE_DISPLAY_ORDER`, `SEO_META_ID`, `IMAGE_ID`) VALUES
+('image', 'IMAGE', 'Image products', NULL, 'Các sản phẩm hình ảnh', TRUE, 1, 16, NULL),
+('decor', 'DECOR', 'Decoration products', NULL, 'Các sản phẩm trang trí', TRUE, 2, 17, NULL),
+('tools', 'TOOLS', 'Drawing tools and equipment', NULL, 'Dụng cụ và thiết bị vẽ', TRUE, 3, 18, NULL);
 
 -- Insert Product Categories
-INSERT INTO `PRODUCT_CATEGORY` (`PRODUCT_CATEGORY_SLUG`, `PRODUCT_CATEGORY_NAME`, `PRODUCT_CATEGORY_DISPLAY_NAME`, `PRODUCT_CATEGORY_REMARK`, `PRODUCT_CATEGORY_ENABLED`, `PRODUCT_CATEGORY_VISIBLE`, `SEO_META_ID`, `PRODUCT_TYPE_ID`, `PRODUCT_CATEGORY_PARENT_ID`, `IMAGE_ID`) VALUES
-('tranh', 'Tranh', 'All paintings', 'Tất cả các loại tranh', TRUE, TRUE, 12, 1, NULL, NULL),
-('tranh-treo-tuong', 'Tranh treo tường', 'Wall paintings', 'Các loại tranh dùng để trang trí treo tường', TRUE, TRUE, 12, 1, 1, NULL),
-('dung-cu-ve', 'Dụng cụ vẽ', 'Drawing tools', 'Các dụng cụ, thiết bị dùng để vẽ tranh', TRUE, TRUE, 13, 3, NULL, NULL),
-('decor-noi-that', 'Decor nội thất', 'Interior decoration', 'Các sản phẩm trang trí nội thất', TRUE, TRUE, 14, 2, NULL, NULL),
-('khung-tranh', 'Khung tranh', 'Picture frames', 'Các loại khung để đóng tranh', TRUE, TRUE, 15, 1, 1, NULL);
+INSERT INTO `PRODUCT_CATEGORY` (`PRODUCT_CATEGORY_SLUG`, `PRODUCT_CATEGORY_NAME`, `PRODUCT_CATEGORY_DISPLAY_NAME`, `PRODUCT_CATEGORY_CONTENT`, `PRODUCT_CATEGORY_REMARK`, `PRODUCT_CATEGORY_ENABLED`, `PRODUCT_CATEGORY_VISIBLE`, `PRODUCT_CATEGORY_DISPLAY_ORDER`, `SEO_META_ID`, `PRODUCT_TYPE_ID`, `PRODUCT_CATEGORY_PARENT_ID`, `IMAGE_ID`) VALUES
+('tranh', 'Tranh', 'All paintings', NULL, 'Tất cả các loại tranh', TRUE, TRUE, 10, 12, 1, NULL, NULL),
+('tranh-treo-tuong', 'Tranh treo tường', 'Wall paintings', NULL, 'Các loại tranh dùng để trang trí treo tường', TRUE, TRUE, 11, 12, 1, 1, NULL),
+('dung-cu-ve', 'Dụng cụ vẽ', 'Drawing tools', NULL, 'Các dụng cụ, thiết bị dùng để vẽ tranh', TRUE, TRUE, 20, 13, 3, NULL, NULL),
+('decor-noi-that', 'Decor nội thất', 'Interior decoration', NULL, 'Các sản phẩm trang trí nội thất', TRUE, TRUE, 30, 14, 2, NULL, NULL),
+('khung-tranh', 'Khung tranh', 'Picture frames', NULL, 'Các loại khung để đóng tranh', TRUE, TRUE, 12, 15, 1, 1, NULL);
 
 -- Insert Product States
 INSERT INTO `PRODUCT_STATE` (`PRODUCT_STATE_NAME`, `PRODUCT_STATE_ENABLED`, `PRODUCT_STATE_DISPLAY_NAME`, `PRODUCT_STATE_REMARK`) VALUES

@@ -40,6 +40,10 @@ public class ProductCategoryRequestDto {
             example = "Beautiful Wall Paintings")
     private String productCategoryDisplayName;
 
+    @Schema(description = "Detailed content/description for the product category", 
+            example = "Detailed category content for landing page or storefront")
+    private String productCategoryContent;
+
     @NotBlank(message = "Product category remark is required")
     @Size(max = 256, message = "Remark must not exceed 256 characters")
     @Schema(description = "Remark or description about the product category", 
@@ -55,6 +59,11 @@ public class ProductCategoryRequestDto {
     @Schema(description = "Whether the product category is visible", 
             example = "true")
     private Boolean productCategoryVisible = true;
+
+    @Min(value = 0, message = "Product category display order must not be negative")
+    @Schema(description = "Display order for product category in UI lists (optional)",
+            example = "10")
+    private Integer productCategoryDisplayOrder;
 
     @NotNull(message = "Product type ID is required")
     @Min(value = 1, message = "Product type ID must be positive")

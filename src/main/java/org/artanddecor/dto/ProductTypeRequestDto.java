@@ -5,10 +5,10 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import com.fasterxml.jackson.annotation.JsonProperty;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
 
 /**
@@ -39,6 +39,10 @@ public class ProductTypeRequestDto {
             example = "Art & Decor Items")
     private String productTypeDisplayName;
 
+    @Schema(description = "Detailed content/description for the product type", 
+            example = "Detailed content about this product type for storefront pages")
+    private String productTypeContent;
+
     @NotBlank(message = "Product type remark is required")
     @Size(max = 256, message = "Remark must not exceed 256 characters")
     @Schema(description = "Remark or description about the product type", 
@@ -49,6 +53,11 @@ public class ProductTypeRequestDto {
     @Schema(description = "Whether the product type is enabled", 
             example = "true")
     private Boolean productTypeEnabled = true;
+
+    @Min(value = 0, message = "Product type display order must not be negative")
+    @Schema(description = "Display order for product type in UI lists (optional)",
+            example = "1")
+    private Integer productTypeDisplayOrder;
 
     @Schema(description = "Image ID for the product type", 
             example = "1")

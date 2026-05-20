@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Map;
 
 /**
@@ -69,7 +70,9 @@ public class ProductCategoryServiceImpl implements ProductCategoryService {
             null,           // parentCategoryId
             null,           // productCategorySlug
             PageRequest.of(0, Integer.MAX_VALUE, 
-                Sort.by("productCategoryName"))
+                Sort.by(
+                    Sort.Order.asc("productCategoryDisplayOrder"),
+                    Sort.Order.asc("productCategoryName")))
         );
         List<ProductCategory> allCategories = categoryPage.getContent();
         
@@ -131,9 +134,11 @@ public class ProductCategoryServiceImpl implements ProductCategoryService {
         productCategory.setProductCategoryName(requestDto.getProductCategoryName());
         productCategory.setProductCategorySlug(requestDto.getProductCategorySlug());
         productCategory.setProductCategoryDisplayName(requestDto.getProductCategoryDisplayName());
+        productCategory.setProductCategoryContent(requestDto.getProductCategoryContent());
         productCategory.setProductCategoryRemark(requestDto.getProductCategoryRemark());
         productCategory.setProductCategoryEnabled(requestDto.getProductCategoryEnabled() != null ? requestDto.getProductCategoryEnabled() : true);
         productCategory.setProductCategoryVisible(requestDto.getProductCategoryVisible() != null ? requestDto.getProductCategoryVisible() : true);
+        productCategory.setProductCategoryDisplayOrder(requestDto.getProductCategoryDisplayOrder());
         productCategory.setProductType(productType);
         
         // Handle parent category
@@ -188,7 +193,9 @@ public class ProductCategoryServiceImpl implements ProductCategoryService {
         existingProductCategory.setProductCategoryName(requestDto.getProductCategoryName());
         existingProductCategory.setProductCategorySlug(requestDto.getProductCategorySlug());
         existingProductCategory.setProductCategoryDisplayName(requestDto.getProductCategoryDisplayName());
+        existingProductCategory.setProductCategoryContent(requestDto.getProductCategoryContent());
         existingProductCategory.setProductCategoryRemark(requestDto.getProductCategoryRemark());
+        existingProductCategory.setProductCategoryDisplayOrder(requestDto.getProductCategoryDisplayOrder());
         if (requestDto.getProductCategoryEnabled() != null) {
             existingProductCategory.setProductCategoryEnabled(requestDto.getProductCategoryEnabled());
         }
@@ -244,6 +251,10 @@ public class ProductCategoryServiceImpl implements ProductCategoryService {
      * @return List of root categories with nested children
      */
     private List<ProductCategoryDto> buildHierarchy(List<ProductCategoryDto> categories) {
+        Comparator<ProductCategoryDto> displayOrderComparator = Comparator
+            .comparing(ProductCategoryDto::getProductCategoryDisplayOrder, Comparator.nullsLast(Integer::compareTo))
+            .thenComparing(ProductCategoryDto::getProductCategoryName, Comparator.nullsLast(String::compareToIgnoreCase));
+
         // Create maps for efficient lookup
         Map<Long, ProductCategoryDto> categoryMap = categories.stream()
                 .collect(Collectors.toMap(ProductCategoryDto::getProductCategoryId, dto -> dto));
@@ -256,12 +267,14 @@ public class ProductCategoryServiceImpl implements ProductCategoryService {
         for (ProductCategoryDto category : categories) {
             Long categoryId = category.getProductCategoryId();
             List<ProductCategoryDto> children = childrenMap.getOrDefault(categoryId, new ArrayList<>());
+            children.sort(displayOrderComparator);
             category.setChildren(children);
         }
         
         // Return only root categories (those without parent)
         return categories.stream()
                 .filter(dto -> dto.getParentCategoryId() == null)
+                .sorted(displayOrderComparator)
                 .collect(Collectors.toList());
     }
 

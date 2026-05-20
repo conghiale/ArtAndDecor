@@ -39,8 +39,15 @@ public class ProductType {
     @Column(name = "PRODUCT_TYPE_DISPLAY_NAME", length = 256)
     private String productTypeDisplayName;
 
+    @Lob
+    @Column(name = "PRODUCT_TYPE_CONTENT", columnDefinition = "LONGTEXT")
+    private String productTypeContent;
+
     @Column(name = "PRODUCT_TYPE_ENABLED", nullable = false)
     private Boolean productTypeEnabled = true;
+
+    @Column(name = "PRODUCT_TYPE_DISPLAY_ORDER")
+    private Integer productTypeDisplayOrder;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "IMAGE_ID")

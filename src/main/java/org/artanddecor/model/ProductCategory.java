@@ -38,6 +38,10 @@ public class ProductCategory {
     @Column(name = "PRODUCT_CATEGORY_DISPLAY_NAME", length = 256)
     private String productCategoryDisplayName;
 
+    @Lob
+    @Column(name = "PRODUCT_CATEGORY_CONTENT", columnDefinition = "LONGTEXT")
+    private String productCategoryContent;
+
     @Column(name = "PRODUCT_CATEGORY_REMARK", nullable = false, length = 256)
     private String productCategoryRemark;
 
@@ -46,6 +50,9 @@ public class ProductCategory {
 
     @Column(name = "PRODUCT_CATEGORY_VISIBLE", nullable = false)
     private Boolean productCategoryVisible = true;
+
+    @Column(name = "PRODUCT_CATEGORY_DISPLAY_ORDER")
+    private Integer productCategoryDisplayOrder;
 
     @Column(name = "SEO_META_ID")
     private Long seoMetaId;

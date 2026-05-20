@@ -53,6 +53,7 @@ public interface ProductCategoryRepository extends JpaRepository<ProductCategory
            "     LOWER(pc.productCategoryName) LIKE LOWER(CONCAT('%', :textSearch, '%')) OR " +
            "     LOWER(pc.productCategorySlug) LIKE LOWER(CONCAT('%', :textSearch, '%')) OR " +
            "     LOWER(pc.productCategoryDisplayName) LIKE LOWER(CONCAT('%', :textSearch, '%')) OR " +
+           "     pc.productCategoryContent LIKE CONCAT('%', :textSearch, '%') OR " +
            "     LOWER(pc.productCategoryRemark) LIKE LOWER(CONCAT('%', :textSearch, '%'))" +
            ")) " +
            "AND (:enabled IS NULL OR pc.productCategoryEnabled = :enabled) " +
@@ -60,7 +61,8 @@ public interface ProductCategoryRepository extends JpaRepository<ProductCategory
            "AND (:productTypeId IS NULL OR pc.productType.productTypeId = :productTypeId) " +
            "AND (:parentCategoryId IS NULL OR (:parentCategoryId = -1 AND pc.parentCategory IS NULL) OR pc.parentCategory.productCategoryId = :parentCategoryId) " +
            "AND (:productCategorySlug IS NULL OR LOWER(pc.productCategorySlug) = LOWER(:productCategorySlug)) " +
-           "ORDER BY pc.createdDt DESC")
+                 "ORDER BY CASE WHEN pc.productCategoryDisplayOrder IS NULL THEN 1 ELSE 0 END ASC, " +
+                 "pc.productCategoryDisplayOrder ASC, pc.createdDt DESC")
     Page<ProductCategory> findProductCategoriesByCriteriaPaginated(
         @Param("textSearch") String textSearch,
         @Param("enabled") Boolean enabled,
@@ -77,7 +79,8 @@ public interface ProductCategoryRepository extends JpaRepository<ProductCategory
     @Query("SELECT pc FROM ProductCategory pc " +
            "WHERE pc.productType.productTypeId = :productTypeId " +
            "AND pc.productCategoryEnabled = true " +
-           "ORDER BY pc.productCategoryName ASC")
+           "ORDER BY CASE WHEN pc.productCategoryDisplayOrder IS NULL THEN 1 ELSE 0 END ASC, " +
+           "pc.productCategoryDisplayOrder ASC, pc.productCategoryName ASC")
     List<ProductCategory> findByProductTypeId(@Param("productTypeId") Long productTypeId);
 
 
@@ -88,6 +91,7 @@ public interface ProductCategoryRepository extends JpaRepository<ProductCategory
     @Query("SELECT pc FROM ProductCategory pc " +
            "WHERE pc.parentCategory.productCategoryId = :parentId " +
            "AND pc.productCategoryEnabled = true " +
-           "ORDER BY pc.productCategoryName ASC")
+           "ORDER BY CASE WHEN pc.productCategoryDisplayOrder IS NULL THEN 1 ELSE 0 END ASC, " +
+           "pc.productCategoryDisplayOrder ASC, pc.productCategoryName ASC")
     List<ProductCategory> findByParentCategoryId(@Param("parentId") Long parentId);
 }

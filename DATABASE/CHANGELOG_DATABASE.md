@@ -48,6 +48,16 @@
 - **Bảng PRODUCT**
   - Thêm cột `PRODUCT_CODE` VARCHAR(64) NOT NULL UNIQUE
   - Thêm cột `PRODUCT_FEATURED` BOOLEAN NOT NULL DEFAULT FALSE (Sản phẩm nổi bật)
+
+# Thay đổi cấu trúc database ART_AND_DECOR (v1.4)
+- **Bảng PRODUCT**
+  - Cập nhật cột `PRODUCT_DESCRIPTION` từ TEXT NOT NULL thành TEXT NULL
+  - **Mục đích**: Cho phép tạo sản phẩm mà không bắt buộc phải có mô tả chi tiết
+  - **Ảnh hưởng**: 
+    - Model Product.java: Thay đổi nullable = true
+    - ProductDto.java và ProductRequestDto.java: Bỏ @NotBlank validation, chỉ giữ @Size cho giới hạn độ dài
+    - Logic tìm kiếm trong ProductRepository vẫn hoạt động đúng (SQL LIKE với null sẽ an toàn trong OR condition)
+  - **Migration**: Sử dụng file UPDATE_PRODUCT_DESCRIPTION_NULLABLE.sql để cập nhật database hiện tại
   - Thêm cột `PRODUCT_HIGHLIGHTED` BOOLEAN NOT NULL DEFAULT FALSE (Sản phẩm tiêu biểu)
 - **Bảng ORDER_ITEM**
   - Thêm cột `PRODUCT_CODE` VARCHAR(64) NOT NULL (Snapshot)

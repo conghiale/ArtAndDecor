@@ -24,7 +24,7 @@ public interface ProductTypeService {
 
     /**
      * Get product types by multiple criteria with pagination (all parameters optional)
-     * @param textSearch Text search in name, slug, displayName, remark (partial match, case-insensitive)
+        * @param textSearch Text search in name, slug, displayName, content, remark (partial match, case-insensitive)
      * @param enabled Filter by enabled status
      * @param productTypeSlug Filter by product type slug
      * @param pageable Pagination and sorting information

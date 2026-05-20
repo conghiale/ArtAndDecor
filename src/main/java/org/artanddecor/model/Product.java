@@ -51,7 +51,7 @@ public class Product {
     @Column(name = "STOCK_QUANTITY", nullable = false)
     private Integer stockQuantity = 0;
 
-    @Column(name = "PRODUCT_DESCRIPTION", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "PRODUCT_DESCRIPTION", nullable = true, columnDefinition = "TEXT")
     private String productDescription;
 
     @Column(name = "PRODUCT_PRICE", nullable = false, precision = 15, scale = 2)

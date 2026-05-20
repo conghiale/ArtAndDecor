@@ -47,7 +47,7 @@ public class ProductDto {
     @Min(value = 0, message = "Sold quantity must not be negative")
     private Integer soldQuantity;
     
-    @NotBlank(message = "Product description is required")
+    @Size(max = 65535, message = "Product description is too long")
     private String productDescription;
     
     private Boolean productEnabled;

@@ -34,7 +34,7 @@ public interface ProductCategoryService {
 
     /**
      * Get product categories by multiple criteria with pagination (all parameters optional)
-     * @param textSearch Text search in name, slug, displayName, remark (partial match, case-insensitive)
+     * @param textSearch Text search in name, slug, displayName, content, remark (partial match, case-insensitive)
      * @param enabled Filter by enabled status
      * @param visible Filter by visible status
      * @param productTypeId Filter by product type ID

@@ -1,8 +1,8 @@
 package org.artanddecor.services;
 
 import org.artanddecor.dto.ImageDto;
+import org.artanddecor.dto.ImageDto;
 import org.artanddecor.dto.ImageUploadDto;
-import org.artanddecor.dto.ImageUploadResponseDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -51,15 +51,15 @@ public interface ImageService {
     // =============================================
 
     /**
-     * Upload multiple images with metadata
-     * Handles file storage with automatic hash + timestamp naming and database persistence
-     * File names are generated automatically to ensure uniqueness
-     * 
-     * @param imageUploadDto Contains files, display names, and optional metadata
-     * @return ImageUploadResponseDto with results and errors
+     * Upload a single image with metadata.
+     * Handles file storage with SHA-256 hash-based naming, deduplication, and database persistence.
+     * When the uploaded file is new (not already on disk), AI embedding is triggered asynchronously.
+     *
+     * @param imageUploadDto Contains file, display name, and optional metadata
+     * @return ImageDto of the uploaded (or deduplicated existing) image
      * @throws IOException If file operations fail
      */
-    ImageUploadResponseDto uploadImages(ImageUploadDto imageUploadDto) throws IOException;
+    ImageDto uploadImage(ImageUploadDto imageUploadDto) throws IOException;
 
     /**
      * Update image with new file and metadata

@@ -442,6 +442,36 @@ public class PaymentController {
             return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to update payment status: " + e.getMessage()));
         }
     }
+
+    /**
+     * Update payment status by order ID (all payments under the order)
+     * Role: ADMIN only
+     */
+    @PatchMapping("/order/{orderId}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+        summary = "Update payment status by order ID",
+        description = "Update payment status for all payments belonging to a specific order by changing payment state ID. Admin access required."
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<BaseResponseDto<java.util.List<PaymentDto>>> updatePaymentStatusByOrderId(
+            @Parameter(description = "Order ID")
+            @PathVariable Long orderId,
+
+            @Parameter(description = "New payment state ID")
+            @RequestParam Long paymentStateId) {
+
+        logger.info("Updating payment status by order - orderId: {}, newStateId: {}", orderId, paymentStateId);
+
+        try {
+            java.util.List<PaymentDto> updatedPayments = paymentService.updatePaymentStatusByOrderId(orderId, paymentStateId);
+            return ResponseEntity.ok(BaseResponseDto.success("Payment statuses updated successfully by order", updatedPayments));
+        } catch (Exception e) {
+            logger.error("Error updating payment status by orderId {}: {}", orderId, e.getMessage(), e);
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to update payment status by order: " + e.getMessage()));
+        }
+    }
+
     // =============================================
     // PAYMENT QR CODE ENDPOINT
     // =============================================
