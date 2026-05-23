@@ -78,6 +78,11 @@ public interface ProductVariantService {
      * Delete product variant by ID
      */
     void deleteProductVariant(Long productVariantId);
+
+    /**
+     * Delete all variants for a product (batch delete, used when replacing all variants)
+     */
+    void deleteVariantsByProductId(Long productId);
     
     // =============================================
     // STOCK OPERATIONS

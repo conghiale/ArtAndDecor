@@ -232,7 +232,11 @@ CREATE TABLE `PRODUCT` (
     INDEX `idx_product_slug` (`PRODUCT_SLUG`),
     INDEX `idx_product_price` (`PRODUCT_PRICE`),
     INDEX `idx_product_stock` (`STOCK_QUANTITY`),
-    INDEX `idx_product_seo_meta` (`SEO_META_ID`)
+    INDEX `idx_product_seo_meta` (`SEO_META_ID`),
+    INDEX `idx_product_enabled` (`PRODUCT_ENABLED`),
+    INDEX `idx_product_featured` (`PRODUCT_FEATURED`),
+    INDEX `idx_product_highlighted` (`PRODUCT_HIGHLIGHTED`),
+    INDEX `idx_product_sold_quantity` (`SOLD_QUANTITY`)
 );
 
 -- Table: PRODUCT_IMAGE
@@ -404,7 +408,8 @@ CREATE TABLE `CART_ITEM` (
     FOREIGN KEY (`PRODUCT_ID`) REFERENCES `PRODUCT`(`PRODUCT_ID`) ON DELETE RESTRICT,
     FOREIGN KEY (`CART_ITEM_STATE_ID`) REFERENCES `CART_ITEM_STATE`(`CART_ITEM_STATE_ID`) ON DELETE RESTRICT,
     INDEX `idx_cart_item_cart` (`CART_ID`),
-    INDEX `idx_cart_item_product` (`PRODUCT_ID`)
+    INDEX `idx_cart_item_product` (`PRODUCT_ID`),
+    INDEX `idx_cart_item_cart_state` (`CART_ID`, `CART_ITEM_STATE_ID`)
 );
 
 -- Table: CART_ITEM_ATTRIBUTE (Simplified mapping table for cart item attributes)

@@ -229,14 +229,18 @@ public class ProductVariantServiceImpl implements ProductVariantService {
 
     @Override
     public void deleteProductVariant(Long productVariantId) {
-        logger.info("Deleting product variant ID: {}", productVariantId);
-        
+        logger.debug("Deleting product variant ID: {}", productVariantId);
         if (!productVariantRepository.existsById(productVariantId)) {
             throw new ResourceNotFoundException("Product variant not found with ID: " + productVariantId);
         }
-        
         productVariantRepository.deleteById(productVariantId);
-        logger.info("Product variant deleted successfully");
+        logger.debug("Product variant {} deleted", productVariantId);
+    }
+
+    @Override
+    public void deleteVariantsByProductId(Long productId) {
+        logger.debug("Deleting all variants for product ID: {}", productId);
+        productVariantRepository.deleteByProductId(productId);
     }
 
     @Override

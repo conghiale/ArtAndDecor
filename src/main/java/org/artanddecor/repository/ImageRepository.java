@@ -87,17 +87,18 @@ public interface ImageRepository extends JpaRepository<Image, Long> {
 
     /**
      * Search images by multiple criteria with pagination (Admin search)
+     * Note: formatId maps to imageSize substring search.
      */
     @Query("SELECT i FROM Image i " +
            "WHERE (:imageId IS NULL OR i.imageId = :imageId) " +
            "AND (:imageName IS NULL OR LOWER(i.imageName) LIKE LOWER(CONCAT('%', :imageName, '%'))) " +
            "AND (:imageDisplayName IS NULL OR LOWER(i.imageDisplayName) LIKE LOWER(CONCAT('%', :imageDisplayName, '%'))) " +
-           "AND (:formatId IS NULL OR LOWER(i.imageSize) LIKE LOWER(CONCAT('%', :formatId, '%'))) " +
+           "AND (:sizeFilter IS NULL OR LOWER(i.imageSize) LIKE LOWER(CONCAT('%', :sizeFilter, '%'))) " +
            "ORDER BY i.modifiedDt DESC")
     Page<Image> findByCriteriaPaginated(@Param("imageId") Long imageId,
                                        @Param("imageName") String imageName,
                                        @Param("imageDisplayName") String imageDisplayName,
-                                       @Param("formatId") Long formatId,
+                                       @Param("sizeFilter") String sizeFilter,
                                        Pageable pageable);
 
     // =============================================
@@ -132,4 +133,10 @@ public interface ImageRepository extends JpaRepository<Image, Long> {
      */
     @Query("SELECT DISTINCT i.imageFormat FROM Image i WHERE i.imageFormat IS NOT NULL ORDER BY i.imageFormat")
     List<String> findDistinctImageFormats();
+
+    /**
+     * Count images whose IDs are in the given collection (batch existence check)
+     */
+    @Query("SELECT COUNT(i) FROM Image i WHERE i.imageId IN :ids")
+    long countByImageIdIn(@Param("ids") java.util.Collection<Long> ids);
 }

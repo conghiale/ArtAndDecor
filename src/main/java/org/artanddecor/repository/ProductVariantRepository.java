@@ -120,7 +120,7 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     /**
      * Check if product-attribute combination exists
      */
-    @Query("SELECT COUNT(pv) > 0 FROM ProductVariant pv " +
+    @Query("SELECT CASE WHEN COUNT(pv) > 0 THEN TRUE ELSE FALSE END FROM ProductVariant pv " +
            "WHERE pv.product.productId = :productId " +
            "AND pv.productAttribute.productAttributeId = :productAttributeId")
     boolean existsByProductIdAndProductAttributeId(@Param("productId") Long productId, 
@@ -150,4 +150,21 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
            "AND pv.productVariantEnabled = true " +
            "AND pv.productAttribute.productAttributeEnabled = true")
     Long countEnabledByProductId(@Param("productId") Long productId);
+
+    /**
+     * Delete all variants for a product (batch delete to replace N individual deletes)
+     */
+    @Modifying
+    @Query("DELETE FROM ProductVariant pv WHERE pv.product.productId = :productId")
+    void deleteByProductId(@Param("productId") Long productId);
+
+    /**
+     * Return attribute IDs that are valid variants for the given product (batch validation)
+     */
+    @Query("SELECT pv.productAttribute.productAttributeId FROM ProductVariant pv " +
+           "WHERE pv.product.productId = :productId " +
+           "AND pv.productAttribute.productAttributeId IN :attributeIds")
+    List<Long> findValidAttributeIdsByProductIdAndAttributeIds(
+            @Param("productId") Long productId,
+            @Param("attributeIds") List<Long> attributeIds);
 }

@@ -4,8 +4,6 @@ import lombok.RequiredArgsConstructor;
 import org.artanddecor.dto.ProductDto;
 import org.artanddecor.dto.ProductRequestDto;
 import org.artanddecor.dto.ProductVariantRequestDto;
-import org.artanddecor.dto.ProductVariantDto;
-import org.artanddecor.dto.ProductImageDto;
 import org.artanddecor.dto.SeoMetaRequestDto;
 import org.artanddecor.dto.SeoMetaDto;
 import org.artanddecor.dto.SimilarImageSearchResponseDto;
@@ -13,13 +11,10 @@ import org.artanddecor.dto.SimilarImageResultDto;
 import org.artanddecor.dto.PolicyDto;
 import org.artanddecor.model.Product;
 import org.artanddecor.model.ProductImage;
-import org.artanddecor.model.ProductAttribute;
-import org.artanddecor.model.ProductAttr;
 import org.artanddecor.model.Image;
 import org.artanddecor.repository.ProductRepository;
 import org.artanddecor.repository.ProductImageRepository;
 import org.artanddecor.repository.ProductAttributeRepository;
-import org.artanddecor.repository.ProductAttrRepository;
 import org.artanddecor.repository.ImageRepository;
 import org.artanddecor.services.ProductService;
 import org.artanddecor.services.ProductVariantService;
@@ -40,6 +35,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.core.io.ByteArrayResource;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -63,7 +59,6 @@ public class ProductServiceImpl implements ProductService {
     private final ProductRepository productRepository;
     private final ProductImageRepository productImageRepository;
     private final ProductAttributeRepository productAttributeRepository;
-    private final ProductAttrRepository productAttrRepository;
     private final ImageRepository imageRepository;
     private final ProductVariantService productVariantService;
     private final SeoMetaService seoMetaService;
@@ -364,10 +359,10 @@ public class ProductServiceImpl implements ProductService {
      * @throws IllegalArgumentException if any image ID doesn't exist
      */
     private void validateImageIds(List<Long> imageIds) {
-        for (Long imageId : imageIds) {
-            if (!imageRepository.existsById(imageId)) {
-                throw new IllegalArgumentException("Image not found with ID: " + imageId);
-            }
+        if (imageIds == null || imageIds.isEmpty()) return;
+        long found = imageRepository.countByImageIdIn(imageIds);
+        if (found != imageIds.size()) {
+            throw new IllegalArgumentException("One or more image IDs are invalid or not found: " + imageIds);
         }
     }
     
@@ -379,23 +374,27 @@ public class ProductServiceImpl implements ProductService {
      */
     private void associateImagesToProduct(Product product, List<Long> imageIds, Long primaryImageId) {
         logger.debug("Associating {} images to product {}", imageIds.size(), product.getProductId());
-        
-        // Determine primary image ID if not specified
+
         Long actualPrimaryImageId = (primaryImageId != null) ? primaryImageId : imageIds.get(0);
-        
-        for (Long imageId : imageIds) {
-            Image image = imageRepository.findById(imageId)
-                .orElseThrow(() -> new IllegalArgumentException("Image not found with ID: " + imageId));
-            
-            ProductImage productImage = new ProductImage();
-            productImage.setProduct(product);
-            productImage.setImage(image);
-            productImage.setProductImagePrimary(imageId.equals(actualPrimaryImageId));
-            
-            productImageRepository.save(productImage);
-        }
-        
-        logger.info("Successfully associated {} images to product {} (primary: {})", imageIds.size(), product.getProductId(), actualPrimaryImageId);
+
+        // Batch load all images in a single query
+        Map<Long, Image> imageMap = imageRepository.findAllById(imageIds).stream()
+                .collect(Collectors.toMap(Image::getImageId, Function.identity()));
+
+        List<ProductImage> toSave = imageIds.stream().map(imageId -> {
+            Image image = imageMap.get(imageId);
+            if (image == null) {
+                throw new IllegalArgumentException("Image not found with ID: " + imageId);
+            }
+            ProductImage pi = new ProductImage();
+            pi.setProduct(product);
+            pi.setImage(image);
+            pi.setProductImagePrimary(imageId.equals(actualPrimaryImageId));
+            return pi;
+        }).collect(Collectors.toList());
+
+        productImageRepository.saveAll(toSave);
+        logger.debug("Associated {} images to product {} (primary: {})", toSave.size(), product.getProductId(), actualPrimaryImageId);
     }
     
     /**
@@ -407,14 +406,18 @@ public class ProductServiceImpl implements ProductService {
         if (productVariants == null || productVariants.isEmpty()) {
             return;
         }
-        
+
+        // Batch-validate all attribute IDs in a single query
+        List<Long> attrIds = productVariants.stream()
+                .map(ProductVariantRequestDto::getProductAttributeId)
+                .distinct()
+                .collect(Collectors.toList());
+        long foundCount = productAttributeRepository.countByProductAttributeIdIn(attrIds);
+        if (foundCount != attrIds.size()) {
+            throw new IllegalArgumentException("One or more product attribute IDs are invalid");
+        }
+
         for (ProductVariantRequestDto variantRequest : productVariants) {
-            // Validate productAttributeId exists
-            if (!productAttributeRepository.existsById(variantRequest.getProductAttributeId())) {
-                throw new IllegalArgumentException("Product attribute not found with ID: " + variantRequest.getProductAttributeId());
-            }
-            
-            // Validate quantity is not negative
             if (variantRequest.getProductVariantStock() < 0) {
                 throw new IllegalArgumentException("Product variant quantity cannot be negative");
             }
@@ -429,71 +432,79 @@ public class ProductServiceImpl implements ProductService {
      * @param primaryImageId Primary image ID (can be null)
      */
     private void updateProductImages(Product product, List<Long> imageIds, Long primaryImageId) {
-        // Handle null input gracefully
         if (imageIds == null) {
-            imageIds = List.of(); // Convert null to empty list
+            imageIds = List.of();
         }
-        
+
         Long productId = product.getProductId();
-        logger.debug("Updating product images for product {} - {} images requested", 
-                    productId, imageIds.size());
-        
-        // 1. Get existing product images - handle possible null result
+        logger.debug("Updating product images for product {} — {} images requested", productId, imageIds.size());
+
+        // 1. Load existing product images once
         List<ProductImage> existingImages = productImageRepository.findByProductId(productId);
         if (existingImages == null) {
-            existingImages = List.of(); // Convert null to empty list
+            existingImages = List.of();
         }
-        
-        // 2. Create sets for comparison
+
         Set<Long> existingImageIds = existingImages.stream()
-            .map(pi -> pi.getImage().getImageId())
-            .collect(Collectors.toSet());
-            
-        Set<Long> newImageIds = new HashSet<>(imageIds);
-        
-        // 3. REMOVE: Delete images that are not in the new list
-        for (ProductImage existingImage : existingImages) {
-            Long existingImageId = existingImage.getImage().getImageId();
-            if (!newImageIds.contains(existingImageId)) {
-                productImageRepository.delete(existingImage);
-                logger.debug("Removed image {} from product {}", existingImageId, productId);
-            }
+                .map(pi -> pi.getImage().getImageId())
+                .collect(Collectors.toSet());
+
+        Set<Long> requestedImageIds = new HashSet<>(imageIds);
+
+        // 2. REMOVE: batch-delete images no longer in the requested list
+        List<ProductImage> imagesToRemove = existingImages.stream()
+                .filter(pi -> !requestedImageIds.contains(pi.getImage().getImageId()))
+                .collect(Collectors.toList());
+        if (!imagesToRemove.isEmpty()) {
+            productImageRepository.deleteAllInBatch(imagesToRemove);
         }
-        
-        // 4. ADD: Insert new images that don't exist
-        Long actualPrimaryImageId = (primaryImageId != null) ? primaryImageId : 
-                                   (!imageIds.isEmpty() ? imageIds.get(0) : null);
-        
-        for (Long imageId : newImageIds) {
-            if (!existingImageIds.contains(imageId)) {
-                Image image = imageRepository.findById(imageId)
-                    .orElseThrow(() -> new IllegalArgumentException("Image not found with ID: " + imageId));
-                    
-                ProductImage productImage = new ProductImage();
-                productImage.setProduct(product);
-                productImage.setImage(image);
-                productImage.setProductImagePrimary(imageId.equals(actualPrimaryImageId));
-                
-                productImageRepository.save(productImage);
-                logger.debug("Added image {} to product {} (primary: {})", imageId, productId, imageId.equals(actualPrimaryImageId));
+
+        // 3. ADD: batch-load and batch-insert new images
+        Long actualPrimaryImageId = (primaryImageId != null) ? primaryImageId :
+                                    (!imageIds.isEmpty() ? imageIds.get(0) : null);
+
+        Set<Long> idsToAdd = new HashSet<>(requestedImageIds);
+        idsToAdd.removeAll(existingImageIds);
+
+        if (!idsToAdd.isEmpty()) {
+            Map<Long, Image> imageMap = imageRepository.findAllById(idsToAdd).stream()
+                    .collect(Collectors.toMap(Image::getImageId, Function.identity()));
+
+            List<ProductImage> toAdd = new ArrayList<>();
+            for (Long imageId : idsToAdd) {
+                Image image = imageMap.get(imageId);
+                if (image == null) {
+                    throw new IllegalArgumentException("Image not found with ID: " + imageId);
+                }
+                ProductImage pi = new ProductImage();
+                pi.setProduct(product);
+                pi.setImage(image);
+                pi.setProductImagePrimary(imageId.equals(actualPrimaryImageId));
+                toAdd.add(pi);
             }
+            productImageRepository.saveAll(toAdd);
         }
-        
-        // 5. UPDATE: Update primary flags for existing images if needed
+
+        // 4. UPDATE: fix primary flag on surviving existing images (no extra DB read needed)
         if (actualPrimaryImageId != null) {
-            List<ProductImage> currentImages = productImageRepository.findByProductId(productId);
-            for (ProductImage img : currentImages) {
+            List<ProductImage> survivingImages = existingImages.stream()
+                    .filter(pi -> requestedImageIds.contains(pi.getImage().getImageId()))
+                    .collect(Collectors.toList());
+
+            List<ProductImage> flagChanges = new ArrayList<>();
+            for (ProductImage img : survivingImages) {
                 boolean shouldBePrimary = img.getImage().getImageId().equals(actualPrimaryImageId);
                 if (img.getProductImagePrimary() != shouldBePrimary) {
                     img.setProductImagePrimary(shouldBePrimary);
-                    productImageRepository.save(img);
-                    logger.debug("Updated primary flag for image {} in product {}: {}", 
-                               img.getImage().getImageId(), productId, shouldBePrimary);
+                    flagChanges.add(img);
                 }
             }
+            if (!flagChanges.isEmpty()) {
+                productImageRepository.saveAll(flagChanges);
+            }
         }
-        
-        logger.info("Successfully updated images for product {} - {} total images", productId, newImageIds.size());
+
+        logger.debug("Updated images for product {}: removed={}, added={}", productId, imagesToRemove.size(), idsToAdd.size());
     }
     
     // =============================================
@@ -560,29 +571,21 @@ public class ProductServiceImpl implements ProductService {
      * @param productVariants New list of product variants
      */
     private void updateProductVariants(Product product, List<ProductVariantRequestDto> productVariants) {
-        logger.debug("Updating variants for product {} - {} variants requested", 
-                    product.getProductId(), productVariants.size());
-        
+        logger.debug("Updating variants for product {} — {} variants requested",
+                product.getProductId(), productVariants.size());
+
         Long productId = product.getProductId();
-        
-        // 1. Remove all existing variants for this product
-        List<ProductVariantDto> existingVariants = productVariantService.findVariantsByProductId(productId);
-        for (ProductVariantDto existingVariant : existingVariants) {
-            productVariantService.deleteProductVariant(existingVariant.getProductVariantId());
-        }
-        logger.debug("Removed {} existing variants for product {}", existingVariants.size(), productId);
-        
+
+        // 1. Batch-delete all existing variants for this product
+        productVariantService.deleteVariantsByProductId(productId);
+
         // 2. Create new variants
-        if (!productVariants.isEmpty()) {
-            for (ProductVariantRequestDto variantRequest : productVariants) {
-                // Set productId for the variant request
-                variantRequest.setProductId(productId);
-                
-                // Create the variant using ProductVariantService
-                productVariantService.createProductVariant(variantRequest);
-            }
-            logger.debug("Created {} new variants for product {}", productVariants.size(), productId);
+        for (ProductVariantRequestDto variantRequest : productVariants) {
+            variantRequest.setProductId(productId);
+            productVariantService.createProductVariant(variantRequest);
         }
+
+        logger.debug("Updated variants for product {}: created={}", productId, productVariants.size());
     }
     
     /**

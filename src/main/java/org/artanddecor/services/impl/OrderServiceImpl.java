@@ -539,6 +539,7 @@ public class OrderServiceImpl implements OrderService {
         }
         
         // Create order items
+        List<OrderItem> orderItemsToSave = new ArrayList<>();
         for (CartItem cartItem : cartItems) {
             Product product = cartItem.getProduct();
             
@@ -626,10 +627,11 @@ public class OrderServiceImpl implements OrderService {
             
             orderItem.setCreatedDt(LocalDateTime.now());
             orderItem.setModifiedDt(LocalDateTime.now());
-            
-            orderItemRepository.save(orderItem);
+
+            orderItemsToSave.add(orderItem);
         }
-        
+        orderItemRepository.saveAll(orderItemsToSave);
+
         // Clear cart after successful checkout (hard delete)
         try {
             if (clearEntireCart) {
@@ -898,12 +900,9 @@ public class OrderServiceImpl implements OrderService {
         // First, perform normal order state update
         OrderDto updatedOrder = updateOrderState(orderId, newOrderStateId, changedByUserId);
         
-        // Get the order state name to check for special handling
+        // Check for special handling using already-loaded state name from DTO — avoids extra DB call
         try {
-            OrderState newOrderState = orderStateRepository.findById(newOrderStateId)
-                    .orElse(null);
-            
-            if (newOrderState != null && "DELIVERED".equalsIgnoreCase(newOrderState.getOrderStateName())) {
+            if (updatedOrder.isDelivered()) {
                 logger.info("Order {} marked as DELIVERED, applying shipment/payment completion workflow", orderId);
 
                 // 1) Mark all shipments of this order as DELIVERED
@@ -915,30 +914,20 @@ public class OrderServiceImpl implements OrderService {
                         ShipmentState deliveredShipmentState = deliveredShipmentStateOpt.get();
                         List<Shipment> shipments = shipmentRepository.findByOrderOrderIdOrderByCreatedDtDesc(orderId);
 
-                        int updatedShipmentCount = 0;
+                        String shipAutoRemark = "Auto-updated to DELIVERED when order was marked DELIVERED" +
+                                (statusNote != null && !statusNote.trim().isEmpty() ? " | Note: " + statusNote.trim() : "");
                         for (Shipment shipment : shipments) {
-                            try {
-                                shipment.setShipmentState(deliveredShipmentState);
-                                if (shipment.getDeliveredAt() == null) {
-                                    shipment.setDeliveredAt(LocalDateTime.now());
-                                }
-
-                                String autoRemark = "Auto-updated to DELIVERED when order was marked DELIVERED";
-                                if (statusNote != null && !statusNote.trim().isEmpty()) {
-                                    autoRemark = autoRemark + " | Note: " + statusNote.trim();
-                                }
-                                shipment.setShipmentRemark(autoRemark);
-
-                                shipmentRepository.save(shipment);
-                                updatedShipmentCount++;
-                            } catch (Exception e) {
-                                logger.warn("Failed to update shipment {} to DELIVERED: {}",
-                                           shipment.getShipmentId(), e.getMessage());
+                            shipment.setShipmentState(deliveredShipmentState);
+                            if (shipment.getDeliveredAt() == null) {
+                                shipment.setDeliveredAt(LocalDateTime.now());
                             }
+                            shipment.setShipmentRemark(shipAutoRemark);
                         }
-
-                        logger.info("Updated {}/{} shipments to DELIVERED for order {}",
-                                   updatedShipmentCount, shipments.size(), orderId);
+                        if (!shipments.isEmpty()) {
+                            shipmentRepository.saveAll(shipments);
+                        }
+                        logger.info("Updated {} shipments to DELIVERED for order {}",
+                                   shipments.size(), orderId);
                     }
                 } catch (Exception e) {
                     logger.error("Error updating shipments to DELIVERED for order {}: {}", orderId, e.getMessage(), e);
@@ -954,32 +943,26 @@ public class OrderServiceImpl implements OrderService {
                         PaymentState completedPaymentState = completedPaymentStateOpt.get();
                         List<Payment> payments = paymentRepository.findByOrderOrderId(orderId);
 
-                        int updatedPaymentCount = 0;
+                        List<Payment> paymentsToUpdate = new ArrayList<>();
+                        String payAutoRemark = "Auto-updated to COMPLETED when order was marked DELIVERED";
                         for (Payment payment : payments) {
-                            try {
-                                if (payment.getPaymentState() == null
-                                        || !"COMPLETED".equalsIgnoreCase(payment.getPaymentState().getPaymentStateName())) {
-                                    payment.setPaymentState(completedPaymentState);
-
-                                    String existingRemark = payment.getPaymentRemark();
-                                    String autoRemark = "Auto-updated to COMPLETED when order was marked DELIVERED";
-                                    if (existingRemark == null || existingRemark.trim().isEmpty()) {
-                                        payment.setPaymentRemark(autoRemark);
-                                    } else if (!existingRemark.contains(autoRemark)) {
-                                        payment.setPaymentRemark(existingRemark + " | " + autoRemark);
-                                    }
-
-                                    paymentRepository.save(payment);
-                                    updatedPaymentCount++;
+                            if (payment.getPaymentState() == null
+                                    || !"COMPLETED".equalsIgnoreCase(payment.getPaymentState().getPaymentStateName())) {
+                                payment.setPaymentState(completedPaymentState);
+                                String existingRemark = payment.getPaymentRemark();
+                                if (existingRemark == null || existingRemark.trim().isEmpty()) {
+                                    payment.setPaymentRemark(payAutoRemark);
+                                } else if (!existingRemark.contains(payAutoRemark)) {
+                                    payment.setPaymentRemark(existingRemark + " | " + payAutoRemark);
                                 }
-                            } catch (Exception e) {
-                                logger.warn("Failed to update payment {} to COMPLETED: {}",
-                                           payment.getPaymentId(), e.getMessage());
+                                paymentsToUpdate.add(payment);
                             }
                         }
-
+                        if (!paymentsToUpdate.isEmpty()) {
+                            paymentRepository.saveAll(paymentsToUpdate);
+                        }
                         logger.info("Updated {}/{} payments to COMPLETED for order {}",
-                                   updatedPaymentCount, payments.size(), orderId);
+                                   paymentsToUpdate.size(), payments.size(), orderId);
                     }
                 } catch (Exception e) {
                     logger.error("Error updating payments to COMPLETED for order {}: {}", orderId, e.getMessage(), e);
@@ -1014,7 +997,7 @@ public class OrderServiceImpl implements OrderService {
         if (bestDiscount != null) {
             try {
                 result.appliedDiscount = bestDiscount;
-                result.discountAmount = discountService.calculateDiscountAmount(bestDiscount.getDiscountId(), orderAmount);
+                result.discountAmount = bestDiscount.calculateDiscountAmount(orderAmount);
                 result.success = true;
                 logger.info("Auto-applied best discount {} with amount {} for order amount {}", 
                         bestDiscount.getDiscountCode(), result.discountAmount, orderAmount);
@@ -1076,19 +1059,11 @@ public class OrderServiceImpl implements OrderService {
                     continue;
                 }
                 
-                try {
-                    // Calculate potential savings from this discount
-                    BigDecimal discountAmount = discountService.calculateDiscountAmount(
-                            discount.getDiscountId(), orderAmount);
-                    
-                    // Select discount with maximum savings
-                    if (discountAmount.compareTo(maxSavings) > 0) {
-                        maxSavings = discountAmount;
-                        bestDiscount = discount;
-                    }
-                } catch (Exception e) {
-                    logger.warn("Failed to calculate discount amount for {}: {}", 
-                            discount.getDiscountCode(), e.getMessage());
+                // Calculate potential savings using DTO data — avoids extra DB call per discount
+                BigDecimal discountAmount = discount.calculateDiscountAmount(orderAmount);
+                if (discountAmount.compareTo(maxSavings) > 0) {
+                    maxSavings = discountAmount;
+                    bestDiscount = discount;
                 }
             }
             

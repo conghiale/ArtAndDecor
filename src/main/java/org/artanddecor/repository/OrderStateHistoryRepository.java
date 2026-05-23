@@ -1,11 +1,14 @@
 package org.artanddecor.repository;
 
 import org.artanddecor.model.OrderStateHistory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -16,9 +19,26 @@ public interface OrderStateHistoryRepository extends JpaRepository<OrderStateHis
 
     /**
      * Find order state history by order ID
-     * @param orderId Order ID
-     * @return List of order state history for specific order
      */
     @Query("SELECT osh FROM OrderStateHistory osh WHERE osh.order.orderId = :orderId ORDER BY osh.createdDt DESC")
     List<OrderStateHistory> findByOrderIdOrderByStateChangeDateDesc(@Param("orderId") Long orderId);
+
+    /**
+     * Find order state history with filtering and database-level pagination.
+     * Replaces the previous findAll() + in-memory filter pattern.
+     */
+    @Query("SELECT osh FROM OrderStateHistory osh " +
+           "WHERE (:orderId IS NULL OR osh.order.orderId = :orderId) " +
+           "AND (:fromDate IS NULL OR osh.createdDt >= :fromDate) " +
+           "AND (:toDate IS NULL OR osh.createdDt <= :toDate) " +
+           "AND (:oldStateId IS NULL OR osh.oldState.orderStateId = :oldStateId) " +
+           "AND (:newStateId IS NULL OR osh.newState.orderStateId = :newStateId) " +
+           "ORDER BY osh.createdDt DESC")
+    Page<OrderStateHistory> findByFilters(
+            @Param("orderId") Long orderId,
+            @Param("fromDate") LocalDateTime fromDate,
+            @Param("toDate") LocalDateTime toDate,
+            @Param("oldStateId") Long oldStateId,
+            @Param("newStateId") Long newStateId,
+            Pageable pageable);
 }

@@ -54,7 +54,7 @@ public class CartServiceImpl implements CartService {
     @Override
     @Transactional(readOnly = true)
     public CartDto getCartById(Long cartId) {
-        logger.info("Fetching cart with ID: {}", cartId);
+        logger.debug("Fetching cart with ID: {}", cartId);
 
         Cart cart = cartRepository.findById(cartId)
             .orElseThrow(() -> new ResourceNotFoundException("Cart not found with ID: " + cartId));
@@ -70,7 +70,7 @@ public class CartServiceImpl implements CartService {
     @Override
     @Transactional(readOnly = true)
     public CartDto getActiveCartByUser(Long userId) {
-        logger.info("Fetching active cart for user ID: {}", userId);
+        logger.debug("Fetching active cart for user ID: {}", userId);
 
         Cart cart = cartRepository.findActiveCartByUser(userId)
             .orElseThrow(() -> new ResourceNotFoundException("Active cart not found for user ID: " + userId));
@@ -87,7 +87,7 @@ public class CartServiceImpl implements CartService {
      */
     @Override
     public CartDto getCurrentCart(Long userId, String sessionId) {
-        logger.info("Getting current cart - userId: {}, sessionId: {}", userId, sessionId);
+        logger.debug("Getting current cart - userId: {}, sessionId: {}", userId, sessionId);
 
         if (userId != null) {
             // User is authenticated - get or create active cart
@@ -201,7 +201,7 @@ public class CartServiceImpl implements CartService {
     public Page<CartDto> getCartsByCriteria(Long cartId, Long userId, String sessionId, 
                                           Long cartStateId, String cartSlug, Boolean cartEnabled,
                                           int page, int size, String sortBy, String sortDirection) {
-        logger.info("Fetching carts by criteria - cartId: {}, userId: {}, sessionId: {}, cartStateId: {}, cartSlug: {}, cartEnabled: {}",
+        logger.debug("Fetching carts by criteria - cartId: {}, userId: {}, sessionId: {}, cartStateId: {}, cartSlug: {}, cartEnabled: {}",
                    cartId, userId, sessionId, cartStateId, cartSlug, cartEnabled);
 
         Sort sort = sortDirection.equalsIgnoreCase("desc") ?

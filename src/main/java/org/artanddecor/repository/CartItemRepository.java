@@ -136,15 +136,15 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long> {
     List<Object[]> getCartItemStatisticsByCategory();
 
     /**
-     * Find cart items with product and category details
-     * @param pageable Pagination parameters
-     * @return Page of cart items with full details
+     * Find cart items with product and category details.
+     * countQuery is required to avoid in-memory pagination (HHH90003004) when using JOIN FETCH with Page.
      */
-    @Query("SELECT ci FROM CartItem ci " +
-           "LEFT JOIN FETCH ci.cart c " +
-           "LEFT JOIN FETCH ci.product p " +
-           "LEFT JOIN FETCH p.productCategory " +
-           "LEFT JOIN FETCH ci.cartItemState")
+    @Query(value = "SELECT ci FROM CartItem ci " +
+                   "LEFT JOIN FETCH ci.cart c " +
+                   "LEFT JOIN FETCH ci.product p " +
+                   "LEFT JOIN FETCH p.productCategory " +
+                   "LEFT JOIN FETCH ci.cartItemState",
+           countQuery = "SELECT COUNT(ci) FROM CartItem ci")
     Page<CartItem> findCartItemsWithDetails(Pageable pageable);
 
     /**

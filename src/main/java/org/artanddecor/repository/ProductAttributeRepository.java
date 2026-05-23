@@ -60,26 +60,32 @@ public interface ProductAttributeRepository extends JpaRepository<ProductAttribu
     /**
      * Check if attribute value and attribute ID combination exists (for unique constraint)
      */
-    @Query("SELECT COUNT(pa) > 0 FROM ProductAttribute pa " +
+    @Query("SELECT CASE WHEN COUNT(pa) > 0 THEN TRUE ELSE FALSE END FROM ProductAttribute pa " +
            "WHERE pa.productAttributeValue = :value " +
            "AND pa.productAttr.productAttrId = :attrId " +
            "AND pa.productAttributePrice = :price")
-    boolean existsByValueAttrIdAndPrice(@Param("value") String productAttributeValue, 
-                                       @Param("attrId") Long productAttrId, 
+    boolean existsByValueAttrIdAndPrice(@Param("value") String productAttributeValue,
+                                       @Param("attrId") Long productAttrId,
                                        @Param("price") BigDecimal price);
-    
+
     /**
      * Check if combination exists excluding specific ID (for updates)
      */
-    @Query("SELECT COUNT(pa) > 0 FROM ProductAttribute pa " +
+    @Query("SELECT CASE WHEN COUNT(pa) > 0 THEN TRUE ELSE FALSE END FROM ProductAttribute pa " +
            "WHERE pa.productAttributeValue = :value " +
            "AND pa.productAttr.productAttrId = :attrId " +
            "AND pa.productAttributePrice = :price " +
            "AND pa.productAttributeId != :excludeId")
-    boolean existsByValueAttrIdAndPriceExcludingId(@Param("value") String productAttributeValue, 
-                                                  @Param("attrId") Long productAttrId, 
+    boolean existsByValueAttrIdAndPriceExcludingId(@Param("value") String productAttributeValue,
+                                                  @Param("attrId") Long productAttrId,
                                                   @Param("price") BigDecimal price,
                                                   @Param("excludeId") Long productAttributeId);
+
+    /**
+     * Batch count product attributes by IDs (used for bulk existence validation)
+     */
+    @Query("SELECT COUNT(pa) FROM ProductAttribute pa WHERE pa.productAttributeId IN :ids")
+    long countByProductAttributeIdIn(@Param("ids") java.util.Collection<Long> ids);
 
     // =============================================
     // SEARCH OPERATIONS

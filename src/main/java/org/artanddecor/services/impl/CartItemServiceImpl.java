@@ -29,8 +29,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Cart Item Service Implementation
@@ -65,7 +70,7 @@ public class CartItemServiceImpl implements CartItemService {
     @Override
     @Transactional(readOnly = true)
     public List<CartItemDto> getCartItemsByCartId(Long cartId, Long cartItemStateId) {
-        logger.info("Fetching cart items for cart ID: {}, state filter: {}", cartId, cartItemStateId);
+        logger.debug("Fetching cart items for cart ID: {}, state filter: {}", cartId, cartItemStateId);
 
         List<CartItem> cartItems;
         if (cartItemStateId != null) {
@@ -88,7 +93,7 @@ public class CartItemServiceImpl implements CartItemService {
     @Override
     @Transactional(readOnly = true)
     public Long getCartItemsCount(Long cartId, Long userId, String sessionId, Long cartItemStateId) {
-        logger.info("Getting cart items count - cartId: {}, userId: {}, sessionId: {}, cartItemStateId: {}", 
+        logger.debug("Getting cart items count — cartId: {}, userId: {}, sessionId: {}, cartItemStateId: {}",
                    cartId, userId, sessionId, cartItemStateId);
 
         try {
@@ -162,7 +167,7 @@ public class CartItemServiceImpl implements CartItemService {
             cartItem = existingCartItem.get();
             
             // Check current state
-            if (removedState.isPresent() && 
+            if (removedState.isPresent() &&
                 cartItem.getCartItemState().getCartItemStateId().equals(removedState.get().getCartItemStateId())) {
                 // Item was removed, now reactivate with new quantity and price
                 cartItem.setCartItemQuantity(request.getQuantity());
@@ -170,18 +175,18 @@ public class CartItemServiceImpl implements CartItemService {
                 // Update unit price if provided from frontend
                 if (request.getCartItemUnitPrice() != null) {
                     cartItem.setCartItemUnitPrice(request.getCartItemUnitPrice());
-                    logger.info("Updated cart item unit price from frontend: {}", request.getCartItemUnitPrice());
+                    logger.debug("Updated cart item unit price from frontend: {}", request.getCartItemUnitPrice());
                 }
-                logger.info("Reactivated removed cart item with quantity {}", request.getQuantity());
+                logger.debug("Reactivated removed cart item with quantity {}", request.getQuantity());
             } else {
                 // Item is active, increase quantity
                 cartItem.setCartItemQuantity(cartItem.getCartItemQuantity() + request.getQuantity());
                 // Update unit price if provided from frontend (overwrites existing)
                 if (request.getCartItemUnitPrice() != null) {
                     cartItem.setCartItemUnitPrice(request.getCartItemUnitPrice());
-                    logger.info("Updated existing cart item unit price from frontend: {}", request.getCartItemUnitPrice());
+                    logger.debug("Updated existing cart item unit price from frontend: {}", request.getCartItemUnitPrice());
                 }
-                logger.info("Updated existing cart item quantity to: {}", cartItem.getCartItemQuantity());
+                logger.debug("Updated existing cart item quantity to: {}", cartItem.getCartItemQuantity());
             }
             cartItem.calculateTotalPrice();
         } else {
@@ -195,43 +200,43 @@ public class CartItemServiceImpl implements CartItemService {
             // Set unit price if provided from frontend
             if (request.getCartItemUnitPrice() != null) {
                 cartItem.setCartItemUnitPrice(request.getCartItemUnitPrice());
-                logger.info("Set new cart item unit price from frontend: {}", request.getCartItemUnitPrice());
+                logger.debug("Set new cart item unit price from frontend: {}", request.getCartItemUnitPrice());
             }
-            
+
             cartItem.calculateTotalPrice();
-            logger.info("Created new cart item");
+            logger.debug("Created new cart item");
         }
 
         CartItem savedCartItem = cartItemRepository.save(cartItem);
         
         // Add attributes if provided
         if (request.hasSelectedAttributes()) {
-            addAttributesToCartItem(savedCartItem.getCartItemId(), request.getSelectedAttributeIds());
-            logger.info("Added {} attributes to cart item", request.getSelectedAttributesCount());
-            
+            addAttributesToCartItem(savedCartItem, request.getSelectedAttributeIds());
+            logger.debug("Added {} attributes to cart item", request.getSelectedAttributesCount());
+
             // Reload cart item with attributes for price recalculation
             savedCartItem = cartItemRepository.findById(savedCartItem.getCartItemId())
                 .orElseThrow(() -> new ResourceNotFoundException("Cart item not found after save"));
         }
-        
+
         // Recalculate unit price if not provided from frontend
         if (request.getCartItemUnitPrice() == null) {
             BigDecimal calculatedUnitPrice = calculateUnitPriceWithPolicy(
-                savedCartItem.getCartItemAttributes(), 
-                savedCartItem.getProduct(), 
+                savedCartItem.getCartItemAttributes(),
+                savedCartItem.getProduct(),
                 null
             );
             savedCartItem.setCartItemUnitPrice(calculatedUnitPrice);
-            logger.info("Calculated unit price from policy/attributes: {}", calculatedUnitPrice);
+            logger.debug("Calculated unit price from policy/attributes: {}", calculatedUnitPrice);
         }
-        
+
         // Final recalculation of total price
         savedCartItem.calculateTotalPrice();
         savedCartItem = cartItemRepository.save(savedCartItem);
-        logger.info("Final total price after all calculations: {}", savedCartItem.getCartItemTotalPrice());
-        
+        logger.debug("Final total price after all calculations: {}", savedCartItem.getCartItemTotalPrice());
+
         // Update cart total quantity
-        updateCartTotalQuantity(targetCartId);
+        updateCartTotalQuantity(cart);
 
         return cartMapper.toDto(savedCartItem);
     }
@@ -273,53 +278,47 @@ public class CartItemServiceImpl implements CartItemService {
 
         // Handle attribute updates if provided
         if (request.hasSelectedAttributes()) {
-            addAttributesToCartItem(cartItemId, request.getSelectedAttributeIds());
-            logger.info("Updated {} attributes for cart item", request.getSelectedAttributesCount());
+            addAttributesToCartItem(existingCartItem, request.getSelectedAttributeIds());
+            logger.debug("Updated {} attributes for cart item", request.getSelectedAttributesCount());
         }
-        
+
         // Handle unit price update if provided from frontend
         if (request.getCartItemUnitPrice() != null) {
             existingCartItem.setCartItemUnitPrice(request.getCartItemUnitPrice());
-            logger.info("Updated cart item unit price from frontend: {}", request.getCartItemUnitPrice());
+            logger.debug("Updated cart item unit price from frontend: {}", request.getCartItemUnitPrice());
         }
 
-        // Recalculate total price after any changes (quantity, attributes, or unit price may affect price)
+        // Recalculate total price after any changes
         if (request.getQuantity() != null && request.getQuantity() > 0) {
-            // Recalculate unit price if not provided from frontend but attributes changed
             if (request.getCartItemUnitPrice() == null && request.hasSelectedAttributes()) {
                 BigDecimal calculatedUnitPrice = calculateUnitPriceWithPolicy(
-                    existingCartItem.getCartItemAttributes(), 
-                    existingCartItem.getProduct(), 
+                    existingCartItem.getCartItemAttributes(),
+                    existingCartItem.getProduct(),
                     null
                 );
                 existingCartItem.setCartItemUnitPrice(calculatedUnitPrice);
-                logger.info("Recalculated unit price from policy/attributes: {}", calculatedUnitPrice);
+                logger.debug("Recalculated unit price from policy/attributes: {}", calculatedUnitPrice);
             }
-            
             existingCartItem.calculateTotalPrice();
-            logger.info("Recalculated total price after updates: {}", existingCartItem.getCartItemTotalPrice());
         } else if (request.hasSelectedAttributes() || request.getCartItemUnitPrice() != null) {
-            // Even if quantity didn't change, attributes or unit price might affect total price
             if (request.getCartItemUnitPrice() == null && request.hasSelectedAttributes()) {
                 BigDecimal calculatedUnitPrice = calculateUnitPriceWithPolicy(
-                    existingCartItem.getCartItemAttributes(), 
-                    existingCartItem.getProduct(), 
+                    existingCartItem.getCartItemAttributes(),
+                    existingCartItem.getProduct(),
                     null
                 );
                 existingCartItem.setCartItemUnitPrice(calculatedUnitPrice);
-                logger.info("Recalculated unit price from policy/attributes: {}", calculatedUnitPrice);
+                logger.debug("Recalculated unit price from policy/attributes: {}", calculatedUnitPrice);
             }
-            
-            existingCartItem.calculateTotalPrice();  
-            logger.info("Recalculated total price after attribute/price updates: {}", existingCartItem.getCartItemTotalPrice());
+            existingCartItem.calculateTotalPrice();
         }
 
         CartItem updatedCartItem = cartItemRepository.save(existingCartItem);
-        
-        // Update cart total quantity
-        updateCartTotalQuantity(existingCartItem.getCart().getCartId());
 
-        logger.info("Cart item updated successfully");
+        // Update cart total quantity (Cart entity already loaded via existingCartItem.getCart())
+        updateCartTotalQuantity(existingCartItem.getCart());
+
+        logger.debug("Cart item {} updated successfully", cartItemId);
         return cartMapper.toDto(updatedCartItem);
     }
 
@@ -330,24 +329,19 @@ public class CartItemServiceImpl implements CartItemService {
      */
     @Override
     public CartItemDto removeCartItem(Long cartItemId) {
-        logger.info("Removing cart item with ID: {}", cartItemId);
+        logger.debug("Removing cart item ID: {}", cartItemId);
 
         CartItem cartItem = cartItemRepository.findById(cartItemId)
             .orElseThrow(() -> new ResourceNotFoundException("Cart item not found with ID: " + cartItemId));
 
-        // Store cart ID before deletion for updating total quantity
-        Long cartId = cartItem.getCart().getCartId();
-        
-        // Create DTO before deletion (for response)
+        Cart cart = cartItem.getCart();
         CartItemDto removedCartItemDto = cartMapper.toDto(cartItem);
-        
-        // Hard delete the cart item (also removes associated attributes due to cascade)
-        cartItemRepository.deleteById(cartItemId);
-        
-        // Update cart total quantity after deletion
-        updateCartTotalQuantity(cartId);
 
-        logger.info("Cart item removed successfully (hard deleted from database)");
+        cartItemRepository.deleteById(cartItemId);
+
+        updateCartTotalQuantity(cart);
+
+        logger.debug("Cart item {} removed", cartItemId);
         return removedCartItemDto;
     }
 
@@ -434,54 +428,47 @@ public class CartItemServiceImpl implements CartItemService {
     }
 
     /**
-     * Add attributes to an existing cart item
-     * @param cartItemId Cart item ID
-     * @param attributeIds List of product attribute IDs
+     * Add attributes to an existing cart item (batch operations to replace N+1 queries)
      */
-    private void addAttributesToCartItem(Long cartItemId, List<Long> attributeIds) {
-        logger.debug("Adding attributes to cart item ID: {}, attributes: {}", cartItemId, attributeIds);
+    private void addAttributesToCartItem(CartItem cartItem, List<Long> attributeIds) {
+        logger.debug("Adding {} attributes to cart item ID: {}", attributeIds.size(), cartItem.getCartItemId());
 
-        CartItem cartItem = cartItemRepository.findById(cartItemId)
-            .orElseThrow(() -> new ResourceNotFoundException("Cart item not found with ID: " + cartItemId));
+        cartItemAttributeRepository.deleteByCartItemId(cartItem.getCartItemId());
 
-        // Clear existing attributes for this cart item
-        cartItemAttributeRepository.deleteByCartItemId(cartItemId);
-        logger.debug("Cleared existing attributes for cart item");
-
-        // Add new attributes - use ProductVariant to validate product-attribute relationship
-        for (Long attributeId : attributeIds) {
-            ProductAttribute productAttribute = productAttributeRepository.findById(attributeId)
-                .orElseThrow(() -> new ResourceNotFoundException("Product attribute not found with ID: " + attributeId));
-
-            // After refactor: ProductAttribute is master catalog, need to check if ProductVariant exists for this product
-            // Validate through ProductVariant that this attribute is available for this product
-            if (!productVariantRepository.existsByProductIdAndProductAttributeId(
-                    cartItem.getProduct().getProductId(), attributeId)) {
-                throw new IllegalArgumentException("Product attribute ID " + attributeId + 
-                    " is not available for product ID " + cartItem.getProduct().getProductId());
-            }
-
-            // Create cart item attribute
-            CartItemAttribute cartItemAttribute = new CartItemAttribute();
-            cartItemAttribute.setCartItem(cartItem);
-            cartItemAttribute.setProductAttribute(productAttribute);
-            
-            cartItemAttributeRepository.save(cartItemAttribute);
-            logger.debug("Added attribute ID {} to cart item", attributeId);
+        // Batch-load all attributes in a single query
+        List<ProductAttribute> productAttributes = productAttributeRepository.findAllById(attributeIds);
+        if (productAttributes.size() != attributeIds.size()) {
+            throw new ResourceNotFoundException("One or more product attribute IDs are invalid");
         }
+        Map<Long, ProductAttribute> attrMap = productAttributes.stream()
+                .collect(Collectors.toMap(ProductAttribute::getProductAttributeId, a -> a));
+
+        // Batch-validate product-attribute variant relationships
+        List<Long> validIds = productVariantRepository.findValidAttributeIdsByProductIdAndAttributeIds(
+                cartItem.getProduct().getProductId(), attributeIds);
+        Set<Long> validSet = new HashSet<>(validIds);
+
+        List<CartItemAttribute> toSave = new ArrayList<>();
+        for (Long attributeId : attributeIds) {
+            if (!validSet.contains(attributeId)) {
+                throw new IllegalArgumentException("Product attribute ID " + attributeId +
+                        " is not available for product ID " + cartItem.getProduct().getProductId());
+            }
+            CartItemAttribute cia = new CartItemAttribute();
+            cia.setCartItem(cartItem);
+            cia.setProductAttribute(attrMap.get(attributeId));
+            toSave.add(cia);
+        }
+        cartItemAttributeRepository.saveAll(toSave);
     }
 
     /**
-     * Update cart total quantity
-     * @param cartId Cart ID
+     * Update cart total quantity using a pre-loaded Cart entity (avoids extra DB lookup)
      */
-    private void updateCartTotalQuantity(Long cartId) {
-        Integer totalQuantity = cartItemRepository.getActiveCartItemsTotalQuantity(cartId);
-        Cart cart = cartRepository.findById(cartId).orElse(null);
-        if (cart != null) {
-            cart.setTotalQuantity(totalQuantity != null ? totalQuantity : 0);
-            cartRepository.save(cart);
-        }
+    private void updateCartTotalQuantity(Cart cart) {
+        Integer totalQuantity = cartItemRepository.getActiveCartItemsTotalQuantity(cart.getCartId());
+        cart.setTotalQuantity(totalQuantity != null ? totalQuantity : 0);
+        cartRepository.save(cart);
     }
 
     /**
