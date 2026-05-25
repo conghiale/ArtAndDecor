@@ -460,15 +460,15 @@ public class ImageServiceImpl implements ImageService {
      */
     private Properties getAiServiceConfig() {
         try {
-            Optional<Policy> aiConfigPolicy = policyRepository.findByPolicyName("SIMILAR_IMAGE_CONFIG");
+            Optional<Policy> aiConfigPolicy = policyRepository.findByPolicyName("SIMILAR_IMG_CONFIG");
             if (aiConfigPolicy.isEmpty()) {
-                logger.error("SIMILAR_IMAGE_CONFIG policy not found");
+                logger.error("SIMILAR_IMG_CONFIG policy not found");
                 return null;
             }
 
             String configValue = aiConfigPolicy.get().getPolicyValue();
             if (configValue == null || configValue.trim().isEmpty()) {
-                logger.error("SIMILAR_IMAGE_CONFIG policy value is empty");
+                logger.error("SIMILAR_IMG_CONFIG policy value is empty");
                 return null;
             }
 

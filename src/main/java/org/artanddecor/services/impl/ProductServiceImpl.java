@@ -616,11 +616,11 @@ public class ProductServiceImpl implements ProductService {
         logger.info("Searching products by similar image, isSelling: {}, file size: {} bytes", isSelling, imageFile.getSize());
         
         // 1. Get AI service configuration from policy
-        PolicyDto aiConfig = policyService.findPolicyByName("SIMILAR_IMAGE_CONFIG")
-                .orElseThrow(() -> new IllegalArgumentException("SIMILAR_IMAGE_CONFIG policy not found"));
+        PolicyDto aiConfig = policyService.findPolicyByName("SIMILAR_IMG_CONFIG")
+                .orElseThrow(() -> new IllegalArgumentException("SIMILAR_IMG_CONFIG policy not found"));
         
         if (!aiConfig.getPolicyEnabled()) {
-            throw new IllegalArgumentException("SIMILAR_IMAGE_CONFIG policy is disabled");
+            throw new IllegalArgumentException("SIMILAR_IMG_CONFIG policy is disabled");
         }
         
         // 2. Parse configuration properties
@@ -630,7 +630,8 @@ public class ProductServiceImpl implements ProductService {
         String topKStr = configProperties.get("top_k");
         
         if (host == null || thresholdStr == null || topKStr == null) {
-            throw new IllegalArgumentException("Invalid SIMILAR_IMAGE_CONFIG: missing required properties (host, threshold, top_k)");
+            throw new IllegalArgumentException("Invalid " +
+                    "SIMILAR_IMG_CONFIG: missing required properties (host, threshold, top_k)");
         }
         
         double threshold = Double.parseDouble(thresholdStr);

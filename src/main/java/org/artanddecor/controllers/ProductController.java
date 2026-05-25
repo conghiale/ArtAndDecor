@@ -204,14 +204,14 @@ public class ProductController {
         summary = "Search products by similar image using AI service",
         description = "Upload an image to find products with similar images using AI-powered image similarity search. " +
                 "The system will call an external AI service to find similar images and return matching products with optional filtering for selling status. " +
-                "Requires SIMILAR_IMAGE_CONFIG policy to be configured with host, threshold, and top_k parameters. " +
+                "Requires SIMILAR_IMG_CONFIG policy to be configured with host, threshold, and top_k parameters. " +
                 "Use query parameters for isSelling and pagination settings."
     )
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Products with similar images retrieved successfully",
                     content = @Content(schema = @Schema(implementation = Page.class))),
         @ApiResponse(responseCode = "400", description = "Invalid image file or AI service configuration error"),
-        @ApiResponse(responseCode = "404", description = "SIMILAR_IMAGE_CONFIG policy not found or no similar products found"),
+        @ApiResponse(responseCode = "404", description = "SIMILAR_IMG_CONFIG policy not found or no similar products found"),
         @ApiResponse(responseCode = "500", description = "AI service call failed or internal server error")
     })
     public ResponseEntity<BaseResponseDto<Page<ProductDto>>> searchProductsBySimilarImage(
