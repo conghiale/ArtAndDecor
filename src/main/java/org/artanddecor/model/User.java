@@ -74,6 +74,12 @@ public class User implements UserDetails {
     @Column(name = "LAST_LOGIN_DT")
     private LocalDateTime lastLoginDt;
 
+    @Column(name = "OTP_CODE", length = 6)
+    private String otpCode;
+
+    @Column(name = "OTP_EXPIRED_DT")
+    private LocalDateTime otpExpiredDt;
+
     @CreationTimestamp
     @Column(name = "CREATED_DT", nullable = false, updatable = false)
     private LocalDateTime createdDt;

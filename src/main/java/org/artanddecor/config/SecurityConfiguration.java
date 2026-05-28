@@ -216,6 +216,8 @@ public class SecurityConfiguration {
 
                         // User endpoints - role-based access
                         .requestMatchers(HttpMethod.GET, "/users/roles/**", "/users/providers/**").permitAll()
+                        // Forgot-password OTP workflow — public, no token required
+                        .requestMatchers(HttpMethod.POST, "/users/forgot-password", "/users/verify-otp", "/users/reset-password-otp").permitAll()
                         .requestMatchers(HttpMethod.GET, "/users").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/users/{userId}").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/users").hasRole("ADMIN")

@@ -46,11 +46,20 @@ public class PasswordUtils {
 
     /**
      * Generate a random password with default length of 12 characters
-     * 
+     *
      * @return Generated password
      */
     public static String generateRandomPassword() {
         return generateRandomPassword(12);
+    }
+
+    /**
+     * Generate a 6-digit numeric OTP code for email verification.
+     *
+     * @return 6-digit OTP string (zero-padded)
+     */
+    public static String generateOtp() {
+        return String.format("%06d", random.nextInt(1_000_000));
     }
 
     /**

@@ -5,7 +5,10 @@ import org.artanddecor.dto.UserRoleDto;
 import org.artanddecor.dto.UserProviderDto;
 import org.artanddecor.dto.BaseResponseDto;
 import org.artanddecor.dto.ChangePasswordRequest;
+import org.artanddecor.dto.ForgotPasswordRequest;
+import org.artanddecor.dto.ResetPasswordWithOtpRequest;
 import org.artanddecor.dto.UserDto;
+import org.artanddecor.dto.VerifyOtpRequest;
 import org.artanddecor.services.UserService;
 import org.artanddecor.services.UserRoleService;
 import org.artanddecor.services.UserProviderService;
@@ -545,6 +548,112 @@ public class UserController {
         } catch (Exception e) {
             logger.error("Error resetting password for user {}: {}", userName, e.getMessage(), e);
             return ResponseEntity.badRequest().body(BaseResponseDto.serverError("Failed to reset password"));
+        }
+    }
+
+    /* =============================================
+     FORGOT-PASSWORD (OTP) WORKFLOW APIs — PUBLIC (no token required)
+     =============================================*/
+
+    /**
+     * Forgot-password step 1 — request OTP.
+     * Accepts either username or email. Sends a 6-digit OTP to the registered email (valid 10 min).
+     */
+    @PostMapping("/forgot-password")
+    @Operation(
+        summary = "Forgot password — request OTP",
+        description = "Step 1 of the forgot-password workflow. " +
+            "Provide your username or registered email address. " +
+            "The system looks up the active account and sends a 6-digit OTP to the associated email. " +
+            "The OTP is valid for 10 minutes. Requesting again overwrites the previous OTP."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "OTP sent to registered email"),
+        @ApiResponse(responseCode = "400", description = "No active user found for the provided identifier"),
+        @ApiResponse(responseCode = "500", description = "Failed to send OTP email")
+    })
+    public ResponseEntity<BaseResponseDto<Void>> forgotPassword(
+            @Parameter(description = "Username or registered email address")
+            @Valid @RequestBody ForgotPasswordRequest request) {
+        logger.info("Forgot-password OTP request for identifier: {}", request.getIdentifier());
+        try {
+            userService.sendForgotPasswordOtp(request.getIdentifier());
+            return ResponseEntity.ok(BaseResponseDto.success(
+                    "OTP has been sent to your registered email address. Please check your inbox (valid 10 minutes)."));
+        } catch (IllegalArgumentException e) {
+            logger.warn("Forgot-password: user not found for identifier: {}", request.getIdentifier());
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Forgot-password OTP send failed for identifier {}: {}", request.getIdentifier(), e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(BaseResponseDto.serverError("Failed to send OTP. Please try again later."));
+        }
+    }
+
+    /**
+     * Forgot-password step 2 — verify OTP.
+     * Returns 200 OK when OTP is valid; 400 if invalid or expired.
+     */
+    @PostMapping("/verify-otp")
+    @Operation(
+        summary = "Forgot password — verify OTP",
+        description = "Step 2 of the forgot-password workflow. " +
+            "Submit the 6-digit OTP received by email along with the same identifier used in step 1. " +
+            "Returns 200 OK when the OTP is valid and not yet expired. " +
+            "On success the client can proceed to the password-reset step."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "OTP is valid — proceed to reset password"),
+        @ApiResponse(responseCode = "400", description = "OTP is invalid, expired, or user not found")
+    })
+    public ResponseEntity<BaseResponseDto<Void>> verifyOtp(
+            @Parameter(description = "Identifier (username or email) and the OTP code received by email")
+            @Valid @RequestBody VerifyOtpRequest request) {
+        logger.info("OTP verification request for identifier: {}", request.getIdentifier());
+        try {
+            userService.verifyForgotPasswordOtp(request.getIdentifier(), request.getOtpCode());
+            return ResponseEntity.ok(BaseResponseDto.success("OTP is valid. You may now reset your password."));
+        } catch (IllegalArgumentException e) {
+            logger.warn("OTP verification failed for identifier {}: {}", request.getIdentifier(), e.getMessage());
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(e.getMessage()));
+        }
+    }
+
+    /**
+     * Forgot-password step 3 — reset password using the verified OTP.
+     * OTP is re-validated for security; cleared from DB on success.
+     */
+    @PostMapping("/reset-password-otp")
+    @Operation(
+        summary = "Forgot password — reset password with OTP",
+        description = "Step 3 (final) of the forgot-password workflow. " +
+            "Submit the identifier, the OTP code (re-validated server-side for security), " +
+            "new password, and password confirmation. " +
+            "On success the password is updated and the OTP is invalidated."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Password reset successfully"),
+        @ApiResponse(responseCode = "400", description = "OTP invalid/expired, passwords do not match, or user not found")
+    })
+    public ResponseEntity<BaseResponseDto<Void>> resetPasswordWithOtp(
+            @Parameter(description = "Identifier, OTP, new password, and confirm password")
+            @Valid @RequestBody ResetPasswordWithOtpRequest request) {
+        logger.info("Reset-password-with-OTP request for identifier: {}", request.getIdentifier());
+        try {
+            userService.resetPasswordWithOtp(
+                    request.getIdentifier(),
+                    request.getOtpCode(),
+                    request.getNewPassword(),
+                    request.getConfirmPassword());
+            return ResponseEntity.ok(BaseResponseDto.success(
+                    "Password has been reset successfully. You can now log in with your new password."));
+        } catch (IllegalArgumentException e) {
+            logger.warn("Reset-password-with-OTP failed for identifier {}: {}", request.getIdentifier(), e.getMessage());
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Reset-password-with-OTP error for identifier {}: {}", request.getIdentifier(), e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(BaseResponseDto.serverError("Failed to reset password. Please try again."));
         }
     }
 }

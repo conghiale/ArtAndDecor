@@ -99,5 +99,42 @@ public interface UserService {
      */
     UserDto resetPassword(String userName);
 
+    // =============================================
+    // FORGOT-PASSWORD (OTP) WORKFLOW
+    // =============================================
+
+    /**
+     * Step 1 — generate a 6-digit OTP and send it to the user's registered email.
+     * {@code identifier} can be a USERNAME or EMAIL address.
+     * OTP is valid for 10 minutes; requesting again overwrites the previous OTP.
+     *
+     * @param identifier Username or email
+     * @throws IllegalArgumentException if no active user is found
+     */
+    void sendForgotPasswordOtp(String identifier);
+
+    /**
+     * Step 2 — verify that the supplied OTP is correct and has not expired.
+     * Throws {@link IllegalArgumentException} if invalid or expired.
+     *
+     * @param identifier Username or email
+     * @param otpCode    6-digit OTP entered by the user
+     * @throws IllegalArgumentException if OTP is invalid or expired
+     */
+    void verifyForgotPasswordOtp(String identifier, String otpCode);
+
+    /**
+     * Step 3 — reset the password after OTP verification.
+     * The OTP is re-validated for security and then cleared on success.
+     *
+     * @param identifier      Username or email
+     * @param otpCode         6-digit OTP (re-sent by client for security)
+     * @param newPassword     New password
+     * @param confirmPassword Must match newPassword
+     * @return Updated user DTO
+     * @throws IllegalArgumentException if OTP is invalid/expired or passwords do not match
+     */
+    UserDto resetPasswordWithOtp(String identifier, String otpCode, String newPassword, String confirmPassword);
+
 
 }

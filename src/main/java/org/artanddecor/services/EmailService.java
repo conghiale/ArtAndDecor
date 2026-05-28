@@ -16,8 +16,17 @@ public interface EmailService {
     void sendPasswordResetEmail(String toEmail, String userName, String newPassword);
 
     /**
+     * Send OTP verification email for forgot-password workflow
+     *
+     * @param toEmail   Recipient email address
+     * @param firstName User's first name (for greeting)
+     * @param otpCode   6-digit OTP code
+     */
+    void sendOtpEmail(String toEmail, String firstName, String otpCode);
+
+    /**
      * Send general notification email
-     * 
+     *
      * @param toEmail Recipient email address
      * @param subject Email subject
      * @param content Email content

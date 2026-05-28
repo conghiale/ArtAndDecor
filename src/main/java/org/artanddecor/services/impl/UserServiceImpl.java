@@ -240,6 +240,100 @@ public class UserServiceImpl implements UserService {
         return convertToDto(updatedUser);
     }
 
+    // =============================================
+    // FORGOT-PASSWORD (OTP) WORKFLOW
+    // =============================================
+
+    @Override
+    @Transactional
+    public void sendForgotPasswordOtp(String identifier) {
+        logger.info("Sending forgot-password OTP for identifier: {}", identifier);
+
+        User user = findActiveUserByIdentifier(identifier);
+
+        String otpCode = PasswordUtils.generateOtp();
+        user.setOtpCode(otpCode);
+        user.setOtpExpiredDt(LocalDateTime.now().plusMinutes(10));
+        userRepository.save(user);
+
+        emailService.sendOtpEmail(user.getEmail(), user.getFirstName(), otpCode);
+        logger.info("OTP sent to email {} for identifier: {}", maskEmail(user.getEmail()), identifier);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public void verifyForgotPasswordOtp(String identifier, String otpCode) {
+        logger.info("Verifying OTP for identifier: {}", identifier);
+        User user = findActiveUserByIdentifier(identifier);
+        validateOtp(user, otpCode);
+        logger.info("OTP verified successfully for identifier: {}", identifier);
+    }
+
+    @Override
+    @Transactional
+    public UserDto resetPasswordWithOtp(String identifier, String otpCode, String newPassword, String confirmPassword) {
+        logger.info("Resetting password with OTP for identifier: {}", identifier);
+
+        if (!newPassword.equals(confirmPassword)) {
+            throw new IllegalArgumentException("New password and confirm password do not match");
+        }
+
+        User user = findActiveUserByIdentifier(identifier);
+        validateOtp(user, otpCode);
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setOtpCode(null);
+        user.setOtpExpiredDt(null);
+        user.setModifiedDt(LocalDateTime.now());
+
+        User savedUser = userRepository.save(user);
+        logger.info("Password reset successfully via OTP for identifier: {}", identifier);
+
+        return convertToDto(savedUser);
+    }
+
+    // =============================================
+    // PRIVATE HELPERS
+    // =============================================
+
+    /**
+     * Find an active (enabled) user by username or email.
+     * Tries username first, then email.
+     */
+    private User findActiveUserByIdentifier(String identifier) {
+        return userRepository.findByUserNameAndUserEnabled(identifier, true)
+                .or(() -> userRepository.findByEmailAndUserEnabled(identifier, true))
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "No active user found for the provided username or email"));
+    }
+
+    /**
+     * Validate OTP: must exist, must match, must not be expired.
+     */
+    private void validateOtp(User user, String otpCode) {
+        if (user.getOtpCode() == null || user.getOtpExpiredDt() == null) {
+            throw new IllegalArgumentException("No OTP found for this account. Please request a new one.");
+        }
+        if (LocalDateTime.now().isAfter(user.getOtpExpiredDt())) {
+            throw new IllegalArgumentException("OTP has expired. Please request a new one.");
+        }
+        if (!user.getOtpCode().equals(otpCode)) {
+            throw new IllegalArgumentException("Invalid OTP code. Please check and try again.");
+        }
+    }
+
+    /**
+     * Mask email address for safe logging (e.g. te***@gmail.com).
+     */
+    private String maskEmail(String email) {
+        if (email == null || !email.contains("@")) return "***";
+        int atIdx = email.indexOf('@');
+        String local = email.substring(0, atIdx);
+        String domain = email.substring(atIdx);
+        if (local.length() <= 2) return "***" + domain;
+        return local.substring(0, 2) + "***" + domain;
+    }
+
     /**
      * Update user fields from DTO
      */
