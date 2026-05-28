@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -74,8 +75,19 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long> {
      * @param cartId Cart ID
      */
     @Modifying
+    @Transactional
     @Query("DELETE FROM CartItem ci WHERE ci.cart.cartId = :cartId")
     void deleteByCartId(@Param("cartId") Long cartId);
+
+    /**
+     * Delete all cart items referencing a specific product
+     * Used before product deletion to satisfy ON DELETE RESTRICT constraint
+     * @param productId Product ID whose cart items should be removed
+     */
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM CartItem ci WHERE ci.product.productId = :productId")
+    void deleteByProductId(@Param("productId") Long productId);
 
     /**
      * Get total quantity of active cart items

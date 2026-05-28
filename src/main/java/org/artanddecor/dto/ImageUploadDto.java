@@ -6,11 +6,12 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.web.multipart.MultipartFile;
 
-import jakarta.validation.constraints.NotNull;
-
 /**
  * Image Upload DTO for handling single file upload with metadata.
  * Used by both upload (POST) and update (PUT) endpoints.
+ *
+ * For upload (POST): imageFile is required.
+ * For update (PUT): imageFile is optional — omit to update metadata only.
  *
  * File name (imageName) is automatically generated via SHA-256 hash of file content.
  * Display name is taken from client for user-friendly identification.
@@ -23,9 +24,8 @@ public class ImageUploadDto {
 
     /**
      * Image file uploaded via form-data.
-     * Required for all upload/update operations.
+     * Required for upload; optional for update (metadata-only update when omitted).
      */
-    @NotNull(message = "Image file is required")
     private MultipartFile imageFile;
 
     /**

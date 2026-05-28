@@ -62,12 +62,16 @@ public interface ImageService {
     ImageDto uploadImage(ImageUploadDto imageUploadDto) throws IOException;
 
     /**
-     * Update image with new file and metadata
-     * Uploads new file, deletes old one, updates metadata in database
-     * File name (imageName) is regenerated with new hash + timestamp
-     * 
-     * @param imageId Image ID to update
-     * @param imageUploadDto Contains file and metadata
+     * Update image with optional new file and/or metadata.
+     * <ul>
+     *   <li>When {@code imageUploadDto.imageFile} is present: uploads the new file, deletes the old
+     *       physical file (if changed), updates all metadata fields, and triggers AI embedding.</li>
+     *   <li>When {@code imageUploadDto.imageFile} is absent: only updates the supplied metadata
+     *       fields (displayName, slug, size, format, remark) without touching the stored file.</li>
+     * </ul>
+     *
+     * @param imageId      Image ID to update
+     * @param imageUploadDto Contains optional file and optional metadata fields
      * @return Updated ImageDto
      * @throws IOException If file operations fail
      */

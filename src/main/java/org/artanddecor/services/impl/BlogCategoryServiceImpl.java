@@ -116,10 +116,21 @@ public class BlogCategoryServiceImpl implements BlogCategoryService {
 
         // Handle SeoMeta relationship
         if (request.getSeoMeta() != null) {
-            SeoMetaDto createdSeoMeta = seoMetaService.createSeoMetaFromRequest(request.getSeoMeta());
-            existingBlogCategory.setSeoMetaId(createdSeoMeta.getSeoMetaId());
+            if (existingBlogCategory.getSeoMetaId() != null) {
+                // BlogCategory already has SEO meta → update it (avoid false duplicate error)
+                seoMetaService.updateSeoMetaFromRequest(existingBlogCategory.getSeoMetaId(), request.getSeoMeta());
+            } else {
+                // BlogCategory has no SEO meta yet → create new
+                SeoMetaDto createdSeoMeta = seoMetaService.createSeoMetaFromRequest(request.getSeoMeta());
+                existingBlogCategory.setSeoMetaId(createdSeoMeta.getSeoMetaId());
+            }
         } else {
-            existingBlogCategory.setSeoMetaId(null);
+            // Request has no SEO meta → remove SEO meta and delete orphan
+            if (existingBlogCategory.getSeoMetaId() != null) {
+                Long oldSeoMetaId = existingBlogCategory.getSeoMetaId();
+                existingBlogCategory.setSeoMetaId(null);
+                seoMetaService.deleteSeoMeta(oldSeoMetaId);
+            }
         }
 
         BlogCategory savedBlogCategory = blogCategoryRepository.save(existingBlogCategory);

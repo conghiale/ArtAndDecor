@@ -26,20 +26,20 @@ public class SeoMeta {
     @Column(name = "SEO_META_ID")
     private Long seoMetaId;
 
-    @Column(name = "SEO_META_TITLE", nullable = false, length = 150)
+    @Column(name = "SEO_META_TITLE", length = 150)
     private String seoMetaTitle;
 
-    @Column(name = "SEO_META_DESCRIPTION", nullable = false, length = 500)
+    @Column(name = "SEO_META_DESCRIPTION", length = 500)
     private String seoMetaDescription;
 
     @Column(name = "SEO_META_KEYWORDS", length = 300)
     private String seoMetaKeywords;
 
-    @Column(name = "SEO_META_INDEX", nullable = false)
-    private Boolean seoMetaIndex = true;
+    @Column(name = "SEO_META_INDEX")
+    private Boolean seoMetaIndex;
 
-    @Column(name = "SEO_META_FOLLOW", nullable = false)
-    private Boolean seoMetaFollow = true;
+    @Column(name = "SEO_META_FOLLOW")
+    private Boolean seoMetaFollow;
 
     @Column(name = "SEO_META_CANONICAL_URL", length = 500)
     private String seoMetaCanonicalUrl;
@@ -53,8 +53,8 @@ public class SeoMeta {
     @Column(name = "SEO_META_CUSTOM_JSON", columnDefinition = "JSON")
     private String seoMetaCustomJson;
 
-    @Column(name = "SEO_META_ENABLED", nullable = false)
-    private Boolean seoMetaEnabled = true;
+    @Column(name = "SEO_META_ENABLED")
+    private Boolean seoMetaEnabled;
 
     @Column(name = "CREATED_DT", nullable = false, updatable = false)
     private LocalDateTime createdDt;
@@ -68,12 +68,6 @@ public class SeoMeta {
         LocalDateTime now = LocalDateTime.now();
         this.createdDt = now;
         this.modifiedDt = now;
-        if (this.seoMetaIndex == null) {
-            this.seoMetaIndex = true;
-        }
-        if (this.seoMetaFollow == null) {
-            this.seoMetaFollow = true;
-        }
     }
 
     @PreUpdate

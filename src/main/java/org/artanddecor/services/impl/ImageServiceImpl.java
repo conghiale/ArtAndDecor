@@ -159,17 +159,24 @@ public class ImageServiceImpl implements ImageService {
     @Override
     @Transactional
     public ImageDto updateImage(Long imageId, ImageUploadDto imageUploadDto) throws IOException {
-        logger.info("Updating image with file - ID: {}", imageId);
-
         Image existingImage = imageRepository.findById(imageId)
                 .orElseThrow(() -> new IllegalArgumentException("Image not found with ID: " + imageId));
 
         MultipartFile imageFile = imageUploadDto.getImageFile();
+        boolean hasFile = imageFile != null && !imageFile.isEmpty();
 
-        if (imageFile == null || imageFile.isEmpty()) {
-            throw new IOException("Image file is required for update");
+        if (hasFile) {
+            return updateImageWithFile(existingImage, imageUploadDto, imageFile);
+        } else {
+            return updateImageMetadataOnly(existingImage, imageUploadDto);
         }
+    }
 
+    /**
+     * Update image with a new file: upload file, swap physical file, update all metadata.
+     */
+    private ImageDto updateImageWithFile(Image existingImage, ImageUploadDto imageUploadDto, MultipartFile imageFile) throws IOException {
+        logger.info("Updating image with new file - ID: {}", existingImage.getImageId());
         try {
             String displayName = (imageUploadDto.getImageDisplayName() != null && !imageUploadDto.getImageDisplayName().trim().isEmpty())
                     ? imageUploadDto.getImageDisplayName().trim()
@@ -216,8 +223,7 @@ public class ImageServiceImpl implements ImageService {
             existingImage.setModifiedDt(LocalDateTime.now());
 
             Image updatedImage = imageRepository.save(existingImage);
-            logger.info("Image updated successfully: ID={} (size: {}, pathFile: {})",
-                       updatedImage.getImageId(), imageSize, uploadResult.getPathFile());
+            logger.info("Image (file+metadata) updated: ID={} pathFile={}", updatedImage.getImageId(), uploadResult.getPathFile());
 
             ImageDto updatedImageDto = convertToDto(updatedImage);
 
@@ -229,12 +235,54 @@ public class ImageServiceImpl implements ImageService {
             return updatedImageDto;
 
         } catch (UnsupportedImageFormatException e) {
-            logger.error("Unsupported format for image update - ID: {}: {}", imageId, e.getMessage(), e);
+            logger.error("Unsupported format for image update - ID: {}: {}", existingImage.getImageId(), e.getMessage(), e);
             throw new IOException("Unsupported image format. Only JPG, JPEG, PNG, WEBP, HEIC are allowed: " + e.getMessage(), e);
         } catch (IOException e) {
-            logger.error("Failed to update image with file - ID: {}: {}", imageId, e.getMessage(), e);
+            logger.error("Failed to update image with file - ID: {}: {}", existingImage.getImageId(), e.getMessage(), e);
             throw e;
         }
+    }
+
+    /**
+     * Update image metadata only (no file change): only apply non-null/non-blank fields from DTO.
+     */
+    private ImageDto updateImageMetadataOnly(Image existingImage, ImageUploadDto imageUploadDto) {
+        logger.info("Updating image metadata only - ID: {}", existingImage.getImageId());
+
+        boolean changed = false;
+
+        if (imageUploadDto.getImageDisplayName() != null && !imageUploadDto.getImageDisplayName().trim().isEmpty()) {
+            existingImage.setImageDisplayName(imageUploadDto.getImageDisplayName().trim());
+            changed = true;
+        }
+        if (imageUploadDto.getImageSlug() != null && !imageUploadDto.getImageSlug().trim().isEmpty()) {
+            existingImage.setImageSlug(imageUploadDto.getImageSlug().trim());
+            changed = true;
+        }
+        if (imageUploadDto.getImageSize() != null && !imageUploadDto.getImageSize().trim().isEmpty()) {
+            existingImage.setImageSize(imageUploadDto.getImageSize().trim());
+            changed = true;
+        }
+        if (imageUploadDto.getImageFormat() != null && !imageUploadDto.getImageFormat().trim().isEmpty()) {
+            existingImage.setImageFormat(imageUploadDto.getImageFormat().trim().toLowerCase());
+            changed = true;
+        }
+        // imageRemark: allow explicit clear (empty string) or set new value
+        if (imageUploadDto.getImageRemark() != null) {
+            String remark = imageUploadDto.getImageRemark().trim();
+            existingImage.setImageRemark(remark.isEmpty() ? null : remark);
+            changed = true;
+        }
+
+        if (changed) {
+            existingImage.setModifiedDt(LocalDateTime.now());
+            existingImage = imageRepository.save(existingImage);
+            logger.info("Image metadata updated: ID={}", existingImage.getImageId());
+        } else {
+            logger.debug("No metadata changes supplied for image ID: {}", existingImage.getImageId());
+        }
+
+        return convertToDto(existingImage);
     }
 
     @Override
@@ -366,26 +414,29 @@ public class ImageServiceImpl implements ImageService {
             }
 
             // Create or update embedding record with PENDING status
-            ImageEmbedding embedding = existingEmbedding.orElse(new ImageEmbedding());
-            embedding.setImageId(imageId);
-            embedding.setImageEmbeddingStatus(ImageEmbeddingStatus.PENDING);
-            imageEmbeddingRepository.save(embedding);
-            
+            if (existingEmbedding.isPresent()) {
+                // Targeted JPQL update — avoids merging a detached entity with uninitialized lazy image
+                imageEmbeddingRepository.updateStatusByImageId(imageId, ImageEmbeddingStatus.PENDING, LocalDateTime.now());
+            } else {
+                // New embedding: must set via the @OneToOne relationship because imageId field
+                // is insertable=false, updatable=false — Hibernate ignores setImageId() on INSERT
+                Image imageEntity = imageRepository.findById(imageId).orElse(null);
+                if (imageEntity == null) {
+                    logger.error("Cannot create embedding: Image not found with ID: {}", imageId);
+                    return;
+                }
+                ImageEmbedding newEmbedding = new ImageEmbedding();
+                newEmbedding.setImage(imageEntity);
+                newEmbedding.setImageEmbeddingStatus(ImageEmbeddingStatus.PENDING);
+                imageEmbeddingRepository.save(newEmbedding);
+            }
+
             logger.info("Creating/updating embedding for image ID: {} with PENDING status", imageId);
             callAiEmbeddingService(imageId);
             
         } catch (Exception e) {
             logger.error("Error processing embedding for image ID {}: {}", imageId, e.getMessage(), e);
-            // Update status to FAILED if an error occurs
-            try {
-                Optional<ImageEmbedding> embedding = imageEmbeddingRepository.findByImageId(imageId);
-                if (embedding.isPresent()) {
-                    embedding.get().setImageEmbeddingStatus(ImageEmbeddingStatus.FAILED);
-                    imageEmbeddingRepository.save(embedding.get());
-                }
-            } catch (Exception ex) {
-                logger.error("Failed to update embedding status to FAILED for image ID {}: {}", imageId, ex.getMessage());
-            }
+            updateEmbeddingStatus(imageId, ImageEmbeddingStatus.FAILED);
         }
     }
 
@@ -496,13 +547,11 @@ public class ImageServiceImpl implements ImageService {
      */
     private void updateEmbeddingStatus(Long imageId, ImageEmbeddingStatus status) {
         try {
-            Optional<ImageEmbedding> embedding = imageEmbeddingRepository.findByImageId(imageId);
-            if (embedding.isPresent()) {
-                embedding.get().setImageEmbeddingStatus(status);
-                imageEmbeddingRepository.save(embedding.get());
-                logger.debug("Updated embedding status to {} for image ID: {}", status, imageId);
-            } else {
+            int updated = imageEmbeddingRepository.updateStatusByImageId(imageId, status, LocalDateTime.now());
+            if (updated == 0) {
                 logger.warn("Embedding not found for image ID: {} when trying to update status to {}", imageId, status);
+            } else {
+                logger.debug("Updated embedding status to {} for image ID: {}", status, imageId);
             }
         } catch (Exception e) {
             logger.error("Failed to update embedding status to {} for image ID {}: {}", status, imageId, e.getMessage(), e);

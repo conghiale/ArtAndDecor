@@ -19,6 +19,14 @@ import java.util.List;
 public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
 
     /**
+     * Check if any order items reference a specific product
+     * Used to block product deletion when order history exists
+     * @param productId Product ID to check
+     * @return true if at least one order item references this product
+     */
+    boolean existsByProduct_ProductId(Long productId);
+
+    /**
      * Find order items by order ID
      * @param orderId Order ID
      * @return List of order items

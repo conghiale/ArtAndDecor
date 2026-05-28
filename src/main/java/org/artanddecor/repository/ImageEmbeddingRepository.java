@@ -1,11 +1,15 @@
 package org.artanddecor.repository;
 
+import org.artanddecor.enums.ImageEmbeddingStatus;
 import org.artanddecor.model.ImageEmbedding;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 /**
@@ -42,4 +46,16 @@ public interface ImageEmbeddingRepository extends JpaRepository<ImageEmbedding, 
      */
     @Query("SELECT ie FROM ImageEmbedding ie WHERE ie.imageId = :imageId AND ie.embedding IS NOT NULL")
     Optional<ImageEmbedding> findByImageIdWithEmbedding(@Param("imageId") Long imageId);
+
+    /**
+     * Update embedding status by image ID (targeted update — avoids full entity merge)
+     * @param imageId the image ID
+     * @param status new status
+     * @param now updated timestamp
+     * @return number of rows updated
+     */
+    @Modifying
+    @Transactional
+    @Query("UPDATE ImageEmbedding ie SET ie.imageEmbeddingStatus = :status, ie.modifiedDt = :now WHERE ie.imageId = :imageId")
+    int updateStatusByImageId(@Param("imageId") Long imageId, @Param("status") ImageEmbeddingStatus status, @Param("now") LocalDateTime now);
 }

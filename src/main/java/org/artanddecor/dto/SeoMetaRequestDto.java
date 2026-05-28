@@ -18,7 +18,6 @@ import jakarta.validation.constraints.*;
 @AllArgsConstructor
 public class SeoMetaRequestDto {
     
-    @NotBlank(message = "SEO meta title is required")
     @Size(max = 150, message = "SEO meta title must not exceed 150 characters")
     private String seoMetaTitle;
     

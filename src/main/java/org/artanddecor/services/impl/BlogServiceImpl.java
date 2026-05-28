@@ -117,10 +117,21 @@ public class BlogServiceImpl implements BlogService {
 
         // Handle SeoMeta relationship
         if (request.getSeoMeta() != null) {
-            SeoMetaDto createdSeoMeta = seoMetaService.createSeoMetaFromRequest(request.getSeoMeta());
-            existingBlog.setSeoMetaId(createdSeoMeta.getSeoMetaId());
+            if (existingBlog.getSeoMetaId() != null) {
+                // Blog already has SEO meta → update it (avoid false duplicate error)
+                seoMetaService.updateSeoMetaFromRequest(existingBlog.getSeoMetaId(), request.getSeoMeta());
+            } else {
+                // Blog has no SEO meta yet → create new
+                SeoMetaDto createdSeoMeta = seoMetaService.createSeoMetaFromRequest(request.getSeoMeta());
+                existingBlog.setSeoMetaId(createdSeoMeta.getSeoMetaId());
+            }
         } else {
-            existingBlog.setSeoMetaId(null);
+            // Request has no SEO meta → remove SEO meta from blog and delete orphan
+            if (existingBlog.getSeoMetaId() != null) {
+                Long oldSeoMetaId = existingBlog.getSeoMetaId();
+                existingBlog.setSeoMetaId(null);
+                seoMetaService.deleteSeoMeta(oldSeoMetaId);
+            }
         }
 
         // Handle Image relationship

@@ -16,6 +16,8 @@ import org.artanddecor.repository.ProductRepository;
 import org.artanddecor.repository.ProductImageRepository;
 import org.artanddecor.repository.ProductAttributeRepository;
 import org.artanddecor.repository.ImageRepository;
+import org.artanddecor.repository.CartItemRepository;
+import org.artanddecor.repository.OrderItemRepository;
 import org.artanddecor.services.ProductService;
 import org.artanddecor.services.ProductVariantService;
 import org.artanddecor.services.SeoMetaService;
@@ -60,6 +62,8 @@ public class ProductServiceImpl implements ProductService {
     private final ProductImageRepository productImageRepository;
     private final ProductAttributeRepository productAttributeRepository;
     private final ImageRepository imageRepository;
+    private final CartItemRepository cartItemRepository;
+    private final OrderItemRepository orderItemRepository;
     private final ProductVariantService productVariantService;
     private final SeoMetaService seoMetaService;
     private final PolicyService policyService;
@@ -107,7 +111,7 @@ public class ProductServiceImpl implements ProductService {
 
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public ProductDto updateProduct(Long productId, ProductRequestDto productRequestDto) {
         logger.info("Updating product ID: {} with request DTO and {} images and {} variants", productId, 
                    productRequestDto.getImageIds() != null ? productRequestDto.getImageIds().size() : 0,
@@ -166,7 +170,7 @@ public class ProductServiceImpl implements ProductService {
 
     // =============================================
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public ProductDto createProduct(ProductRequestDto productRequestDto) {
         logger.info("Creating new product from request DTO: {} with {} images and {} variants", 
                    productRequestDto.getProductName(), 
@@ -222,6 +226,7 @@ public class ProductServiceImpl implements ProductService {
     // =============================================
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void removeImageFromProduct(Long productId, Long imageId) {
         logger.info("Removing image {} from product {}", imageId, productId);
         
@@ -244,6 +249,56 @@ public class ProductServiceImpl implements ProductService {
         // Delete the association
         productImageRepository.deleteByProductProductIdAndImageImageId(productId, imageId);
         logger.info("Successfully removed image {} from product {}", imageId, productId);
+    }
+
+    // =============================================
+    // PRODUCT DELETE OPERATION
+    // =============================================
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteProduct(Long productId) {
+        logger.info("Deleting product ID: {}", productId);
+
+        // 1. Verify product exists
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new IllegalArgumentException("Product not found with ID: " + productId));
+
+        // 2. Block deletion if the product has order history (financial integrity)
+        //    ORDER_ITEM.PRODUCT_ID has ON DELETE RESTRICT — deleting would corrupt order records
+        if (orderItemRepository.existsByProduct_ProductId(productId)) {
+            throw new IllegalStateException(
+                "Cannot delete product ID " + productId + " because it has existing order history. " +
+                "Disable the product instead of deleting it.");
+        }
+
+        // 3. Remove from all active carts
+        //    CART_ITEM.PRODUCT_ID has ON DELETE RESTRICT — must remove before deleting product
+        cartItemRepository.deleteByProductId(productId);
+        logger.debug("Removed product {} from all carts", productId);
+
+        // 4. Capture SEO_META_ID before product is deleted
+        //    After product deletion, SEO_META becomes an orphan (no FK back to PRODUCT)
+        Long seoMetaId = product.getSeoMetaId();
+
+        // 5. Delete the product
+        //    DB CASCADE handles automatically:
+        //      - PRODUCT_IMAGE records (junction table only, IMAGE records are preserved)
+        //      - PRODUCT_VARIANT records (junction table only, PRODUCT_ATTRIBUTE records are preserved)
+        //      - REVIEW records + PRODUCT_REVIEW_LIKE (cascade from REVIEW)
+        //      - WISHLIST records
+        productRepository.deleteById(productId);
+        logger.debug("Deleted product {} and all cascaded child records", productId);
+
+        // 6. Delete orphaned SEO_META if it was associated
+        //    PRODUCT.SEO_META_ID FK is ON DELETE SET NULL (SEO_META → PRODUCT direction),
+        //    so SEO_META is not automatically cleaned up when product is deleted
+        if (seoMetaId != null) {
+            seoMetaService.deleteSeoMeta(seoMetaId);
+            logger.debug("Deleted orphaned SEO meta ID: {}", seoMetaId);
+        }
+
+        logger.info("Successfully deleted product ID: {}", productId);
     }
 
     // =============================================
@@ -407,20 +462,25 @@ public class ProductServiceImpl implements ProductService {
             return;
         }
 
-        // Batch-validate all attribute IDs in a single query
-        List<Long> attrIds = productVariants.stream()
-                .map(ProductVariantRequestDto::getProductAttributeId)
-                .distinct()
-                .collect(Collectors.toList());
-        long foundCount = productAttributeRepository.countByProductAttributeIdIn(attrIds);
-        if (foundCount != attrIds.size()) {
-            throw new IllegalArgumentException("One or more product attribute IDs are invalid");
+        // Check for null attribute IDs and duplicate productAttributeIds within the same request
+        Set<Long> uniqueAttrIds = new HashSet<>();
+        for (ProductVariantRequestDto variant : productVariants) {
+            if (variant.getProductAttributeId() == null) {
+                throw new IllegalArgumentException("Product attribute ID cannot be null for a variant");
+            }
+            if (!uniqueAttrIds.add(variant.getProductAttributeId())) {
+                throw new IllegalArgumentException(
+                    "Duplicate product attribute ID in variant list: " + variant.getProductAttributeId());
+            }
+            if (variant.getProductVariantStock() == null || variant.getProductVariantStock() < 0) {
+                throw new IllegalArgumentException("Product variant stock cannot be null or negative");
+            }
         }
 
-        for (ProductVariantRequestDto variantRequest : productVariants) {
-            if (variantRequest.getProductVariantStock() < 0) {
-                throw new IllegalArgumentException("Product variant quantity cannot be negative");
-            }
+        // Batch-validate all attribute IDs exist in a single query
+        long foundCount = productAttributeRepository.countByProductAttributeIdIn(new ArrayList<>(uniqueAttrIds));
+        if (foundCount != uniqueAttrIds.size()) {
+            throw new IllegalArgumentException("One or more product attribute IDs are invalid or do not exist");
         }
     }
     
@@ -518,30 +578,15 @@ public class ProductServiceImpl implements ProductService {
      * @return SEO meta ID (existing or newly created)
      */
     private Long handleSeoMeta(SeoMetaRequestDto seoMetaRequest, Long existingSeoMetaId) {
+        SeoMetaDto seoMetaDto = convertSeoMetaRequestToDto(seoMetaRequest);
         if (existingSeoMetaId != null) {
-            // Update existing SEO meta
             logger.debug("Updating existing SEO meta with ID: {}", existingSeoMetaId);
-            try {
-                SeoMetaDto seoMetaDto = convertSeoMetaRequestToDto(seoMetaRequest);
-                seoMetaService.updateSeoMeta(existingSeoMetaId, seoMetaDto);
-                logger.info("Successfully updated SEO meta ID: {}", existingSeoMetaId);
-                return existingSeoMetaId;
-            } catch (Exception e) {
-                logger.error("Failed to update SEO meta: {}", e.getMessage(), e);
-                throw new IllegalArgumentException("Failed to update SEO meta: " + e.getMessage(), e);
-            }
+            seoMetaService.updateSeoMeta(existingSeoMetaId, seoMetaDto);
+            return existingSeoMetaId;
         } else {
-            // Create new SEO meta
             logger.debug("Creating new SEO meta with title: {}", seoMetaRequest.getSeoMetaTitle());
-            try {
-                SeoMetaDto seoMetaDto = convertSeoMetaRequestToDto(seoMetaRequest);
-                SeoMetaDto createdSeoMeta = seoMetaService.createSeoMeta(seoMetaDto);
-                logger.info("Successfully created SEO meta with ID: {}", createdSeoMeta.getSeoMetaId());
-                return createdSeoMeta.getSeoMetaId();
-            } catch (Exception e) {
-                logger.error("Failed to create SEO meta: {}", e.getMessage(), e);
-                throw new IllegalArgumentException("Failed to create SEO meta: " + e.getMessage(), e);
-            }
+            SeoMetaDto createdSeoMeta = seoMetaService.createSeoMeta(seoMetaDto);
+            return createdSeoMeta.getSeoMetaId();
         }
     }
     

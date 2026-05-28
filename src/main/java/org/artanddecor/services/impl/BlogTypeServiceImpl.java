@@ -105,10 +105,21 @@ public class BlogTypeServiceImpl implements BlogTypeService {
 
         // Handle SeoMeta relationship
         if (request.getSeoMeta() != null) {
-            SeoMetaDto createdSeoMeta = seoMetaService.createSeoMetaFromRequest(request.getSeoMeta());
-            existingBlogType.setSeoMetaId(createdSeoMeta.getSeoMetaId());
+            if (existingBlogType.getSeoMetaId() != null) {
+                // BlogType already has SEO meta → update it (avoid false duplicate error)
+                seoMetaService.updateSeoMetaFromRequest(existingBlogType.getSeoMetaId(), request.getSeoMeta());
+            } else {
+                // BlogType has no SEO meta yet → create new
+                SeoMetaDto createdSeoMeta = seoMetaService.createSeoMetaFromRequest(request.getSeoMeta());
+                existingBlogType.setSeoMetaId(createdSeoMeta.getSeoMetaId());
+            }
         } else {
-            existingBlogType.setSeoMetaId(null);
+            // Request has no SEO meta → remove SEO meta and delete orphan
+            if (existingBlogType.getSeoMetaId() != null) {
+                Long oldSeoMetaId = existingBlogType.getSeoMetaId();
+                existingBlogType.setSeoMetaId(null);
+                seoMetaService.deleteSeoMeta(oldSeoMetaId);
+            }
         }
 
         BlogType savedBlogType = blogTypeRepository.save(existingBlogType);

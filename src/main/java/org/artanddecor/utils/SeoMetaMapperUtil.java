@@ -102,13 +102,13 @@ public class SeoMetaMapperUtil {
         seoMeta.setSeoMetaTitle(seoMetaRequestDto.getSeoMetaTitle());
         seoMeta.setSeoMetaDescription(seoMetaRequestDto.getSeoMetaDescription());
         seoMeta.setSeoMetaKeywords(seoMetaRequestDto.getSeoMetaKeywords());
-        seoMeta.setSeoMetaIndex(seoMetaRequestDto.getSeoMetaIndex() != null ? seoMetaRequestDto.getSeoMetaIndex() : true);
-        seoMeta.setSeoMetaFollow(seoMetaRequestDto.getSeoMetaFollow() != null ? seoMetaRequestDto.getSeoMetaFollow() : true);
+        seoMeta.setSeoMetaIndex(seoMetaRequestDto.getSeoMetaIndex());
+        seoMeta.setSeoMetaFollow(seoMetaRequestDto.getSeoMetaFollow());
         seoMeta.setSeoMetaCanonicalUrl(seoMetaRequestDto.getSeoMetaCanonicalUrl());
         seoMeta.setSeoMetaImageName(null); // SeoMetaRequestDto doesn't have seoMetaImageName field
         seoMeta.setSeoMetaSchemaType(seoMetaRequestDto.getSeoMetaSchemaType());
         seoMeta.setSeoMetaCustomJson(seoMetaRequestDto.getSeoMetaCustomJson());
-        seoMeta.setSeoMetaEnabled(seoMetaRequestDto.getSeoMetaEnabled() != null ? seoMetaRequestDto.getSeoMetaEnabled() : true);
+        seoMeta.setSeoMetaEnabled(seoMetaRequestDto.getSeoMetaEnabled());
         
         return seoMeta;
     }

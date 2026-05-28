@@ -49,12 +49,13 @@ public class SeoMetaServiceImpl implements SeoMetaService {
         logger.info("Creating new SEO meta: {}", seoMetaDto.getSeoMetaTitle());
         
         // Validation
-        if (existsByTitle(seoMetaDto.getSeoMetaTitle())) {
+        if (seoMetaDto.getSeoMetaTitle() != null && !seoMetaDto.getSeoMetaTitle().isBlank()
+                && existsByTitle(seoMetaDto.getSeoMetaTitle())) {
             throw new IllegalArgumentException("SEO meta title already exists: " + seoMetaDto.getSeoMetaTitle());
         }
         
-        if (seoMetaDto.getSeoMetaCanonicalUrl() != null && 
-            existsByCanonicalUrl(seoMetaDto.getSeoMetaCanonicalUrl())) {
+        if (seoMetaDto.getSeoMetaCanonicalUrl() != null && !seoMetaDto.getSeoMetaCanonicalUrl().isBlank()
+                && existsByCanonicalUrl(seoMetaDto.getSeoMetaCanonicalUrl())) {
             throw new IllegalArgumentException("SEO meta canonical URL already exists: " + seoMetaDto.getSeoMetaCanonicalUrl());
         }
         
@@ -71,12 +72,13 @@ public class SeoMetaServiceImpl implements SeoMetaService {
         logger.info("Creating new SEO meta from request: {}", seoMetaRequestDto.getSeoMetaTitle());
         
         // Validation
-        if (existsByTitle(seoMetaRequestDto.getSeoMetaTitle())) {
+        if (seoMetaRequestDto.getSeoMetaTitle() != null && !seoMetaRequestDto.getSeoMetaTitle().isBlank()
+                && existsByTitle(seoMetaRequestDto.getSeoMetaTitle())) {
             throw new IllegalArgumentException("SEO meta title already exists: " + seoMetaRequestDto.getSeoMetaTitle());
         }
         
-        if (seoMetaRequestDto.getSeoMetaCanonicalUrl() != null && 
-            existsByCanonicalUrl(seoMetaRequestDto.getSeoMetaCanonicalUrl())) {
+        if (seoMetaRequestDto.getSeoMetaCanonicalUrl() != null && !seoMetaRequestDto.getSeoMetaCanonicalUrl().isBlank()
+                && existsByCanonicalUrl(seoMetaRequestDto.getSeoMetaCanonicalUrl())) {
             throw new IllegalArgumentException("SEO meta canonical URL already exists: " + seoMetaRequestDto.getSeoMetaCanonicalUrl());
         }
         
@@ -95,16 +97,19 @@ public class SeoMetaServiceImpl implements SeoMetaService {
         SeoMeta existingSeoMeta = seoMetaRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("SEO meta not found with ID: " + id));
         
-        // Validation - check if title/canonical URL exists for other records
-        if (!existingSeoMeta.getSeoMetaTitle().equals(seoMetaDto.getSeoMetaTitle()) && 
-            existsByTitle(seoMetaDto.getSeoMetaTitle())) {
-            throw new IllegalArgumentException("SEO meta title already exists: " + seoMetaDto.getSeoMetaTitle());
+        // Validation - check if title/canonical URL exists for other records (null-safe)
+        String newTitle = seoMetaDto.getSeoMetaTitle();
+        String existingTitle = existingSeoMeta.getSeoMetaTitle();
+        if (newTitle != null && !newTitle.isBlank() && !newTitle.equals(existingTitle)
+                && existsByTitle(newTitle)) {
+            throw new IllegalArgumentException("SEO meta title already exists: " + newTitle);
         }
-        
-        if (seoMetaDto.getSeoMetaCanonicalUrl() != null && 
-            !seoMetaDto.getSeoMetaCanonicalUrl().equals(existingSeoMeta.getSeoMetaCanonicalUrl()) &&
-            existsByCanonicalUrl(seoMetaDto.getSeoMetaCanonicalUrl())) {
-            throw new IllegalArgumentException("SEO meta canonical URL already exists: " + seoMetaDto.getSeoMetaCanonicalUrl());
+
+        String newUrl = seoMetaDto.getSeoMetaCanonicalUrl();
+        String existingUrl = existingSeoMeta.getSeoMetaCanonicalUrl();
+        if (newUrl != null && !newUrl.isBlank() && !newUrl.equals(existingUrl)
+                && existsByCanonicalUrl(newUrl)) {
+            throw new IllegalArgumentException("SEO meta canonical URL already exists: " + newUrl);
         }
         
         // Update fields
@@ -123,28 +128,31 @@ public class SeoMetaServiceImpl implements SeoMetaService {
         SeoMeta existingSeoMeta = seoMetaRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("SEO meta not found with ID: " + id));
         
-        // Validation - check if title/canonical URL exists for other records
-        if (!existingSeoMeta.getSeoMetaTitle().equals(seoMetaRequestDto.getSeoMetaTitle()) && 
-            existsByTitle(seoMetaRequestDto.getSeoMetaTitle())) {
-            throw new IllegalArgumentException("SEO meta title already exists: " + seoMetaRequestDto.getSeoMetaTitle());
+        // Validation - check if title/canonical URL exists for other records (null-safe)
+        String newTitle = seoMetaRequestDto.getSeoMetaTitle();
+        String existingTitle = existingSeoMeta.getSeoMetaTitle();
+        if (newTitle != null && !newTitle.isBlank() && !newTitle.equals(existingTitle)
+                && existsByTitle(newTitle)) {
+            throw new IllegalArgumentException("SEO meta title already exists: " + newTitle);
+        }
+
+        String newUrl = seoMetaRequestDto.getSeoMetaCanonicalUrl();
+        String existingUrl = existingSeoMeta.getSeoMetaCanonicalUrl();
+        if (newUrl != null && !newUrl.isBlank() && !newUrl.equals(existingUrl)
+                && existsByCanonicalUrl(newUrl)) {
+            throw new IllegalArgumentException("SEO meta canonical URL already exists: " + newUrl);
         }
         
-        if (seoMetaRequestDto.getSeoMetaCanonicalUrl() != null && 
-            !seoMetaRequestDto.getSeoMetaCanonicalUrl().equals(existingSeoMeta.getSeoMetaCanonicalUrl()) &&
-            existsByCanonicalUrl(seoMetaRequestDto.getSeoMetaCanonicalUrl())) {
-            throw new IllegalArgumentException("SEO meta canonical URL already exists: " + seoMetaRequestDto.getSeoMetaCanonicalUrl());
-        }
-        
-        // Update fields from request DTO
+        // Update fields directly — null values are saved as-is (no forced defaults)
         existingSeoMeta.setSeoMetaTitle(seoMetaRequestDto.getSeoMetaTitle());
         existingSeoMeta.setSeoMetaDescription(seoMetaRequestDto.getSeoMetaDescription());
         existingSeoMeta.setSeoMetaKeywords(seoMetaRequestDto.getSeoMetaKeywords());
-        existingSeoMeta.setSeoMetaIndex(seoMetaRequestDto.getSeoMetaIndex() != null ? seoMetaRequestDto.getSeoMetaIndex() : true);
-        existingSeoMeta.setSeoMetaFollow(seoMetaRequestDto.getSeoMetaFollow() != null ? seoMetaRequestDto.getSeoMetaFollow() : true);
+        existingSeoMeta.setSeoMetaIndex(seoMetaRequestDto.getSeoMetaIndex());
+        existingSeoMeta.setSeoMetaFollow(seoMetaRequestDto.getSeoMetaFollow());
         existingSeoMeta.setSeoMetaCanonicalUrl(seoMetaRequestDto.getSeoMetaCanonicalUrl());
         existingSeoMeta.setSeoMetaSchemaType(seoMetaRequestDto.getSeoMetaSchemaType());
         existingSeoMeta.setSeoMetaCustomJson(seoMetaRequestDto.getSeoMetaCustomJson());
-        existingSeoMeta.setSeoMetaEnabled(seoMetaRequestDto.getSeoMetaEnabled() != null ? seoMetaRequestDto.getSeoMetaEnabled() : true);
+        existingSeoMeta.setSeoMetaEnabled(seoMetaRequestDto.getSeoMetaEnabled());
         
         SeoMeta updatedSeoMeta = seoMetaRepository.save(existingSeoMeta);
         

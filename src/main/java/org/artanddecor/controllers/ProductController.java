@@ -347,7 +347,51 @@ public class ProductController {
             return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to update product: " + e.getMessage()));
         }
     }
-    
+
+    /**
+     * Delete product and all its related data (Admin only)
+     */
+    @DeleteMapping("/{productId}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
+    @Operation(
+        summary = "Delete product and all related data",
+        description = "Permanently delete a product along with all its dependent records: product images (links only), " +
+            "product variants, reviews and review likes, wishlist entries, and cart items. " +
+            "Associated SEO metadata owned by this product is also deleted. " +
+            "Shared master data (IMAGE files, PRODUCT_ATTRIBUTE, PRODUCT_CATEGORY, PRODUCT_ATTR) are NOT deleted. " +
+            "Deletion is BLOCKED if the product is referenced by any existing order (financial integrity). " +
+            "In that case, disable the product instead. Admin/Manager access required."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Product deleted successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid product ID"),
+        @ApiResponse(responseCode = "401", description = "Authentication required"),
+        @ApiResponse(responseCode = "403", description = "Access denied - ADMIN or MANAGER role required"),
+        @ApiResponse(responseCode = "404", description = "Product not found with specified ID"),
+        @ApiResponse(responseCode = "409", description = "Cannot delete product because it has existing order history"),
+        @ApiResponse(responseCode = "500", description = "Internal server error occurred while deleting product")
+    })
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<BaseResponseDto<Void>> deleteProduct(
+            @Parameter(description = "Product database ID", example = "1")
+            @PathVariable Long productId) {
+        logger.info("Deleting product ID: {}", productId);
+        try {
+            productService.deleteProduct(productId);
+            return ResponseEntity.ok(BaseResponseDto.success("Product deleted successfully", null));
+        } catch (IllegalArgumentException e) {
+            logger.error("Product not found for deletion: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(BaseResponseDto.notFound(e.getMessage()));
+        } catch (IllegalStateException e) {
+            logger.error("Cannot delete product {}: {}", productId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(BaseResponseDto.error(HttpStatus.CONFLICT.value(), e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Error deleting product {}: {}", productId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(BaseResponseDto.serverError("Failed to delete product: " + e.getMessage()));
+        }
+    }
+
     /**
      * Get total product count (Admin dashboard)
      */

@@ -77,6 +77,17 @@ public interface ProductService {
      */
     ProductDto updateProduct(Long productId, ProductRequestDto productRequestDto);
 
+    /**
+     * Delete a product and all its dependent data (images links, variants, reviews, wishlist, cart items).
+     * Will block deletion if the product is referenced by any order (financial integrity).
+     * Does NOT delete shared master data: IMAGE, PRODUCT_ATTRIBUTE, PRODUCT_CATEGORY, PRODUCT_ATTR, etc.
+     *
+     * @param productId Product ID to delete
+     * @throws IllegalArgumentException if product not found
+     * @throws IllegalStateException if product has order history and cannot be deleted
+     */
+    void deleteProduct(Long productId);
+
     // =============================================
     // PRODUCT IMAGE OPERATIONS
     // =============================================

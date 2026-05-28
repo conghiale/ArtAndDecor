@@ -191,26 +191,26 @@ public class ImageController {
     }
 
     /**
-     * Update existing image with new file and metadata
-     * Replaces the existing image file while preserving the same ID and updating metadata
-     * Public access for content management and image replacement operations
-     * 
+     * Update existing image with optional new file and metadata.
+     * If imageFile is provided, replaces the existing file and updates all metadata.
+     * If imageFile is omitted, only the supplied metadata fields are updated (file unchanged).
+     *
      * @param imageId Database ID of the image to update
-     * @param imageFile Single image file to replace the existing one
+     * @param imageFile Optional new image file to replace the existing one
      * @param imageDisplayName Optional display name for the updated image
      * @param imageSize Optional size metadata for the updated image
      * @param imageFormat Optional format metadata for the updated image
      * @param imageRemark Optional remark for the updated image
      * @param imageSlug Optional URL-friendly identifier for the updated image
-     * @return Updated image information with new file details
+     * @return Updated image information
      */
     @PutMapping(value = "/{imageId}/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "Update existing image with new file",
-               description = "Replace an existing image file while maintaining the same database record. Updates both the file content and associated metadata. The new file undergoes the same processing as new uploads including SHA-256 hashing and dimension detection.")
+    @Operation(summary = "Update existing image (file and/or metadata)",
+               description = "Update an existing image record. When imageFile is provided, the file is replaced and all metadata is recalculated (SHA-256 hash, dimension detection). When imageFile is omitted, only the supplied metadata fields are updated while the stored file remains unchanged.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Image updated successfully",
                      content = @Content(schema = @Schema(implementation = ImageDto.class))),
-        @ApiResponse(responseCode = "400", description = "Invalid request data or image file is required for update"),
+        @ApiResponse(responseCode = "400", description = "Invalid request data"),
         @ApiResponse(responseCode = "404", description = "Image not found with provided ID"),
         @ApiResponse(responseCode = "413", description = "File size exceeds maximum limit (50MB)"),
         @ApiResponse(responseCode = "415", description = "Unsupported file format"),
@@ -219,58 +219,51 @@ public class ImageController {
     public ResponseEntity<BaseResponseDto<ImageDto>> updateImage(
             @Parameter(description = "Database ID of the image to update", example = "1")
             @PathVariable Long imageId,
-            
-            @Parameter(description = "Image file to replace the existing one", required = true,
+
+            @Parameter(description = "Optional new image file. When provided, replaces the existing file.",
                     content = @Content(
                     mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
                     schema = @Schema(type = "string", format = "binary")
             ))
-            @RequestPart("imageFile") MultipartFile imageFile,
-            
+            @RequestPart(value = "imageFile", required = false) MultipartFile imageFile,
+
             @Parameter(description = "Optional display name for the updated image")
             @RequestPart(value = "imageDisplayName", required = false) String imageDisplayName,
-            
+
             @Parameter(description = "Optional size metadata for the updated image (e.g., '1920x1080')")
             @RequestPart(value = "imageSize", required = false) String imageSize,
-            
+
             @Parameter(description = "Optional format metadata for the updated image (e.g., 'JPG', 'PNG')")
             @RequestPart(value = "imageFormat", required = false) String imageFormat,
-            
+
             @Parameter(description = "Optional remark for the updated image")
             @RequestPart(value = "imageRemark", required = false) String imageRemark,
-            
+
             @Parameter(description = "Optional URL-friendly identifier for the updated image")
             @RequestPart(value = "imageSlug", required = false) String imageSlug) {
-        
-        logger.info("Updating image with file - ID: {}", imageId);
-        
+
+        boolean hasFile = imageFile != null && !imageFile.isEmpty();
+        logger.info("Updating image ID: {} ({})", imageId, hasFile ? "with new file" : "metadata only");
+
         try {
-            // Validate required parameters
-            if (imageFile == null || imageFile.isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(BaseResponseDto.badRequest("Image file is required for update"));
-            }
-            
-            // Build DTO and delegate to service
             ImageUploadDto imageUploadDto = ImageUploadDto.builder()
-                    .imageFile(imageFile)
+                    .imageFile(hasFile ? imageFile : null)
                     .imageDisplayName(imageDisplayName)
                     .imageSize(imageSize)
                     .imageFormat(imageFormat)
                     .imageRemark(imageRemark)
                     .imageSlug(imageSlug)
                     .build();
-            
-            // Process update using ImageUploadDto
+
             ImageDto updatedImage = imageService.updateImage(imageId, imageUploadDto);
-            
-            return ResponseEntity.ok(BaseResponseDto.success(
-                    "Image file updated successfully with metadata", 
-                    updatedImage
-            ));
-            
+
+            String message = hasFile
+                    ? "Image file and metadata updated successfully"
+                    : "Image metadata updated successfully";
+            return ResponseEntity.ok(BaseResponseDto.success(message, updatedImage));
+
         } catch (IllegalArgumentException e) {
-            logger.error("Validation error updating image {}: {}", imageId, e.getMessage());
+            logger.error("Image not found for update - ID {}: {}", imageId, e.getMessage());
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(BaseResponseDto.notFound(e.getMessage()));
         } catch (IOException e) {
