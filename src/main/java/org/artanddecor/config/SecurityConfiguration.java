@@ -261,6 +261,12 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.POST, "/testimonials").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/testimonials/**").hasRole("ADMIN")
 
+                        // Banner endpoints - public read, admin for management
+                        .requestMatchers(HttpMethod.GET, "/banners").permitAll() // Public: list/filter
+                        .requestMatchers(HttpMethod.GET, "/banners/{bannerId:[\\d+]}").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/banners").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/banners/**").hasRole("ADMIN")
+
                         // Wishlist endpoints - public access for both authenticated and anonymous users
                         .requestMatchers(HttpMethod.GET, "/wishlists").permitAll() // Get wishlist items with filtering
                         .requestMatchers(HttpMethod.POST, "/wishlists").permitAll() // Add product to wishlist

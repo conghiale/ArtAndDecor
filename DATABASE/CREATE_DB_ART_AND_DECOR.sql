@@ -795,6 +795,39 @@ CREATE TABLE `BLOG` (
 );
 
 -- =============================================
+-- BANNER MANAGEMENT TABLES
+-- =============================================
+
+-- Table: BANNER (Website banners/slides displayed on the homepage or landing pages)
+CREATE TABLE `BANNER` (
+    `BANNER_ID` BIGINT PRIMARY KEY AUTO_INCREMENT,
+    `BANNER_TITLE` VARCHAR(256) NOT NULL,
+    `BANNER_LINK` VARCHAR(512) NULL,
+    `BANNER_ENABLED` BOOLEAN NOT NULL DEFAULT TRUE,
+    `BANNER_DISPLAY_ORDER` INT DEFAULT NULL,
+    `CREATED_DT` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `MODIFIED_DT` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX `idx_banner_enabled` (`BANNER_ENABLED`),
+    INDEX `idx_banner_display_order` (`BANNER_DISPLAY_ORDER`)
+);
+
+-- Table: BANNER_IMAGE (Junction table - n-n relationship between BANNER and IMAGE)
+CREATE TABLE `BANNER_IMAGE` (
+    `BANNER_IMAGE_ID` BIGINT PRIMARY KEY AUTO_INCREMENT,
+    `BANNER_ID` BIGINT NOT NULL,
+    `IMAGE_ID` BIGINT NOT NULL,
+    `BANNER_IMAGE_DISPLAY_ORDER` INT NOT NULL DEFAULT 0,
+    `CREATED_DT` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `MODIFIED_DT` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (`BANNER_ID`) REFERENCES `BANNER`(`BANNER_ID`) ON DELETE CASCADE,
+    FOREIGN KEY (`IMAGE_ID`) REFERENCES `IMAGE`(`IMAGE_ID`) ON DELETE RESTRICT,
+    UNIQUE KEY `idx_banner_image_unique` (`BANNER_ID`, `IMAGE_ID`),
+    INDEX `idx_banner_image_banner` (`BANNER_ID`),
+    INDEX `idx_banner_image_image` (`IMAGE_ID`),
+    INDEX `idx_banner_image_display_order` (`BANNER_IMAGE_DISPLAY_ORDER`)
+);
+
+-- =============================================
 -- TESTIMONIAL TABLE
 -- =============================================
 
