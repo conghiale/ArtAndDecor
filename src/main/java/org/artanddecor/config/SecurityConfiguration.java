@@ -255,6 +255,12 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.PUT, "/pages/**").hasRole("ADMIN") // Update page
                         .requestMatchers(HttpMethod.PATCH, "/pages/**").hasRole("ADMIN") // Update page status
 
+                        // Testimonial endpoints - public read, admin for management
+                        .requestMatchers(HttpMethod.GET, "/testimonials").permitAll() // Public: list/filter
+                        .requestMatchers(HttpMethod.GET, "/testimonials/{testimonialId:[\\d+]}").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/testimonials").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/testimonials/**").hasRole("ADMIN")
+
                         // Wishlist endpoints - public access for both authenticated and anonymous users
                         .requestMatchers(HttpMethod.GET, "/wishlists").permitAll() // Get wishlist items with filtering
                         .requestMatchers(HttpMethod.POST, "/wishlists").permitAll() // Add product to wishlist
