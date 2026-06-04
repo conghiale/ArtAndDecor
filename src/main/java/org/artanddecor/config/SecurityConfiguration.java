@@ -166,6 +166,7 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.POST, "/policies").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/policies/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/policies/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/policies/**").hasRole("ADMIN")
 
                         // Review endpoints - public read access, customer can create reviews
                         .requestMatchers(HttpMethod.GET, "/reviews/**").permitAll()
@@ -263,7 +264,7 @@ public class SecurityConfiguration {
 
                         // Banner endpoints - public read, admin for management
                         .requestMatchers(HttpMethod.GET, "/banners").permitAll() // Public: list/filter
-                        .requestMatchers(HttpMethod.GET, "/banners/{bannerId:[\\d+]}").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/banners/{bannerId:[\\d+]}").permitAll() // Public: get by ID
                         .requestMatchers(HttpMethod.POST, "/banners").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/banners/**").hasRole("ADMIN")
 

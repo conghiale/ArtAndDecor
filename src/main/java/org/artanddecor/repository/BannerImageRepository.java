@@ -14,9 +14,12 @@ import org.springframework.stereotype.Repository;
 public interface BannerImageRepository extends JpaRepository<BannerImage, Long> {
 
     /**
-     * Delete all image associations for a given banner
+     * Delete all image associations for a given banner.
+     * clearAutomatically = true ensures the L1 persistence context is refreshed after
+     * this bulk DELETE, preventing stale BannerImage entities from being read back
+     * when the mapper accesses the bannerImages collection within the same transaction.
      */
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("DELETE FROM BannerImage bi WHERE bi.banner.bannerId = :bannerId")
     void deleteByBannerId(@Param("bannerId") Long bannerId);
 

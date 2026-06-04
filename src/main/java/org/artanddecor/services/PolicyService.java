@@ -90,4 +90,11 @@ public interface PolicyService {
      * @return total count of policies in database
      */
     long getTotalPolicyCount();
+
+    /**
+     * Hard delete a policy by ID
+     * @param policyId the policy ID to delete
+     * @throws org.artanddecor.exception.ResourceNotFoundException if policy not found
+     */
+    void deletePolicy(Long policyId);
 }

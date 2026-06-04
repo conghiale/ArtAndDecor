@@ -390,4 +390,39 @@ public class PolicyController {
                     "Failed to retrieve policy names: " + e.getMessage()));
         }
     }
+
+    @Operation(
+        summary = "Delete policy (Admin)",
+        description = "Hard-delete a policy permanently by its ID. Restricted to admin users only.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Policy deleted successfully",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "404", description = "Policy not found with the provided ID",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid request or system error",
+            content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
+        @ApiResponse(responseCode = "401", description = "Unauthorized - Authentication required"),
+        @ApiResponse(responseCode = "403", description = "Forbidden - Admin role required")
+    })
+    @DeleteMapping("/{policyId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<BaseResponseDto<?>> deletePolicy(
+        @Parameter(description = "Policy ID to delete", example = "1")
+        @PathVariable Long policyId) {
+        logger.info("Deleting policy with ID: {}", policyId);
+        try {
+            policyService.deletePolicy(policyId);
+            return ResponseEntity.ok(BaseResponseDto.success("Policy deleted successfully", null));
+        } catch (IllegalArgumentException | org.artanddecor.exception.ResourceNotFoundException e) {
+            logger.warn("Policy not found with ID: {}", policyId);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                    BaseResponseDto.notFound("Policy not found with ID: " + policyId));
+        } catch (Exception e) {
+            logger.error("Error deleting policy {}: {}", policyId, e.getMessage(), e);
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(
+                    "Failed to delete policy: " + e.getMessage()));
+        }
+    }
 }

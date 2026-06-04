@@ -266,12 +266,12 @@ public class ContactServiceImpl implements ContactService {
             • Cập nhật trạng thái xử lý sau khi hoàn thành
             
             ⚠️ LƯU Ý:
-            • Email này được gửi tự động từ hệ thống Art and Decor
+            • Email này được gửi tự động từ hệ thống Maison Art
             • Không trả lời trực tiếp email này
             • Liên hệ trực tiếp với khách hàng theo thông tin trên
             
             ═══════════════════════════════════════════════════════════════
-            Hệ thống Art and Decor - %s
+            Hệ thống Maison Art - %s
             """,
             customerContactRequest.getCustomerName(),
             customerContactRequest.getCustomerEmail(), 

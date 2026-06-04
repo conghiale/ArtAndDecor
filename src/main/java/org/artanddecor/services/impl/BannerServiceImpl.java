@@ -71,7 +71,11 @@ public class BannerServiceImpl implements BannerService {
         }
         banner.setBannerDisplayOrder(request.getBannerDisplayOrder());
 
-        bannerRepository.save(banner);
+        // saveAndFlush ensures the UPDATE is written to DB before deleteByBannerId
+        // clears the L1 persistence context (clearAutomatically = true).
+        // Without this, the dirty Banner entity would be discarded and the response
+        // would return stale field values fetched from the database.
+        bannerRepository.saveAndFlush(banner);
 
         // Replace image associations
         bannerImageRepository.deleteByBannerId(bannerId);

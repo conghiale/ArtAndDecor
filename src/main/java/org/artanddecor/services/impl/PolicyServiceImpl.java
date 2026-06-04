@@ -3,6 +3,7 @@ package org.artanddecor.services.impl;
 import lombok.RequiredArgsConstructor;
 import org.artanddecor.dto.PolicyDto;
 import org.artanddecor.dto.PolicyRequest;
+import org.artanddecor.exception.ResourceNotFoundException;
 import org.artanddecor.model.Policy;
 import org.artanddecor.repository.PolicyRepository;
 import org.artanddecor.services.PolicyService;
@@ -185,6 +186,18 @@ public class PolicyServiceImpl implements PolicyService {
     public List<String> getAllPolicyNames() {
         logger.debug("Getting all policy names");
         return policyRepository.findAllPolicyNames();
+    }
+
+    @Override
+    public void deletePolicy(Long policyId) {
+        logger.info("Deleting policy with ID: {}", policyId);
+        Policy policy = policyRepository.findById(policyId)
+                .orElseThrow(() -> {
+                    logger.error("Policy not found with ID: {}", policyId);
+                    return new ResourceNotFoundException("Policy not found with ID: " + policyId);
+                });
+        policyRepository.delete(policy);
+        logger.info("Policy deleted successfully with ID: {}", policyId);
     }
     
     // =============================================

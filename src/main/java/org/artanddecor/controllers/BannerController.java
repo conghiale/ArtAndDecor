@@ -92,7 +92,6 @@ public class BannerController {
             content = @Content(schema = @Schema(implementation = BaseResponseDto.class)))
     })
     @GetMapping("/{bannerId}")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BaseResponseDto<BannerDto>> getBannerById(
         @Parameter(description = "Banner ID", example = "1")
         @PathVariable Long bannerId) {

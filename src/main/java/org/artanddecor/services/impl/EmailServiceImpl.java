@@ -38,7 +38,7 @@ public class EmailServiceImpl implements EmailService {
         }
 
         try {
-            String subject = "Mật khẩu mới cho tài khoản Art and Decor của bạn";
+            String subject = "Mật khẩu mới cho tài khoản Maison Art của bạn";
             String content = buildPasswordResetEmailContent(userName, newPassword);
             String fromAddress = mailConfiguration.getSenderAddress();
 
@@ -58,7 +58,7 @@ public class EmailServiceImpl implements EmailService {
                     StandardCharsets.UTF_8.name()
             );
 
-            helper.setFrom(fromAddress, "Art and Decor System");
+            helper.setFrom(fromAddress, "Maison Art System");
             helper.setTo(toEmail);
             helper.setSubject(subject);
 
@@ -108,12 +108,13 @@ public class EmailServiceImpl implements EmailService {
                     StandardCharsets.UTF_8.name()
             );
 
-            helper.setFrom(fromAddress, "Art and Decor System");
+            helper.setFrom(fromAddress, "Maison Art System");
             helper.setTo(toEmail);
             helper.setSubject(subject);
 
-            // plain text UTF-8
-            helper.setText(content, false);
+            // auto-detect HTML content
+            boolean isHtml = content != null && content.trim().startsWith("<!DOCTYPE");
+            helper.setText(content, isHtml);
 
             javaMailSender.send(mimeMessage);
             
@@ -209,7 +210,7 @@ public class EmailServiceImpl implements EmailService {
         }
 
         try {
-            String subject = "Mã xác nhận đặt lại mật khẩu - Art and Decor";
+            String subject = "Mã xác nhận đặt lại mật khẩu - Maison Art";
             String content = buildOtpEmailContent(firstName, otpCode);
             String fromAddress = mailConfiguration.getSenderAddress();
 
@@ -219,7 +220,7 @@ public class EmailServiceImpl implements EmailService {
                     false,
                     StandardCharsets.UTF_8.name()
             );
-            helper.setFrom(fromAddress, "Art and Decor System");
+            helper.setFrom(fromAddress, "Maison Art System");
             helper.setTo(toEmail);
             helper.setSubject(subject);
             helper.setText(content, false);

@@ -483,9 +483,9 @@ public class MailConfiguration {
 
     // Default values constants
     private static final String DEFAULT_FROM_ADDRESS = "artanddecor.system@gmail.com";
-    private static final String DEFAULT_FROM_NAME = "Art and Decor System";
+    private static final String DEFAULT_FROM_NAME = "Maison Art System";
     private static final String DEFAULT_SUPPORT_ADDRESS = "support@artanddecor.com";
-    private static final String DEFAULT_SYSTEM_NAME = "Art and Decor E-commerce Platform";
+    private static final String DEFAULT_SYSTEM_NAME = "Maison Art E-commerce Platform";
     private static final String DEFAULT_SYSTEM_WEBSITE = "https://artanddecor.com";
     private static final String DEFAULT_SUPPORT_PHONE = "+84-123-456-789";
 }

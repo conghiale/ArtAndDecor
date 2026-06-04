@@ -1,10 +1,13 @@
 package org.artanddecor.services.impl;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.artanddecor.dto.*;
 import org.artanddecor.exception.ResourceNotFoundException;
 import org.artanddecor.model.*;
 import org.artanddecor.repository.*;
 import org.artanddecor.services.*;
+import org.artanddecor.config.MailConfiguration;
 import org.artanddecor.utils.OrderMapperUtil;
 import org.artanddecor.utils.ProductMapperUtil;
 import org.slf4j.Logger;
@@ -32,6 +35,7 @@ import java.util.stream.Collectors;
 public class OrderServiceImpl implements OrderService {
 
     private static final Logger logger = LoggerFactory.getLogger(OrderServiceImpl.class);
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     
     // Default shipping fee configuration - can be moved to application.properties later
     private static final BigDecimal DEFAULT_SHIPPING_FEE = BigDecimal.valueOf(50000); // 50,000 VND
@@ -92,6 +96,15 @@ public class OrderServiceImpl implements OrderService {
     
     @Autowired
     private EmailService emailService;
+
+    @Autowired
+    private ProductRepository productRepository;
+
+    @Autowired
+    private MailConfiguration mailConfiguration;
+
+    @Autowired
+    private PolicyService policyService;
 
     // ===== NEW APIS =====
     
@@ -532,7 +545,16 @@ public class OrderServiceImpl implements OrderService {
             paymentRepository.save(initialPayment);
             logger.info("Initial payment record created for order {} with payment ID: {}", 
                        savedOrder.getOrderId(), initialPayment.getPaymentId());
-            
+
+            // Update in-memory payments collection to avoid Hibernate L1 cache stale issue.
+            // findById() within the same transaction returns the cached entity (savedOrder),
+            // which still has payments=null because JPA only updates the owning side (Payment.order).
+            // Without this, applyLatestPaymentSnapshot() sees no payments → paymentMethod is null in email.
+            if (savedOrder.getPayments() == null) {
+                savedOrder.setPayments(new java.util.ArrayList<>());
+            }
+            savedOrder.getPayments().add(initialPayment);
+
         } catch (Exception e) {
             logger.error("Failed to create initial payment record for order {}: {}", savedOrder.getOrderId(), e.getMessage());
             // Don't fail order creation due to payment record creation failure
@@ -586,14 +608,22 @@ public class OrderServiceImpl implements OrderService {
                             jsonBuilder.append("{");
                             
                             // Add attribute name
-                            if (productAttr.getProductAttr() != null && productAttr.getProductAttr().getProductAttrName() != null) {
+                            if (productAttr.getProductAttr() != null && productAttr.getProductAttr().getProductAttrDisplayName() != null) {
+                                jsonBuilder.append("\"attributeName\":\"")
+                                          .append(escapeJsonString(productAttr.getProductAttr().getProductAttrDisplayName()))
+                                          .append("\",");
+                            } else if (productAttr.getProductAttr() != null && productAttr.getProductAttr().getProductAttrName() != null) {
                                 jsonBuilder.append("\"attributeName\":\"")
                                           .append(escapeJsonString(productAttr.getProductAttr().getProductAttrName()))
                                           .append("\",");
                             }
                             
                             // Add attribute value
-                            if (productAttr.getProductAttributeValue() != null) {
+                            if (productAttr.getProductAttributeDisplayName() != null) {
+                                jsonBuilder.append("\"attributeValue\":\"")
+                                          .append(escapeJsonString(productAttr.getProductAttributeDisplayName()))
+                                          .append("\",");
+                            } else if (productAttr.getProductAttributeValue() != null) {
                                 jsonBuilder.append("\"attributeValue\":\"")
                                           .append(escapeJsonString(productAttr.getProductAttributeValue()))
                                           .append("\",");
@@ -1188,92 +1218,170 @@ public class OrderServiceImpl implements OrderService {
      * Build email subject for customer notification
      */
     private String buildOrderCustomerEmailSubject(OrderDto order) {
-        return String.format("[Art & Decor] Đặt hàng thành công - %s", order.getOrderCode());
+        return String.format("Đơn hàng tại Maison Art đã được đặt! - %s", order.getOrderCode());
     }
 
     /**
-     * Build email content for customer notification
+     * Build email content for customer notification (HTML template)
      */
     private String buildOrderCustomerEmailContent(OrderDto order) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
-        String orderTime = order.getCreatedDt().format(formatter);
-        StringBuilder itemsBuilder = new StringBuilder();
-        if (order.getOrderItems() != null && !order.getOrderItems().isEmpty()) {
-            for (OrderItemDto item : order.getOrderItems()) {
-                itemsBuilder.append(String.format("    • %s (x%d) - %s\n",
-                        item.getProductName() != null ? item.getProductName() : "Sản phẩm",
-                        item.getQuantity(),
-                        formatCurrency(item.getUnitPrice().multiply(new BigDecimal(item.getQuantity())))));
-            }
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+        String orderDate = order.getCreatedDt().format(formatter);
+
+        // Determine payment method
+        String paymentMethod = order.getPaymentMethod() != null ? order.getPaymentMethod() : "";
+        boolean isBankTransfer = "BANK_TRANSFER".equalsIgnoreCase(paymentMethod);
+        boolean isCOD = "COD".equalsIgnoreCase(paymentMethod);
+
+        String greeting = order.getCustomerName() != null ? order.getCustomerName() : "Quý khách";
+
+        // Conditional intro paragraph
+        String introText;
+        if (isBankTransfer) {
+            introText = "Chúng tôi đã nhận được đơn hàng của bạn. Vui lòng chuyển khoản theo thông tin bên dưới để xác nhận thanh toán. "
+                    + "Sau khi thanh toán được xác nhận, chúng tôi sẽ đóng gói và giao hàng đến bạn trong thời gian sớm nhất.";
+        } else if (isCOD) {
+            introText = "Chúng tôi đã nhận được đơn hàng của bạn. "
+                    + "Đơn hàng sẽ được chuẩn bị và giao đến địa chỉ của bạn. Bạn thanh toán khi nhận được hàng.";
         } else {
-            itemsBuilder.append("    • Thông tin sản phẩm đang được cập nhật\n");
+            introText = "Chúng tôi đã nhận được đơn hàng của bạn và đang tiến hành xử lý. "
+                    + "Sau khi xác nhận, chúng tôi sẽ đóng gói và sắp xếp giao hàng đến bạn trong thời gian sớm nhất.";
         }
-        return String.format("""
-            Cảm ơn bạn đã đặt hàng tại Art & Decor!
-            ═══════════════════════════════════════════════════════════════
-        
-            📋 THÔNG TIN ĐƠN HÀNG:
-            • Mã đơn hàng: %s
-            • Thời gian đặt: %s
-            • Trạng thái: %s
-            %s
-        
-            👤 THÔNG TIN KHÁCH HÀNG:
-            • Tên: %s
-            • Email: %s
-            • Số điện thoại: %s
-            • Địa chỉ: %s
-        
-            📦 THÔNG TIN GIAO HÀNG:
-            • Người nhận: %s
-            • Số điện thoại: %s
-            • Email nhận: %s
-            • Địa chỉ giao hàng: %s, %s, %s, %s
-        
-            🛒 CHI TIẾT SẢN PHẨM:
-            %s
-        
-            💰 TỔNG KẾT THANH TOÁN:
-            • Tạm tính: %s
-            • Giảm giá: -%s (%s)
-            • Phí vận chuyển: %s
-            • ───────────────────────────────────────
-            • TỔNG CỘNG: %s
-        
-            📝 GHI CHÚ:
-            %s
-        
-            Nếu bạn có bất kỳ thắc mắc nào về đơn hàng, vui lòng liên hệ với chúng tôi qua email này hoặc hotline hỗ trợ trên website.
-        
-            Trân trọng cảm ơn!
-            Art & Decor
-            """,
-                order.getOrderCode(),
-                orderTime,
-                order.getOrderState() != null ? order.getOrderState().getOrderStateDisplayName() : "Đang xử lý",
-                order.getSessionId() != null ? "\n• Session ID: " + order.getSessionId() : "",
-                order.getCustomerName() != null ? order.getCustomerName() : "Chưa cập nhật",
-                order.getCustomerEmail() != null ? order.getCustomerEmail() : "Chưa cập nhật",
-                order.getCustomerPhoneNumber() != null ? order.getCustomerPhoneNumber() : "Chưa cập nhật",
-                order.getCustomerAddress() != null ? order.getCustomerAddress() : "Chưa cập nhật",
-                order.getReceiverName() != null ? order.getReceiverName() : "Chưa cập nhật",
-                order.getReceiverPhone() != null ? order.getReceiverPhone() : "Chưa cập nhật",
-                order.getReceiverEmail() != null ? order.getReceiverEmail() : "Chưa cập nhật",
-                order.getAddressLine() != null ? order.getAddressLine() : "Chưa cập nhật",
-                order.getWard() != null ? order.getWard() : "",
-                order.getCity() != null ? order.getCity() : "",
-                order.getCountry() != null ? order.getCountry() : "Việt Nam",
-                itemsBuilder.toString(),
-                formatCurrency(order.getSubtotalAmount()),
-                formatCurrency(order.getDiscountAmount()),
-                order.getDiscountCode() != null ? order.getDiscountCode() : "Không có",
-                formatCurrency(order.getShippingFeeAmount()),
-                formatCurrency(order.getTotalAmount()),
-                order.getOrderNote() != null && !order.getOrderNote().trim().isEmpty()
-                        ? order.getOrderNote() : "Không có ghi chú đặc biệt"
-        );
+
+        // Payment summary values
+        BigDecimal subtotal = order.getSubtotalAmount()    != null ? order.getSubtotalAmount()    : BigDecimal.ZERO;
+        BigDecimal discount = order.getDiscountAmount()    != null ? order.getDiscountAmount()    : BigDecimal.ZERO;
+        BigDecimal shipping = order.getShippingFeeAmount() != null ? order.getShippingFeeAmount() : BigDecimal.ZERO;
+        BigDecimal total    = order.getTotalAmount()       != null ? order.getTotalAmount()       : BigDecimal.ZERO;
+
+        String discountCode = (order.getDiscountCode() != null && !order.getDiscountCode().isBlank())
+                ? " (" + order.getDiscountCode() + ")" : "";
+        String discountLabel = discount.compareTo(BigDecimal.ZERO) > 0
+                ? "-" + formatCurrency(discount) + discountCode
+                : "Không có";
+
+        // Payment method display name
+        String paymentMethodDisplay;
+        if (isBankTransfer) {
+            paymentMethodDisplay = "Chuyển khoản qua ngân hàng";
+        } else if (isCOD) {
+            paymentMethodDisplay = "Thanh toán khi nhận hàng (COD)";
+        } else {
+            paymentMethodDisplay = paymentMethod;
+        }
+
+        // Order state display
+        String orderStateName = (order.getOrderState() != null && order.getOrderState().getOrderStateDisplayName() != null)
+                ? order.getOrderState().getOrderStateDisplayName()
+                : (order.getOrderStateName() != null ? order.getOrderStateName() : "Đang xử lý");
+
+        // Delivery info
+        String receiverName  = order.getReceiverName()  != null ? order.getReceiverName()  : (order.getCustomerName() != null ? order.getCustomerName() : "");
+        String receiverPhone = order.getReceiverPhone() != null ? order.getReceiverPhone() : (order.getCustomerPhoneNumber() != null ? order.getCustomerPhoneNumber() : "");
+        String receiverEmail = order.getReceiverEmail() != null ? order.getReceiverEmail() : "";
+        List<String> addrParts = new ArrayList<>();
+        if (order.getAddressLine() != null && !order.getAddressLine().isBlank()) addrParts.add(order.getAddressLine());
+        if (order.getWard()        != null && !order.getWard().isBlank())        addrParts.add(order.getWard());
+        if (order.getCity()        != null && !order.getCity().isBlank())        addrParts.add(order.getCity());
+        if (order.getCountry()     != null && !order.getCountry().isBlank())     addrParts.add(order.getCountry());
+        String fullAddress = String.join(", ", addrParts);
+
+        // Bank transfer section (only for BANK_TRANSFER)
+        String bankTransferSection = "";
+        if (isBankTransfer) {
+            String bankAccountName   = "HOANG DINH HA";
+            String bankName          = "Vietcombank";
+            String bankAccountNumber = "9963879962";
+            String bankBranch        = "";
+            try {
+                java.util.Optional<PolicyDto> bankPolicyOpt = policyService.findPolicyByName("PAYMENT_BANK_INFO");
+                if (bankPolicyOpt.isPresent() && bankPolicyOpt.get().getPolicyValue() != null) {
+                    java.util.Properties bankProps = new java.util.Properties();
+                    bankProps.load(new java.io.StringReader(bankPolicyOpt.get().getPolicyValue()));
+                    if (bankProps.getProperty("bank.account.name") != null)   bankAccountName   = bankProps.getProperty("bank.account.name");
+                    if (bankProps.getProperty("bank.name") != null)           bankName          = bankProps.getProperty("bank.name");
+                    if (bankProps.getProperty("bank.account.number") != null) bankAccountNumber = bankProps.getProperty("bank.account.number");
+                    if (bankProps.getProperty("bank.branch") != null)         bankBranch        = bankProps.getProperty("bank.branch");
+                }
+            } catch (Exception e) {
+                logger.debug("Could not load PAYMENT_BANK_INFO policy: {}", e.getMessage());
+            }
+            String transferNote = "Thanh toan " + order.getOrderCode();
+            String branchRow = !bankBranch.isBlank()
+                    ? "<tr><td style=\"padding:6px 16px 6px 0;color:#888;font-size:14px;\">Chi nhánh:</td>"
+                        + "<td style=\"padding:6px 0;font-size:14px;\"><strong>" + bankBranch + "</strong></td></tr>"
+                    : "";
+            bankTransferSection =
+                    "<hr style=\"margin:30px 0;border:none;border-top:1px solid #e5e5e5;\">"
+                    + "<h2 style=\"font-size:18px;font-weight:bold;margin:0 0 16px;\">Thông tin chuyển khoản</h2>"
+                    + "<table cellpadding=\"0\" cellspacing=\"0\">"
+                    + "<tr><td style=\"padding:6px 16px 6px 0;color:#888;font-size:14px;\">Chủ tài khoản:</td>"
+                        + "<td style=\"padding:6px 0;font-size:14px;\"><strong>" + bankAccountName + "</strong></td></tr>"
+                    + "<tr><td style=\"padding:6px 16px 6px 0;color:#888;font-size:14px;\">Ngân hàng:</td>"
+                        + "<td style=\"padding:6px 0;font-size:14px;\"><strong>" + bankName + "</strong></td></tr>"
+                    + "<tr><td style=\"padding:6px 16px 6px 0;color:#888;font-size:14px;\">Số tài khoản:</td>"
+                        + "<td style=\"padding:6px 0;font-size:14px;\"><strong>" + bankAccountNumber + "</strong></td></tr>"
+                    + branchRow
+                    + "<tr><td style=\"padding:6px 16px 6px 0;color:#888;font-size:14px;\">Nội dung CK:</td>"
+                        + "<td style=\"padding:6px 0;font-size:14px;\"><strong>" + transferNote + "</strong></td></tr>"
+                    + "</table>";
+        }
+
+        // Order note section (optional)
+        String noteSection = "";
+        if (order.getOrderNote() != null && !order.getOrderNote().isBlank()) {
+            noteSection =
+                    "<hr style=\"margin:30px 0;border:none;border-top:1px solid #e5e5e5;\">"
+                    + "<h2 style=\"font-size:18px;font-weight:bold;margin:0 0 12px;\">Ghi chú đơn hàng</h2>"
+                    + "<p style=\"font-size:14px;line-height:1.8;margin:0;\">" + escapeHtml(order.getOrderNote()) + "</p>";
+        }
+
+        String receiverEmailRow = !receiverEmail.isBlank()
+                ? "<tr><td style=\"padding:6px 16px 6px 0;color:#888;font-size:14px;\">Email:</td>"
+                    + "<td style=\"padding:6px 0;font-size:14px;\">" + escapeHtml(receiverEmail) + "</td></tr>"
+                : "";
+        String receiverAddressRow = !fullAddress.isBlank()
+                ? "<tr><td style=\"padding:6px 16px 6px 0;color:#888;font-size:14px;\">Địa chỉ:</td>"
+                    + "<td style=\"padding:6px 0;font-size:14px;\">" + escapeHtml(fullAddress) + "</td></tr>"
+                : "";
+
+        String bodyIntro = "<p style=\"font-size:15px;margin:0 0 10px;\">Xin chào " + escapeHtml(greeting) + ",</p>"
+                + "<p style=\"line-height:1.8;font-size:14px;margin:0 0 16px;color:#555;\">" + escapeHtml(introText) + "</p>";
+
+        String deliverySection = "<hr style=\"margin:30px 0;border:none;border-top:1px solid #e5e5e5;\">"
+                + "<h2 style=\"font-size:18px;font-weight:bold;margin:0 0 16px;\">Thông tin giao hàng</h2>"
+                + "<table cellpadding=\"0\" cellspacing=\"0\">"
+                + "<tr><td style=\"padding:6px 16px 6px 0;color:#888;font-size:14px;\">Người nhận:</td>"
+                    + "<td style=\"padding:6px 0;font-size:14px;\"><strong>" + escapeHtml(receiverName) + "</strong></td></tr>"
+                + "<tr><td style=\"padding:6px 16px 6px 0;color:#888;font-size:14px;\">Số điện thoại:</td>"
+                    + "<td style=\"padding:6px 0;font-size:14px;\">" + escapeHtml(receiverPhone) + "</td></tr>"
+                + receiverEmailRow
+                + receiverAddressRow
+                + "</table>";
+
+        return buildOrderEmailTemplate(
+                "Xác nhận đơn hàng - Maison Art",
+                "Cảm ơn bạn đã đặt hàng",
+                bodyIntro,
+                order,
+                orderDate,
+                orderStateName,
+                paymentMethodDisplay,
+                subtotal,
+                discountLabel,
+                shipping,
+                total,
+                bankTransferSection,
+                deliverySection,
+                noteSection,
+                "<div style=\"margin-top:40px;text-align:center;line-height:1.8;color:#888;font-size:13px;\">"
+                        + "<p style=\"margin:0 0 6px;\">Cảm ơn bạn đã mua hàng tại <strong style=\"color:#333;\">Maison Art</strong>!</p>"
+                        + "<p style=\"margin:0;\">Cần hỗ trợ? Liên hệ: "
+                        + "<a href=\"mailto:dinhha.hrc@gmail.com\" style=\"color:#333;text-decoration:underline;\">dinhha.hrc@gmail.com</a>"
+                        + "</p>"
+                        + "</div>");
     }
-    
+
     /**
      * Build email subject for order notification
      * @param order Order details
@@ -1295,97 +1403,331 @@ public class OrderServiceImpl implements OrderService {
     private String buildOrderEmailContent(OrderDto order) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
         String orderTime = order.getCreatedDt().format(formatter);
-        String orderType = (order.getUserId() != null) ? "KHÁCH HÀNG ĐĂNG KÝ" : "KHÁCH VÃNG LAI";
-        
-        // Build order items summary
-        StringBuilder itemsBuilder = new StringBuilder();
-        if (order.getOrderItems() != null && !order.getOrderItems().isEmpty()) {
-            for (OrderItemDto item : order.getOrderItems()) {
-                itemsBuilder.append(String.format("    • %s (x%d) - %s\n",
-                    item.getProductName() != null ? item.getProductName() : "Sản phẩm",
-                    item.getQuantity(),
-                    formatCurrency(item.getUnitPrice().multiply(new BigDecimal(item.getQuantity())))));
+        String orderType = (order.getUserId() != null) ? "Khách hàng đăng ký" : "Khách vãng lai";
+
+        String paymentMethod = order.getPaymentMethod() != null ? order.getPaymentMethod() : "";
+        String paymentMethodDisplay;
+        if ("BANK_TRANSFER".equalsIgnoreCase(paymentMethod)) {
+            paymentMethodDisplay = "Chuyển khoản qua ngân hàng";
+        } else if ("COD".equalsIgnoreCase(paymentMethod)) {
+            paymentMethodDisplay = "Thanh toán khi nhận hàng (COD)";
+        } else {
+            paymentMethodDisplay = paymentMethod;
+        }
+
+        BigDecimal subtotal = order.getSubtotalAmount() != null ? order.getSubtotalAmount() : BigDecimal.ZERO;
+        BigDecimal discount = order.getDiscountAmount() != null ? order.getDiscountAmount() : BigDecimal.ZERO;
+        BigDecimal shipping = order.getShippingFeeAmount() != null ? order.getShippingFeeAmount() : BigDecimal.ZERO;
+        BigDecimal total = order.getTotalAmount() != null ? order.getTotalAmount() : BigDecimal.ZERO;
+        String discountCode = (order.getDiscountCode() != null && !order.getDiscountCode().isBlank())
+                ? " (" + order.getDiscountCode() + ")" : "";
+        String discountLabel = discount.compareTo(BigDecimal.ZERO) > 0
+                ? "-" + formatCurrency(discount) + discountCode
+                : "Không có";
+
+        String orderStateName = (order.getOrderState() != null && order.getOrderState().getOrderStateDisplayName() != null)
+                ? order.getOrderState().getOrderStateDisplayName()
+                : (order.getOrderStateName() != null ? order.getOrderStateName() : "Đang xử lý");
+
+        String receiverName = order.getReceiverName() != null ? order.getReceiverName() : "Chưa cập nhật";
+        String receiverPhone = order.getReceiverPhone() != null ? order.getReceiverPhone() : "Chưa cập nhật";
+        String receiverEmail = order.getReceiverEmail() != null ? order.getReceiverEmail() : "";
+
+        List<String> addrParts = new ArrayList<>();
+        if (order.getAddressLine() != null && !order.getAddressLine().isBlank()) addrParts.add(order.getAddressLine());
+        if (order.getWard() != null && !order.getWard().isBlank()) addrParts.add(order.getWard());
+        if (order.getCity() != null && !order.getCity().isBlank()) addrParts.add(order.getCity());
+        if (order.getCountry() != null && !order.getCountry().isBlank()) addrParts.add(order.getCountry());
+        String deliveryAddress = addrParts.isEmpty() ? "Chưa cập nhật" : String.join(", ", addrParts);
+
+        String sessionInfo = order.getSessionId() != null && !order.getSessionId().isBlank()
+                ? "<tr><td style=\"padding:6px 16px 6px 0;color:#888;font-size:14px;\">Session ID:</td>"
+                    + "<td style=\"padding:6px 0;font-size:14px;\">" + escapeHtml(order.getSessionId()) + "</td></tr>"
+                : "";
+
+        String adminIntro = "<p style=\"font-size:15px;margin:0 0 10px;\">Một đơn hàng mới vừa được tạo trên hệ thống Maison Art.</p>"
+                + "<p style=\"line-height:1.8;font-size:14px;margin:0 0 16px;color:#555;\">"
+                + "Vui lòng kiểm tra thông tin thanh toán, xác nhận đơn hàng và tiếp tục quy trình xử lý giao hàng cho khách."
+                + "</p>";
+
+        String adminInfoSection = "<hr style=\"margin:30px 0;border:none;border-top:1px solid #e5e5e5;\">"
+                + "<h2 style=\"font-size:18px;font-weight:bold;margin:0 0 16px;\">Thông tin cần xử lý</h2>"
+                + "<table cellpadding=\"0\" cellspacing=\"0\">"
+                + "<tr><td style=\"padding:6px 16px 6px 0;color:#888;font-size:14px;\">Loại khách:</td>"
+                    + "<td style=\"padding:6px 0;font-size:14px;\"><strong>" + escapeHtml(orderType) + "</strong></td></tr>"
+                + "<tr><td style=\"padding:6px 16px 6px 0;color:#888;font-size:14px;\">Khách đặt hàng:</td>"
+                    + "<td style=\"padding:6px 0;font-size:14px;\">" + escapeHtml(defaultString(order.getCustomerName(), "Chưa cập nhật")) + "</td></tr>"
+                + "<tr><td style=\"padding:6px 16px 6px 0;color:#888;font-size:14px;\">Email:</td>"
+                    + "<td style=\"padding:6px 0;font-size:14px;\">" + escapeHtml(defaultString(order.getCustomerEmail(), "Chưa cập nhật")) + "</td></tr>"
+                + "<tr><td style=\"padding:6px 16px 6px 0;color:#888;font-size:14px;\">Số điện thoại:</td>"
+                    + "<td style=\"padding:6px 0;font-size:14px;\">" + escapeHtml(defaultString(order.getCustomerPhoneNumber(), "Chưa cập nhật")) + "</td></tr>"
+                + sessionInfo
+                + "<tr><td style=\"padding:6px 16px 6px 0;color:#888;font-size:14px;\">Người nhận:</td>"
+                    + "<td style=\"padding:6px 0;font-size:14px;\">" + escapeHtml(receiverName) + "</td></tr>"
+                + "<tr><td style=\"padding:6px 16px 6px 0;color:#888;font-size:14px;\">SĐT nhận hàng:</td>"
+                    + "<td style=\"padding:6px 0;font-size:14px;\">" + escapeHtml(receiverPhone) + "</td></tr>"
+                + (!receiverEmail.isBlank()
+                    ? "<tr><td style=\"padding:6px 16px 6px 0;color:#888;font-size:14px;\">Email nhận:</td>"
+                        + "<td style=\"padding:6px 0;font-size:14px;\">" + escapeHtml(receiverEmail) + "</td></tr>"
+                    : "")
+                + "<tr><td style=\"padding:6px 16px 6px 0;color:#888;font-size:14px;\">Địa chỉ giao hàng:</td>"
+                    + "<td style=\"padding:6px 0;font-size:14px;\">" + escapeHtml(deliveryAddress) + "</td></tr>"
+                + "</table>";
+
+        String noteSection = "";
+        if (order.getOrderNote() != null && !order.getOrderNote().trim().isEmpty()) {
+            noteSection = "<hr style=\"margin:30px 0;border:none;border-top:1px solid #e5e5e5;\">"
+                    + "<h2 style=\"font-size:18px;font-weight:bold;margin:0 0 12px;\">Ghi chú của khách</h2>"
+                    + "<p style=\"font-size:14px;line-height:1.8;margin:0;\">" + escapeHtml(order.getOrderNote()) + "</p>";
+        }
+
+        return buildOrderEmailTemplate(
+                "Đơn hàng mới - Maison Art",
+                "Đơn hàng mới cần xử lý",
+                adminIntro,
+                order,
+                orderTime,
+                orderStateName,
+                paymentMethodDisplay,
+                subtotal,
+                discountLabel,
+                shipping,
+                total,
+                "",
+                adminInfoSection,
+                noteSection,
+                "<div style=\"margin-top:40px;font-size:13px;color:#888;line-height:1.8;\">"
+                        + "Email này được gửi tự động từ hệ thống Maison Art."
+                        + "</div>");
+    }
+
+    private String buildOrderEmailTemplate(
+            String title,
+            String heading,
+            String introHtml,
+            OrderDto order,
+            String orderDate,
+            String orderStateName,
+            String paymentMethodDisplay,
+            BigDecimal subtotal,
+            String discountLabel,
+            BigDecimal shipping,
+            BigDecimal total,
+            String extraTopSection,
+            String infoSection,
+            String noteSection,
+            String footerHtml) {
+        String safePaymentMethod = paymentMethodDisplay == null || paymentMethodDisplay.isBlank()
+                ? "Chưa cập nhật"
+                : paymentMethodDisplay;
+
+        return "<!DOCTYPE html>"
+                + "<html lang=\"vi\">"
+                + "<head><meta charset=\"UTF-8\"><title>" + escapeHtml(title) + "</title></head>"
+                + "<body style=\"margin:0;padding:0;background:#f7f7f7;font-family:Arial,Helvetica,sans-serif;color:#333333;\">"
+                + "<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#f7f7f7;padding:40px 0;\">"
+                + "<tr><td align=\"center\">"
+                + "<table width=\"620\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#ffffff;border-radius:6px;padding:40px;\">"
+                + "<tr><td>"
+                + "<p style=\"font-size:13px;margin:0 0 14px;color:#888;\">Maison Art</p>"
+                + "<h1 style=\"font-size:26px;font-weight:bold;margin:0 0 18px;color:#222;\">" + escapeHtml(heading) + "</h1>"
+                + introHtml
+                + "<p style=\"font-size:13px;color:#888;margin:0 0 4px;\">"
+                    + "Đơn hàng: <strong style=\"color:#333;\">#" + escapeHtml(order.getOrderCode()) + "</strong>"
+                    + " &nbsp;|&nbsp; " + escapeHtml(orderDate)
+                    + " &nbsp;|&nbsp; " + escapeHtml(orderStateName)
+                + "</p>"
+                + defaultString(extraTopSection, "")
+                + "<hr style=\"margin:30px 0;border:none;border-top:1px solid #e5e5e5;\">"
+                + "<h2 style=\"font-size:18px;font-weight:bold;margin:0 0 16px;\">Chi tiết sản phẩm</h2>"
+                + buildOrderItemsHtml(order)
+                + "<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin-top:16px;\">"
+                + "<tr>"
+                    + "<td style=\"padding:6px 0;font-size:14px;color:#888;\">Tạm tính:</td>"
+                    + "<td align=\"right\" style=\"padding:6px 0;font-size:14px;\">" + formatCurrency(subtotal) + "</td>"
+                + "</tr>"
+                + "<tr>"
+                    + "<td style=\"padding:6px 0;font-size:14px;color:#888;\">Giảm giá:</td>"
+                    + "<td align=\"right\" style=\"padding:6px 0;font-size:14px;\">" + discountLabel + "</td>"
+                + "</tr>"
+                + "<tr>"
+                    + "<td style=\"padding:6px 0;font-size:14px;color:#888;\">Phí vận chuyển:</td>"
+                    + "<td align=\"right\" style=\"padding:6px 0;font-size:14px;\">" + formatCurrency(shipping) + "</td>"
+                + "</tr>"
+                + "<tr><td colspan=\"2\" style=\"padding:4px 0;\">"
+                    + "<hr style=\"border:none;border-top:1px solid #e5e5e5;margin:6px 0;\">"
+                + "</td></tr>"
+                + "<tr>"
+                    + "<td style=\"padding:6px 0;font-size:16px;font-weight:bold;\">Tổng cộng:</td>"
+                    + "<td align=\"right\" style=\"padding:6px 0;font-size:16px;font-weight:bold;\">" + formatCurrency(total) + "</td>"
+                + "</tr>"
+                + "<tr>"
+                    + "<td colspan=\"2\" style=\"padding:8px 0 0;font-size:13px;color:#888;\">"
+                        + "Phương thức thanh toán: <strong style=\"color:#333;\">" + escapeHtml(safePaymentMethod) + "</strong>"
+                    + "</td>"
+                + "</tr>"
+                + "</table>"
+                + defaultString(infoSection, "")
+                + defaultString(noteSection, "")
+                + defaultString(footerHtml, "")
+                + "</td></tr></table></td></tr></table></body></html>";
+    }
+
+    private String buildOrderItemsHtml(OrderDto order) {
+        List<OrderItemDto> itemList = getOrderItemsForEmail(order);
+        String apiBase = mailConfiguration.getSystemWebsite().replaceAll("/$", "");
+        String storagePath = policyService.findPolicyByName("STORAGE_PATH")
+                .map(p -> p.getPolicyValue() != null ? p.getPolicyValue().replaceAll("/$", "") : "")
+                .orElse("");
+
+        StringBuilder itemsHtml = new StringBuilder();
+        itemsHtml.append("<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"table-layout:fixed;border-collapse:collapse;\">");
+        itemsHtml.append("<tr>")
+                .append("<th style=\"text-align:left;padding:8px 0;border-bottom:2px solid #e5e5e5;font-size:12px;color:#888;width:70px;\"></th>")
+                .append("<th style=\"text-align:left;padding:8px 12px 8px 0;border-bottom:2px solid #e5e5e5;font-size:12px;color:#888;width:56%;\">Sản phẩm</th>")
+                .append("<th style=\"text-align:center;padding:8px 0;border-bottom:2px solid #e5e5e5;font-size:12px;color:#888;width:12%;white-space:nowrap;\">SL</th>")
+                .append("<th style=\"text-align:right;padding:8px 0;border-bottom:2px solid #e5e5e5;font-size:12px;color:#888;width:22%;white-space:nowrap;\">Thành tiền</th>")
+                .append("</tr>");
+
+        if (itemList != null && !itemList.isEmpty()) {
+            for (OrderItemDto item : itemList) {
+                BigDecimal rowTotal = (item.getUnitPrice() != null && item.getQuantity() != null)
+                        ? item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity()))
+                        : BigDecimal.ZERO;
+
+                String imgUrl = resolvePrimaryProductImageUrl(item.getProductId(), apiBase, storagePath);
+                String imgCell = imgUrl != null
+                        ? "<td style=\"padding:12px 10px 12px 0;border-bottom:1px solid #e5e5e5;width:70px;vertical-align:middle;\">"
+                            + "<img src=\"" + imgUrl + "\" alt=\"\" width=\"60\" height=\"60\" style=\"border-radius:4px;display:block;object-fit:cover;\"></td>"
+                        : "<td style=\"padding:12px 10px 12px 0;border-bottom:1px solid #e5e5e5;width:70px;\"></td>";
+
+                String productName = escapeHtml(defaultString(item.getProductName(), "Sản phẩm"));
+                String attributesHtml = buildOrderItemAttributesHtml(item);
+
+                itemsHtml.append("<tr>")
+                        .append(imgCell)
+                        .append("<td style=\"padding:12px 12px 12px 0;border-bottom:1px solid #e5e5e5;font-size:14px;vertical-align:top;\">")
+                        .append("<div style=\"max-width:320px;line-height:1.45;word-break:break-word;overflow-wrap:anywhere;\">")
+                        .append(productName)
+                        .append(attributesHtml)
+                        .append("</div>")
+                        .append("</td>")
+                        .append("<td align=\"center\" style=\"padding:12px 0;border-bottom:1px solid #e5e5e5;font-size:14px;white-space:nowrap;\">&times;")
+                        .append(item.getQuantity() != null ? item.getQuantity() : 0)
+                        .append("</td>")
+                        .append("<td align=\"right\" style=\"padding:12px 0;border-bottom:1px solid #e5e5e5;font-size:14px;white-space:nowrap;\">")
+                        .append(formatCurrency(rowTotal))
+                        .append("</td>")
+                        .append("</tr>");
             }
         } else {
-            itemsBuilder.append("    • Thông tin sản phẩm đang được cập nhật\n");
+            itemsHtml.append("<tr><td colspan=\"4\" style=\"padding:15px 0;border-bottom:1px solid #e5e5e5;color:#888;font-size:14px;\">Thông tin sản phẩm đang được cập nhật</td></tr>");
         }
-        
-        return String.format("""
-            THÔNG BÁO ĐƠN HÀNG MỚI
-            ═══════════════════════════════════════════════════════════════
-            
-            📋 THÔNG TIN ĐƠN HÀNG:
-            • Mã đơn hàng: %s
-            • Loại khách hàng: %s
-            • Thời gian đặt: %s
-            • Trạng thái: %s
-            %s
-            
-            👤 THÔNG TIN KHÁCH HÀNG:
-            • Tên: %s
-            • Email: %s
-            • Số điện thoại: %s
-            • Địa chỉ: %s
-            
-            📦 THÔNG TIN GIAO HÀNG:
-            • Người nhận: %s
-            • Số điện thoại: %s
-            • Email nhận: %s
-            • Địa chỉ giao hàng: %s, %s, %s, %s
-            
-            🛒 CHI TIẾT SẢN PHẨM:
-            %s
-            
-            💰 TỔNG KẾT THANH TOÁN:
-            • Tạm tính: %s
-            • Giảm giá: -%s (%s)
-            • Phí vận chuyển: %s
-            • ───────────────────────────────────────
-            • TỔNG CỘNG: %s
-            
-            📝 GHI CHÚ:
-            %s
-            
-            🔧 YÊU CẦU XỬ LÝ:
-            • Kiểm tra và xác nhận đơn hàng trong hệ thống
-            • Liên hệ khách hàng để xác nhận thông tin giao hàng
-            • Chuẩn bị hàng hóa và sắp xếp giao hàng
-            • Cập nhật trạng thái đơn hàng trong hệ thống
-            
-            ⚠️ LƯU Ý:
-            • Email này được gửi tự động từ hệ thống Art and Decor
-            • Vui lòng xử lý đơn hàng trong thời gian sớm nhất
-            • Liên hệ khách hàng để xác nhận chi tiết giao hàng
-            
-            ═══════════════════════════════════════════════════════════════
-            Hệ thống Art and Decor - %s
-            """,
-            order.getOrderCode(),
-            orderType,
-            orderTime,
-            order.getOrderState() != null ? order.getOrderState().getOrderStateDisplayName() : "Đang xử lý",
-            order.getSessionId() != null ? "\n• Session ID: " + order.getSessionId() : "",
-            order.getCustomerName() != null ? order.getCustomerName() : "Chưa cập nhật",
-            order.getCustomerEmail() != null ? order.getCustomerEmail() : "Chưa cập nhật", 
-            order.getCustomerPhoneNumber() != null ? order.getCustomerPhoneNumber() : "Chưa cập nhật",
-            order.getCustomerAddress() != null ? order.getCustomerAddress() : "Chưa cập nhật",
-            order.getReceiverName() != null ? order.getReceiverName() : "Chưa cập nhật",
-            order.getReceiverPhone() != null ? order.getReceiverPhone() : "Chưa cập nhật",
-            order.getReceiverEmail() != null ? order.getReceiverEmail() : "Chưa cập nhật",
-            order.getAddressLine() != null ? order.getAddressLine() : "Chưa cập nhật",
-            order.getWard() != null ? order.getWard() : "",
-            order.getCity() != null ? order.getCity() : "",
-            order.getCountry() != null ? order.getCountry() : "Việt Nam",
-            itemsBuilder.toString(),
-            formatCurrency(order.getSubtotalAmount()),
-            formatCurrency(order.getDiscountAmount()),
-            order.getDiscountCode() != null ? order.getDiscountCode() : "Không có",
-            formatCurrency(order.getShippingFeeAmount()),
-            formatCurrency(order.getTotalAmount()),
-            order.getOrderNote() != null && !order.getOrderNote().trim().isEmpty() 
-                ? order.getOrderNote() : "Không có ghi chú đặc biệt",
-            orderTime
-        );
+
+        itemsHtml.append("</table>");
+        return itemsHtml.toString();
+    }
+
+    private List<OrderItemDto> getOrderItemsForEmail(OrderDto order) {
+        List<OrderItemDto> itemList = order.getOrderItems();
+        if ((itemList == null || itemList.isEmpty()) && order.getOrderId() != null) {
+            try {
+                List<OrderItem> rawItems = orderItemRepository.findByOrderOrderId(order.getOrderId());
+                if (!rawItems.isEmpty()) {
+                    itemList = rawItems.stream()
+                            .map(orderMapperUtil::mapToDto)
+                            .collect(Collectors.toList());
+                }
+            } catch (Exception e) {
+                logger.debug("Could not load order items for order {}: {}", order.getOrderId(), e.getMessage());
+            }
+        }
+        return itemList;
+    }
+
+    private String resolvePrimaryProductImageUrl(Long productId, String apiBase, String storagePath) {
+        if (productId == null) {
+            return null;
+        }
+
+        try {
+            Product prod = productRepository.findById(productId).orElse(null);
+            if (prod != null && prod.getProductImages() != null) {
+                for (ProductImage productImage : prod.getProductImages()) {
+                    if (Boolean.TRUE.equals(productImage.getProductImagePrimary())
+                            && productImage.getImage() != null
+                            && productImage.getImage().getPathFile() != null) {
+                        return apiBase + "/api/images/file" + storagePath + productImage.getImage().getPathFile();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            logger.debug("Could not load product image for product ID {}: {}", productId, e.getMessage());
+        }
+
+        return null;
+    }
+
+    private String buildOrderItemAttributesHtml(OrderItemDto item) {
+        List<Map<String, Object>> attributes = parseOrderItemAttributes(item.getProductAttrJson());
+        if (attributes.isEmpty()) {
+            return "";
+        }
+
+        StringBuilder html = new StringBuilder();
+        html.append("<div style=\"margin-top:6px;font-size:12px;color:#666;line-height:1.6;\">");
+        for (Map<String, Object> attribute : attributes) {
+            String attributeName = stringValue(attribute.get("attributeName"));
+            String attributeValue = stringValue(attribute.get("attributeValue"));
+            if (attributeName.isBlank() && attributeValue.isBlank()) {
+                continue;
+            }
+
+            html.append("<div>");
+            if (!attributeName.isBlank()) {
+                html.append("<span style=\"color:#888;\">")
+                        .append(escapeHtml(attributeName))
+                        .append(":</span> ");
+            }
+            html.append("<span>")
+                    .append(escapeHtml(attributeValue))
+                    .append("</span></div>");
+        }
+        html.append("</div>");
+        return html.toString();
+    }
+
+    private List<Map<String, Object>> parseOrderItemAttributes(String productAttrJson) {
+        if (productAttrJson == null || productAttrJson.isBlank() || "[]".equals(productAttrJson)) {
+            return Collections.emptyList();
+        }
+
+        try {
+            return OBJECT_MAPPER.readValue(productAttrJson, new TypeReference<List<Map<String, Object>>>() {});
+        } catch (Exception e) {
+            logger.debug("Could not parse order item attribute JSON: {}", e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    private String defaultString(String value, String fallback) {
+        return value != null ? value : fallback;
+    }
+
+    private String stringValue(Object value) {
+        return value != null ? String.valueOf(value) : "";
+    }
+
+    private String escapeHtml(String input) {
+        if (input == null) {
+            return "";
+        }
+
+        return input.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#39;");
     }
     
     /**
