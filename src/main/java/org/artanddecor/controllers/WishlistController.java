@@ -126,9 +126,9 @@ public class WishlistController {
         description = "Remove a specific item from wishlist using wishlist ID. Performs hard delete operation."
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Product removed from wishlist successfully",
+        @ApiResponse(responseCode = "200", description = "Xoá sản phẩm khỏi danh sách yêu thích thành công",
             content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
-        @ApiResponse(responseCode = "404", description = "Wishlist item not found",
+        @ApiResponse(responseCode = "404", description = "Không tìm thấy mục yêu thích",
             content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
         @ApiResponse(responseCode = "400", description = "System error occurred",
             content = @Content(schema = @Schema(implementation = BaseResponseDto.class)))
@@ -143,7 +143,7 @@ public class WishlistController {
         try {
             wishlistService.removeFromWishlist(wishlistId);
             return ResponseEntity.ok(BaseResponseDto.success(
-                    "Product removed from wishlist successfully",
+                    "Xoá sản phẩm khỏi danh sách yêu thích thành công.",
                     null));
         } catch (RuntimeException e) {
             logger.warn("Wishlist item not found: {}", e.getMessage());
@@ -152,7 +152,7 @@ public class WishlistController {
         } catch (Exception e) {
             logger.error("Error removing product from wishlist: {}", e.getMessage(), e);
             return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(
-                    "Failed to remove product from wishlist: " + e.getMessage()));
+                    "Không thể xoá sản phẩm khỏi danh sách yêu thích."));
         }
     }
 }

@@ -1,6 +1,7 @@
 package org.artanddecor.services;
 
 import org.artanddecor.dto.DiscountDto;
+import org.artanddecor.dto.DiscountRequestDto;
 import org.artanddecor.dto.DiscountTypeDto;
 import org.artanddecor.dto.DiscountValidationResult;
 import org.springframework.data.domain.Page;
@@ -59,18 +60,18 @@ public interface DiscountService {
 
     /**
      * Create new discount
-     * @param discountDto Discount data
+     * @param discountRequestDto Discount data
      * @return Created discount
      */
-    DiscountDto createDiscount(DiscountDto discountDto);
+    DiscountDto createDiscount(DiscountRequestDto discountRequestDto);
 
     /**
      * Update existing discount
      * @param discountId Discount ID
-     * @param discountDto Updated discount data
+     * @param discountRequestDto Updated discount data
      * @return Updated discount
      */
-    DiscountDto updateDiscount(Long discountId, DiscountDto discountDto);
+    DiscountDto updateDiscount(Long discountId, DiscountRequestDto discountRequestDto);
 
     /**
      * Delete discount

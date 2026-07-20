@@ -38,7 +38,7 @@ public class OrderServiceImpl implements OrderService {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     
     // Default shipping fee configuration - can be moved to application.properties later
-    private static final BigDecimal DEFAULT_SHIPPING_FEE = BigDecimal.valueOf(50000); // 50,000 VND
+    private static final BigDecimal DEFAULT_SHIPPING_FEE = BigDecimal.valueOf(0); // 0 VND
 
     @Autowired
     private OrderRepository orderRepository;
@@ -167,46 +167,23 @@ public class OrderServiceImpl implements OrderService {
         
         // Validate inventory and collect warnings
         for (CartItem item : cartItems) {
-            // Check if product is active and available
-            Product product = item.getProduct();
-            if (!product.getProductEnabled()) {
-                errors.add("Product '" + product.getProductName() + "' is no longer available");
-            }
-            
-            // Check stock (if you have inventory management)
-            // Add your inventory check logic here
+            validateCartItemInventory(item, errors);
         }
         
-        // Calculate discount - Use snapshot approach (no automatic discount selection)
-        BigDecimal discountAmount = BigDecimal.ZERO;
-        DiscountDto appliedDiscount = null;
-        String discountMessage = "No discount applied";
-        
-        // Auto-select best discount for subtotal amount (enabled discounts only)
-        AutoDiscountResult autoDiscountResult = applyBestAvailableDiscount(subtotalAmount);
-        appliedDiscount = autoDiscountResult.appliedDiscount;
-        discountAmount = autoDiscountResult.discountAmount;
+        // Calculate discount using the same rules as checkout
+        DiscountCalculationResult discountResult = calculateOrderDiscount(cartItems, subtotalAmount, request.getDiscountCode());
+        BigDecimal discountAmount = discountResult.discountAmount;
+        DiscountDto appliedDiscount = discountResult.appliedDiscount;
+        String discountMessage = discountResult.discountMessage;
 
-        /*DiscountDto bestDiscount = findBestDiscountForOrder(subtotalAmount);
-        if (bestDiscount != null) {
-            try {
-                appliedDiscount = bestDiscount;
-                discountAmount = discountService.calculateDiscountAmount(bestDiscount.getDiscountId(), subtotalAmount);
-                discountMessage = "Best discount '" + bestDiscount.getDiscountCode() + "' automatically applied";
-                logger.info("Auto-applied best discount {} with amount {} for order amount {}", 
-                        bestDiscount.getDiscountCode(), discountAmount, subtotalAmount);
-            } catch (Exception e) {
-                logger.warn("Failed to apply auto discount: {}", e.getMessage());
-                warnings.add("Could not apply best available discount: " + e.getMessage());
-            }
-        }*/
-        
-        // Calculate shipping fee
-        BigDecimal shippingFeeAmount = BigDecimal.ZERO;
-        ShippingFeeDto appliedShippingFee = null;
-        String shippingMessage = "Standard shipping";
-        
-        try {
+
+        // AUTO-CALCULATE OPTIMAL SHIPPING FEE (phí ship tối ưu cho khách hàng)
+        ShippingFeeCalculationResult shippingResult = calculateOrderShippingFee(subtotalAmount);
+        BigDecimal shippingFeeAmount = shippingResult.shippingFeeAmount;
+        ShippingFeeDto appliedShippingFee = shippingResult.appliedShippingFee;
+        String shippingMessage = shippingResult.shippingMessage;
+
+        /*try {
             // Calculate shipping fee based on subtotal amount only
             appliedShippingFee = shippingFeeService.calculateShippingFee(subtotalAmount);
             
@@ -223,8 +200,8 @@ public class OrderServiceImpl implements OrderService {
             logger.warn("Failed to calculate shipping fee, using default: {}", e.getMessage());
             shippingFeeAmount = DEFAULT_SHIPPING_FEE;
             shippingMessage = "Standard shipping fee applied";
-        }
-        
+        }*/
+
         // Calculate final total
         BigDecimal totalAmount = subtotalAmount.subtract(discountAmount).add(shippingFeeAmount);
         
@@ -378,53 +355,23 @@ public class OrderServiceImpl implements OrderService {
         BigDecimal subtotalAmount = cartItems.stream()
                 .map(item -> item.calculateUnitPrice().multiply(new BigDecimal(item.getCartItemQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        List<String> inventoryErrors = new ArrayList<>();
+        for (CartItem cartItem : cartItems) {
+            validateCartItemInventory(cartItem, inventoryErrors);
+        }
+        if (!inventoryErrors.isEmpty()) {
+            throw new IllegalStateException(String.join("; ", inventoryErrors));
+        }
         
         Long cartId = cart.getCartId();
         
-        // AUTO-APPLY BEST DISCOUNT (giá được giảm nhiều nhất cho khách hàng)
-        BigDecimal discountAmount = BigDecimal.ZERO;
-        DiscountDto appliedDiscount = null;
-        
-        if (request.hasManualDiscountCode()) {
-            // Use manual discount code if provided
-            try {
-                List<Long> productIds = cartItems.stream()
-                        .map(item -> item.getProduct().getProductId())
-                        .collect(Collectors.toList());
-                        
-                DiscountValidationResult validationResult = discountService.validateDiscountCode(
-                        request.getDiscountCode(), subtotalAmount, productIds);
-                        
-                if (validationResult != null && validationResult.isValid()) {
-                    appliedDiscount = discountService.getDiscountByCode(validationResult.getDiscountCode());
-                    discountAmount = validationResult.getDiscountAmount();
-                    logger.info("Manual discount applied - Code: {}, Amount: {}", appliedDiscount.getDiscountCode(), discountAmount);
-                }
-            } catch (Exception e) {
-                logger.warn("Failed to apply manual discount code: {}", e.getMessage());
-            }
-        } else {
-            // AUTO-SELECT BEST DISCOUNT (giá được giảm nhiều nhất cho khách hàng)
-            AutoDiscountResult autoDiscountResult = applyBestAvailableDiscount(subtotalAmount);
-            appliedDiscount = autoDiscountResult.appliedDiscount;
-            discountAmount = autoDiscountResult.discountAmount;
-        }
-        
-        // AUTO-CALCULATE OPTIMAL SHIPPING FEE (phí ship tối ưu cho khách hàng)
-        BigDecimal shippingFeeAmount = BigDecimal.ZERO;
-        try {   
-            ShippingFeeDto shippingFee = shippingFeeService.calculateShippingFee(subtotalAmount);
-            if (shippingFee != null && shippingFee.getShippingFeeValue() != null) {
-                shippingFeeAmount = shippingFee.getShippingFeeValue();
-                logger.info("Optimal shipping fee calculated: {} ({})", shippingFeeAmount, shippingFee.getShippingFeeDisplayName() != null ? shippingFee.getShippingFeeDisplayName() : "Standard shipping");
-            } else {
-                shippingFeeAmount = DEFAULT_SHIPPING_FEE;
-                logger.info("Using default shipping fee: {}", shippingFeeAmount);
-            }
-        } catch (Exception e) {
-            logger.warn("Error calculating shipping fee, using default: {}", e.getMessage());
-            shippingFeeAmount = DEFAULT_SHIPPING_FEE;
-        }
+        DiscountCalculationResult discountResult = calculateOrderDiscount(cartItems, subtotalAmount, request.getDiscountCode());
+        BigDecimal discountAmount = discountResult.discountAmount;
+        DiscountDto appliedDiscount = discountResult.appliedDiscount;
+
+        ShippingFeeCalculationResult shippingResult = calculateOrderShippingFee(subtotalAmount);
+        BigDecimal shippingFeeAmount = shippingResult.shippingFeeAmount;
         
         // Create order
         Order order = new Order();
@@ -1052,6 +999,125 @@ public class OrderServiceImpl implements OrderService {
         BigDecimal discountAmount = BigDecimal.ZERO;
         boolean success = false;
         String errorMessage = null;
+    }
+
+    /**
+     * Shared discount calculation for preview and checkout flows.
+     */
+    private DiscountCalculationResult calculateOrderDiscount(List<CartItem> cartItems, BigDecimal subtotalAmount, String discountCode) {
+        DiscountCalculationResult result = new DiscountCalculationResult();
+
+        if (discountCode != null && !discountCode.trim().isEmpty()) {
+            try {
+                List<Long> productIds = cartItems.stream()
+                        .map(item -> item.getProduct().getProductId())
+                        .collect(Collectors.toList());
+
+                DiscountValidationResult validationResult = discountService.validateDiscountCode(
+                        discountCode, subtotalAmount, productIds);
+
+                if (validationResult != null && validationResult.isValid()) {
+                    result.appliedDiscount = discountService.getDiscountByCode(validationResult.getDiscountCode());
+                    result.discountAmount = validationResult.getDiscountAmount();
+                    result.discountMessage = "Mã giảm giá " + validationResult.getDiscountCode() + " đã được áp dụng";
+                    if (result.appliedDiscount != null) {
+                        logger.info("Manual discount applied - Code: {}, Amount: {}", result.appliedDiscount.getDiscountCode(), result.discountAmount);
+                    }
+                }
+            } catch (Exception e) {
+                logger.warn("Failed to apply manual discount code: {}", e.getMessage());
+            }
+
+            return result;
+        }
+
+        AutoDiscountResult autoDiscountResult = applyBestAvailableDiscount(subtotalAmount);
+        result.appliedDiscount = autoDiscountResult.appliedDiscount;
+        result.discountAmount = autoDiscountResult.discountAmount;
+        result.discountMessage = result.appliedDiscount != null
+                ? "Đã áp dụng mã giảm giá tự động: " + result.appliedDiscount.getDiscountCode()
+                : "Không có mã giảm giá nào được áp dụng";
+        return result;
+    }
+
+    /**
+     * Shared shipping fee calculation for preview and checkout flows.
+     */
+    private ShippingFeeCalculationResult calculateOrderShippingFee(BigDecimal subtotalAmount) {
+        ShippingFeeCalculationResult result = new ShippingFeeCalculationResult();
+
+        try {
+            ShippingFeeDto shippingFee = shippingFeeService.calculateShippingFee(subtotalAmount);
+            if (shippingFee != null && shippingFee.getShippingFeeValue() != null) {
+                result.appliedShippingFee = shippingFee;
+                result.shippingFeeAmount = shippingFee.getShippingFeeValue();
+                result.shippingMessage = shippingFee.getShippingFeeDisplayName() != null ? shippingFee.getShippingFeeDisplayName() : "Standard shipping";
+                logger.info("Calculated shipping fee: {} ({})", result.shippingFeeAmount, result.shippingMessage);
+            } else {
+                result.shippingFeeAmount = DEFAULT_SHIPPING_FEE;
+                result.shippingMessage = "Miễn phí vận chuyển";
+                logger.info("No specific shipping fee found, using default: {}", result.shippingFeeAmount);
+            }
+        } catch (Exception e) {
+            logger.error("Error calculating shipping fee for subtotal {}: {}", subtotalAmount, e.getMessage());
+            result.shippingFeeAmount = DEFAULT_SHIPPING_FEE;
+            result.shippingMessage = "Miễn phí vận chuyển";
+        }
+
+        return result;
+    }
+
+    /**
+     * Validate whether a cart item can still be purchased based on the current product state and stock.
+     * Uses product-level stock because the cart item schema does not store a product-variant identifier.
+     */
+    private void validateCartItemInventory(CartItem cartItem, List<String> errors) {
+        if (cartItem == null || cartItem.getProduct() == null) {
+            errors.add("A cart item is missing product information");
+            return;
+        }
+
+        Product product = cartItem.getProduct();
+        Integer requestedQuantity = cartItem.getCartItemQuantity() != null ? cartItem.getCartItemQuantity() : 0;
+        Integer availableStock = product.getStockQuantity() != null ? product.getStockQuantity() : 0;
+
+        if (!Boolean.TRUE.equals(product.getProductEnabled())) {
+            errors.add("Product '" + product.getProductName() + "' is no longer available");
+            return;
+        }
+
+        if (product.getProductState() != null && product.getProductState().getProductStateName() != null
+                && !"ACTIVE".equalsIgnoreCase(product.getProductState().getProductStateName())) {
+            errors.add("Product '" + product.getProductName() + "' is not active");
+            return;
+        }
+
+        if (availableStock <= 0) {
+            errors.add("Product '" + product.getProductName() + "' is out of stock");
+            return;
+        }
+
+        if (requestedQuantity > availableStock) {
+            errors.add("Product '" + product.getProductName() + "' only has " + availableStock + " item(s) in stock, but " + requestedQuantity + " were requested");
+        }
+    }
+
+    /**
+     * Shared result for discount calculation.
+     */
+    private static class DiscountCalculationResult {
+        private DiscountDto appliedDiscount;
+        private BigDecimal discountAmount = BigDecimal.ZERO;
+        private String discountMessage = "Không có mã giảm giá nào được áp dụng";
+    }
+
+    /**
+     * Shared result for shipping fee calculation.
+     */
+    private static class ShippingFeeCalculationResult {
+        private ShippingFeeDto appliedShippingFee;
+        private BigDecimal shippingFeeAmount = BigDecimal.ZERO;
+        private String shippingMessage = "Free shipping applied";
     }
     
     /**

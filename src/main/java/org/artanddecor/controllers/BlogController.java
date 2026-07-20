@@ -5,6 +5,7 @@ import org.artanddecor.dto.*;
 import org.artanddecor.services.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -207,6 +208,48 @@ public class BlogController {
         }
     }
 
+    /**
+     * Delete Blog Type
+     * Role: ADMIN only
+     */
+    @DeleteMapping("/types/{blogTypeId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+        summary = "Delete blog type",
+        description = "Delete blog type when no blog category references it.",
+        tags = {"Blog Type Management"}
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<BaseResponseDto<Void>> deleteBlogType(
+            @Parameter(description = "Blog Type ID", required = true)
+            @PathVariable Long blogTypeId) {
+
+        try {
+            blogTypeService.deleteBlogType(blogTypeId);
+            return ResponseEntity.ok(BaseResponseDto.success("Xoá loại bài viết thành công.", null));
+        } catch (IllegalArgumentException e) {
+            logger.error("Delete blog type validation/not-found error: {}", e.getMessage());
+            if (e.getMessage() != null && e.getMessage().startsWith("Không tìm thấy")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(BaseResponseDto.notFound(e.getMessage()));
+            }
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(e.getMessage()));
+        } catch (IllegalStateException e) {
+            logger.error("Delete blog type blocked by references: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(BaseResponseDto.error(HttpStatus.CONFLICT.value(),
+                    buildReferenceConflictMessage("loại bài viết", e.getMessage())));
+        } catch (DataIntegrityViolationException e) {
+            logger.error("Delete blog type blocked by database reference constraint: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(BaseResponseDto.error(HttpStatus.CONFLICT.value(),
+                    buildReferenceConflictMessage("loại bài viết", e.getMessage())));
+        } catch (Exception e) {
+            logger.error("Error deleting blog type: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(BaseResponseDto.serverError("Không thể xoá loại bài viết. Vui lòng thử lại."));
+        }
+    }
+
     // ===== BLOG CATEGORY APIs =====
 
     /**
@@ -360,6 +403,48 @@ public class BlogController {
             logger.error("Error creating blog category: {}", e.getMessage(), e);
             return ResponseEntity.badRequest()
                     .body(BaseResponseDto.badRequest("Failed to create blog category: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Delete Blog Category
+     * Role: ADMIN only
+     */
+    @DeleteMapping("/categories/{blogCategoryId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+        summary = "Delete blog category",
+        description = "Delete blog category when no blog references it.",
+        tags = {"Blog Category Management"}
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<BaseResponseDto<Void>> deleteBlogCategory(
+            @Parameter(description = "Blog Category ID", required = true)
+            @PathVariable Long blogCategoryId) {
+
+        try {
+            blogCategoryService.deleteBlogCategory(blogCategoryId);
+            return ResponseEntity.ok(BaseResponseDto.success("Xoá danh mục bài viết thành công.", null));
+        } catch (IllegalArgumentException e) {
+            logger.error("Delete blog category validation/not-found error: {}", e.getMessage());
+            if (e.getMessage() != null && e.getMessage().startsWith("Không tìm thấy")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(BaseResponseDto.notFound(e.getMessage()));
+            }
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(e.getMessage()));
+        } catch (IllegalStateException e) {
+            logger.error("Delete blog category blocked by references: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(BaseResponseDto.error(HttpStatus.CONFLICT.value(),
+                    buildReferenceConflictMessage("danh mục bài viết", e.getMessage())));
+        } catch (DataIntegrityViolationException e) {
+            logger.error("Delete blog category blocked by database reference constraint: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(BaseResponseDto.error(HttpStatus.CONFLICT.value(),
+                    buildReferenceConflictMessage("danh mục bài viết", e.getMessage())));
+        } catch (Exception e) {
+            logger.error("Error deleting blog category: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(BaseResponseDto.serverError("Không thể xoá danh mục bài viết. Vui lòng thử lại."));
         }
     }
 
@@ -551,5 +636,57 @@ public class BlogController {
             return ResponseEntity.badRequest()
                     .body(BaseResponseDto.badRequest("Failed to create blog: " + e.getMessage()));
         }
+    }
+
+    /**
+     * Delete Blog
+     * Role: ADMIN only
+     */
+    @DeleteMapping("/{blogId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+        summary = "Delete blog",
+        description = "Delete blog by ID after validating existence.",
+        tags = {"Blog Management"}
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<BaseResponseDto<Void>> deleteBlog(
+            @Parameter(description = "Blog ID", required = true)
+            @PathVariable Long blogId) {
+
+        try {
+            blogService.deleteBlog(blogId);
+            return ResponseEntity.ok(BaseResponseDto.success("Xoá bài viết thành công.", null));
+        } catch (IllegalArgumentException e) {
+            logger.error("Delete blog validation/not-found error: {}", e.getMessage());
+            if (e.getMessage() != null && e.getMessage().startsWith("Không tìm thấy")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(BaseResponseDto.notFound(e.getMessage()));
+            }
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(e.getMessage()));
+        } catch (IllegalStateException e) {
+            logger.error("Delete blog blocked by references: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(BaseResponseDto.error(HttpStatus.CONFLICT.value(),
+                            buildReferenceConflictMessage("bài viết", e.getMessage())));
+        } catch (DataIntegrityViolationException e) {
+            logger.error("Delete blog blocked by database reference constraint: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(BaseResponseDto.error(HttpStatus.CONFLICT.value(),
+                            buildReferenceConflictMessage("bài viết", e.getMessage())));
+        } catch (Exception e) {
+            logger.error("Error deleting blog: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(BaseResponseDto.serverError("Không thể xoá bài viết. Vui lòng thử lại."));
+        }
+    }
+
+    private String buildReferenceConflictMessage(String entityDisplayName, String detail) {
+        String message = "Không thể xoá " + entityDisplayName +
+                " vì bản ghi này đang được tham chiếu bởi dữ liệu liên quan. " +
+                "Vui lòng kiểm tra và xử lý dữ liệu phụ thuộc trước khi thử lại.";
+        if (detail != null && !detail.isBlank()) {
+            message = message + " Chi tiết: " + detail;
+        }
+        return message;
     }
 }

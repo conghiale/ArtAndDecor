@@ -19,32 +19,32 @@ public class UpdateOrderRequest {
     
     private Long orderStateId; // Optional - if provided, order state will be updated and history created
     
-    @Size(max = 255, message = "Customer name must not exceed 255 characters")
+    @Size(max = 255, message = "Tên khách hàng không được vượt quá 255 ký tự")
     private String customerName;
     
-    @Size(max = 20, message = "Customer phone number must not exceed 20 characters")
+    @Size(max = 20, message = "Số điện thoại khách hàng không được vượt quá 20 ký tự")
     private String customerPhoneNumber;
     
-    @Size(max = 255, message = "Customer email must not exceed 255 characters")
+    @Size(max = 255, message = "Email khách hàng không được vượt quá 255 ký tự")
     private String customerEmail;
     
-    @Size(max = 500, message = "Customer address must not exceed 500 characters")
+    @Size(max = 500, message = "Địa chỉ khách hàng không được vượt quá 500 ký tự")
     private String customerAddress;
     
-    @Size(max = 255, message = "Receiver name must not exceed 255 characters")
+    @Size(max = 255, message = "Tên người nhận không được vượt quá 255 ký tự")
     private String receiverName;
     
-    @Size(max = 20, message = "Receiver phone must not exceed 20 characters")
+    @Size(max = 20, message = "Số điện thoại người nhận không được vượt quá 20 ký tự")
     private String receiverPhone;
     
-    @Size(max = 255, message = "Receiver email must not exceed 255 characters")
+    @Size(max = 255, message = "Email người nhận không được vượt quá 255 ký tự")
     private String receiverEmail;
     
-    @Size(max = 500, message = "Receiver address must not exceed 500 characters")
+    @Size(max = 500, message = "Địa chỉ người nhận không được vượt quá 500 ký tự")
     private String receiverAddress;
     
     private BigDecimal shippingFeeAmount; // Optional - admin can adjust shipping fee
     
-    @Size(max = 1000, message = "Order note must not exceed 1000 characters")
+    @Size(max = 1000, message = "Ghi chú đơn hàng không được vượt quá 1000 ký tự")
     private String orderNote; // Optional - admin can add/update order notes
 }

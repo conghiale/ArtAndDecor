@@ -29,8 +29,8 @@ public class CartItemAttributeDto {
 
     private String attributeDisplayName;
 
-    @DecimalMin(value = "0.0", inclusive = true, message = "Product attribute price must not be negative")
-    @Digits(integer = 13, fraction = 2, message = "Product attribute price must have at most 13 integer digits and 2 decimal places")
+    @DecimalMin(value = "0.0", inclusive = true, message = "Product attribute price không được là số âm")
+    @Digits(integer = 13, fraction = 2, message = "Product attribute price được phép tối đa 13 chữ số phần nguyên và 2 chữ số phần thập phân")
     private BigDecimal productAttributePrice;
 
     private LocalDateTime createdDt;

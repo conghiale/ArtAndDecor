@@ -19,19 +19,19 @@ public class BlogCategoryDto {
     
     private Long blogCategoryId;
     
-    @NotBlank(message = "Blog category slug is required")
-    @Size(max = 64, message = "Blog category slug must not exceed 64 characters")
+    @NotBlank(message = "Blog category slug là bắt buộc")
+    @Size(max = 64, message = "Blog category slug không được vượt quá 64 ký tự")
     private String blogCategorySlug;
     
-    @NotBlank(message = "Blog category name is required")
-    @Size(max = 64, message = "Blog category name must not exceed 64 characters")
+    @NotBlank(message = "Blog category name là bắt buộc")
+    @Size(max = 64, message = "Blog category name không được vượt quá 64 ký tự")
     private String blogCategoryName;
     
-    @Size(max = 256, message = "Blog category display name must not exceed 256 characters")
+    @Size(max = 256, message = "Blog category display name không được vượt quá 256 ký tự")
     private String blogCategoryDisplayName;
     
-    @NotBlank(message = "Blog category remark is required")
-    @Size(max = 256, message = "Blog category remark must not exceed 256 characters")
+    @NotBlank(message = "Blog category remark là bắt buộc")
+    @Size(max = 256, message = "Blog category remark không được vượt quá 256 ký tự")
     private String blogCategoryRemark;
     
     private Boolean blogCategoryEnabled;

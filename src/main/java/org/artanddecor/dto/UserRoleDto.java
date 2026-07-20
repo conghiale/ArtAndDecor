@@ -18,18 +18,18 @@ public class UserRoleDto {
     
     private Long userRoleId;
     
-    @NotBlank(message = "User role name is required")
-    @Size(max = 64, message = "User role name must not exceed 64 characters")
+    @NotBlank(message = "Tên vai trò người dùng là bắt buộc")
+    @Size(max = 64, message = "Tên vai trò người dùng không được vượt quá 64 ký tự")
     private String userRoleName;
     
-    @Size(max = 256, message = "User role display name must not exceed 256 characters")
+    @Size(max = 256, message = "Tên hiển thị vai trò người dùng không được vượt quá 256 ký tự")
     private String userRoleDisplayName;
     
-    @NotBlank(message = "User role remark is required")
-    @Size(max = 256, message = "User role remark must not exceed 256 characters")
+    @NotBlank(message = "Ghi chú vai trò người dùng là bắt buộc")
+    @Size(max = 256, message = "Ghi chú vai trò người dùng không được vượt quá 256 ký tự")
     private String userRoleRemark;
     
-    @NotNull(message = "User role enabled flag is required")
+    @NotNull(message = "Cờ kích hoạt vai trò người dùng là bắt buộc")
     private Boolean userRoleEnabled;
     
     // Additional information for reporting

@@ -20,17 +20,17 @@ public class ProductStateDto {
     
     private Long productStateId;
     
-    @NotBlank(message = "Product state name is required")
-    @Size(max = 64, message = "Product state name must not exceed 64 characters")
+    @NotBlank(message = "Tên trạng thái sản phẩm là bắt buộc")
+    @Size(max = 64, message = "Tên trạng thái sản phẩm không được vượt quá 64 ký tự")
     private String productStateName;
     
-    @NotNull(message = "Product state enabled flag is required")
+    @NotNull(message = "Cờ trạng thái sản phẩm là bắt buộc")
     private Boolean productStateEnabled;
 
-    @Size(max = 256, message = "Product state display name must not exceed 256 characters")
+    @Size(max = 256, message = "Tên hiển thị trạng thái sản phẩm không được vượt quá 256 ký tự")
     private String productStateDisplayName;
 
-    @Size(max = 256, message = "Remark must not exceed 256 characters")
+    @Size(max = 256, message = "Ghi chú trạng thái sản phẩm không được vượt quá 256 ký tự")
     private String productStateRemark;
     
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")

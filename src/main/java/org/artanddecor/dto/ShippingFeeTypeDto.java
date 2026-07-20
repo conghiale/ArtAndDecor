@@ -21,18 +21,18 @@ public class ShippingFeeTypeDto {
     
     private Long shippingFeeTypeId;
     
-    @NotBlank(message = "Shipping fee type name is required")
-    @Size(max = 64, message = "Shipping fee type name must not exceed 64 characters")
+    @NotBlank(message = "Tên loại phí vận chuyển là bắt buộc")
+    @Size(max = 64, message = "Tên loại phí vận chuyển không được vượt quá 64 ký tự")
     private String shippingFeeTypeName;
     
-    @Size(max = 256, message = "Shipping fee type display name must not exceed 256 characters")
+    @Size(max = 256, message = "Tên hiển thị loại phí vận chuyển không được vượt quá 256 ký tự")
     private String shippingFeeTypeDisplayName;
     
-    @NotBlank(message = "Shipping fee type remark is required")
-    @Size(max = 256, message = "Shipping fee type remark must not exceed 256 characters")
+    @NotBlank(message = "Ghi chú loại phí vận chuyển là bắt buộc")
+    @Size(max = 256, message = "Ghi chú loại phí vận chuyển không được vượt quá 256 ký tự")
     private String shippingFeeTypeRemark;
     
-    @NotNull(message = "Shipping fee type enabled flag is required")
+    @NotNull(message = "Cờ trạng thái loại phí vận chuyển là bắt buộc")
     private Boolean shippingFeeTypeEnabled;
     
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")

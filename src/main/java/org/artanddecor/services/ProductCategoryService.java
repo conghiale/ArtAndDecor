@@ -61,4 +61,9 @@ public interface ProductCategoryService {
      * Update existing product category using request DTO
      */
     ProductCategoryDto updateProductCategory(Long productCategoryId, ProductCategoryRequestDto requestDto);
+
+    /**
+     * Delete product category by ID with reference validation
+     */
+    void deleteProductCategory(Long productCategoryId);
 }

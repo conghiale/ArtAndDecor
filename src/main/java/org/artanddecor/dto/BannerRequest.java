@@ -18,11 +18,11 @@ import java.util.List;
 @AllArgsConstructor
 public class BannerRequest {
 
-    @NotBlank(message = "Banner title is required")
-    @Size(max = 256, message = "Banner title must not exceed 256 characters")
+    @NotBlank(message = "Tiêu đề banner là bắt buộc")
+    @Size(max = 256, message = "Tiêu đề banner không được vượt quá 256 ký tự")
     private String bannerTitle;
 
-    @Size(max = 512, message = "Banner link must not exceed 512 characters")
+    @Size(max = 512, message = "Liên kết banner không được vượt quá 512 ký tự")
     private String bannerLink;
 
     private Boolean bannerEnabled;

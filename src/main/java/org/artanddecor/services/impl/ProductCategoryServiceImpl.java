@@ -9,6 +9,7 @@ import org.artanddecor.model.ProductCategory;
 import org.artanddecor.model.ProductType;
 import org.artanddecor.repository.ImageRepository;
 import org.artanddecor.repository.ProductCategoryRepository;
+import org.artanddecor.repository.ProductRepository;
 import org.artanddecor.repository.ProductTypeRepository;
 import org.artanddecor.services.ProductCategoryService;
 import org.artanddecor.services.SeoMetaService;
@@ -42,6 +43,7 @@ public class ProductCategoryServiceImpl implements ProductCategoryService {
     private static final Logger logger = LoggerFactory.getLogger(ProductCategoryServiceImpl.class);
     
     private final ProductCategoryRepository productCategoryRepository;
+    private final ProductRepository productRepository;
     private final ProductTypeRepository productTypeRepository;
     private final ImageRepository imageRepository;
     private final SeoMetaService seoMetaService;
@@ -238,6 +240,60 @@ public class ProductCategoryServiceImpl implements ProductCategoryService {
         logger.info("Product category updated successfully with ID: {}", savedProductCategory.getProductCategoryId());
         
         return convertToDto(savedProductCategory);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteProductCategory(Long productCategoryId) {
+        logger.info("Start delete productCategory, id={}", productCategoryId);
+
+        if (productCategoryId == null || productCategoryId <= 0) {
+            logger.warn("Invalid productCategory id for delete, id={}", productCategoryId);
+            throw new IllegalArgumentException("ID danh mục sản phẩm không hợp lệ.");
+        }
+
+        ProductCategory productCategory = productCategoryRepository.findById(productCategoryId)
+                .orElseThrow(() -> {
+                    logger.warn("ProductCategory not found for delete, id={}", productCategoryId);
+                    return new IllegalArgumentException("Không tìm thấy danh mục sản phẩm cần xoá.");
+                });
+
+        Long seoMetaId = productCategory.getSeoMetaId();
+
+        logger.debug("Checking references before deleting productCategory, id={}", productCategoryId);
+
+        Long productRefCount = productRepository.countByProductCategory_ProductCategoryId(productCategoryId);
+        Long productSampleId = productRepository.findSampleProductIdByProductCategoryId(productCategoryId);
+        if (productRefCount != null && productRefCount > 0) {
+            logger.warn(
+                    "Cannot delete PRODUCT_CATEGORY, id={}, referencedTable={}, referencedColumn={}, referencedCount={}, sampleReferencedId={}",
+                    productCategoryId, "PRODUCT", "PRODUCT_CATEGORY_ID", productRefCount, productSampleId);
+            String referenceDetail = String.format(
+                "Cannot delete PRODUCT_CATEGORY, id=%s, referencedTable=%s, referencedColumn=%s, referencedCount=%s, sampleReferencedId=%s",
+                productCategoryId, "PRODUCT", "PRODUCT_CATEGORY_ID", productRefCount, productSampleId);
+            throw new IllegalStateException(referenceDetail);
+        }
+
+        Long childRefCount = productCategoryRepository.countByParentCategory_ProductCategoryId(productCategoryId);
+        Long childSampleId = productCategoryRepository.findSampleChildCategoryIdByParentId(productCategoryId);
+        if (childRefCount != null && childRefCount > 0) {
+            logger.warn(
+                    "Cannot delete PRODUCT_CATEGORY, id={}, referencedTable={}, referencedColumn={}, referencedCount={}, sampleReferencedId={}",
+                    productCategoryId, "PRODUCT_CATEGORY", "PRODUCT_CATEGORY_PARENT_ID", childRefCount, childSampleId);
+            String referenceDetail = String.format(
+                "Cannot delete PRODUCT_CATEGORY, id=%s, referencedTable=%s, referencedColumn=%s, referencedCount=%s, sampleReferencedId=%s",
+                productCategoryId, "PRODUCT_CATEGORY", "PRODUCT_CATEGORY_PARENT_ID", childRefCount, childSampleId);
+            throw new IllegalStateException(referenceDetail);
+        }
+
+        productCategoryRepository.delete(productCategory);
+
+        if (seoMetaId != null) {
+            seoMetaService.deleteSeoMeta(seoMetaId);
+            logger.info("Deleted associated SEO meta for productCategory, productCategoryId={}, seoMetaId={}", productCategoryId, seoMetaId);
+        }
+
+        logger.info("Deleted productCategory successfully, id={}", productCategoryId);
     }
 
     // =============================================

@@ -23,20 +23,20 @@ public class CartItemRequestDto {
     private Long userId;
     private String sessionId;
 
-    @NotNull(message = "Product ID is required")
-    @Min(value = 1, message = "Product ID must be positive")
+    @NotNull(message = "ID sản phẩm là bắt buộc")
+    @Min(value = 1, message = "ID sản phẩm phải lớn hơn 0")
     private Long productId;
 
-    @NotNull(message = "Quantity is required")
-    @Min(value = 1, message = "Quantity must be at least 1")
-    @Max(value = 999, message = "Quantity cannot exceed 999")
+    @NotNull(message = "Số lượng là bắt buộc")
+    @Min(value = 1, message = "Số lượng phải lớn hơn hoặc bằng 1")
+    @Max(value = 999, message = "Số lượng không được vượt quá 999")
     private Integer quantity;
     
     /**
      * Unit price calculated on frontend and passed to API
      * Optional - if not provided, will be calculated based on product/attributes
      */
-    @DecimalMin(value = "0.0", inclusive = true, message = "Cart item unit price must not be negative")
+    @DecimalMin(value = "0.0", inclusive = true, message = "Đơn giá mục giỏ hàng không được là số âm")
     private BigDecimal cartItemUnitPrice;
 
     /**

@@ -1,12 +1,12 @@
 package org.artanddecor.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class DiscountDto {
+public class DiscountRequestDto {
     
     private Long discountId;
     
@@ -49,8 +49,7 @@ public class DiscountDto {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @NotNull(message = "Ngày kết thúc là bắt buộc")
     private LocalDateTime endAt;
-    
-    @NotNull(message = "Giới hạn sử dụng là bắt buộc")
+
     @Min(value = 1, message = "Giới hạn sử dụng phải lớn hơn hoặc bằng 1")
     private Integer totalUsageLimit;
     
@@ -62,8 +61,7 @@ public class DiscountDto {
     
     @Size(max = 256, message = "Tên hiển thị không được vượt quá 256 ký tự")
     private String discountDisplayName;
-    
-    @NotBlank(message = "Ghi chú giảm giá là bắt buộc")
+
     @Size(max = 256, message = "Ghi chú giảm giá không được vượt quá 256 ký tự")
     private String discountRemark;
     
@@ -74,24 +72,9 @@ public class DiscountDto {
     private LocalDateTime modifiedDt;
     
     // Nested DTO for related entity
-    private DiscountTypeDto discountType;
-    
-    // Computed fields
-    private Boolean isExpired;
-    private Boolean isExhausted;
-    private Integer remainingUsage;
-    
-    /**
-     * Check if discount is valid now
-     */
-    public boolean isValidNow() {
-        LocalDateTime now = LocalDateTime.now();
-        return isActive != null && isActive &&
-               (startAt == null || !now.isBefore(startAt)) &&
-               (endAt == null || !now.isAfter(endAt)) &&
-               (totalUsageLimit == null || usedCount < totalUsageLimit);
-    }
-    
+    @NotNull(message = "Loại giảm giá là bắt buộc")
+    private Long discountTypeId;
+
     /**
      * Check if discount is expired
      */
@@ -104,41 +87,5 @@ public class DiscountDto {
      */
     public boolean isUsageExhausted() {
         return totalUsageLimit != null && usedCount >= totalUsageLimit;
-    }
-    
-    /**
-     * Get remaining usage count
-     */
-    public int getRemainingUsageCount() {
-        if (totalUsageLimit == null) return Integer.MAX_VALUE;
-        return Math.max(0, totalUsageLimit - (usedCount != null ? usedCount : 0));
-    }
-    
-    /**
-     * Calculate discount amount for given order amount
-     */
-    public BigDecimal calculateDiscountAmount(BigDecimal orderAmount) {
-        if (orderAmount == null || orderAmount.compareTo(BigDecimal.ZERO) <= 0) {
-            return BigDecimal.ZERO;
-        }
-        
-        if (minOrderAmount != null && orderAmount.compareTo(minOrderAmount) < 0) {
-            return BigDecimal.ZERO;
-        }
-        
-        BigDecimal discountAmount;
-        if (discountType != null && discountType.isFixedAmountType()) {
-            discountAmount = discountValue;
-        } else if (discountType != null && discountType.isPercentageType()) {
-            discountAmount = orderAmount.multiply(discountValue).divide(BigDecimal.valueOf(100));
-        } else {
-            return BigDecimal.ZERO;
-        }
-        
-        if (maxDiscountAmount != null && discountAmount.compareTo(maxDiscountAmount) > 0) {
-            discountAmount = maxDiscountAmount;
-        }
-        
-        return discountAmount.min(orderAmount);
     }
 }

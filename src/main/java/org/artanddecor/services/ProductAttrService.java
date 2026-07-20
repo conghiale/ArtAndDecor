@@ -44,4 +44,9 @@ public interface ProductAttrService {
      * Update existing product attribute using request DTO
      */
     ProductAttrDto updateProductAttr(Long productAttrId, ProductAttrRequestDto requestDto);
+
+    /**
+     * Delete product attribute group by ID with reference validation
+     */
+    void deleteProductAttr(Long productAttrId);
 }

@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.artanddecor.dto.BaseResponseDto;
 import org.artanddecor.dto.DiscountDto;
+import org.artanddecor.dto.DiscountRequestDto;
 import org.artanddecor.dto.DiscountTypeDto;
 import org.artanddecor.services.DiscountService;
 import org.artanddecor.services.DiscountTypeService;
@@ -391,14 +392,14 @@ public class DiscountController {
             @Parameter(
                 description = "Discount campaign creation data with all required fields and validation rules",
                 required = true,
-                example = "{\"discountCode\": \"WELCOME2026\", \"discountName\": \"Welcome Discount\", \"discountType\": {\"discountTypeId\": 1}, \"discountValue\": 15.0, \"minOrderAmount\": 100000, \"maxDiscountAmount\": 50000, \"totalUsageLimit\": 1000, \"startAt\": \"2026-01-01T00:00:00\", \"endAt\": \"2026-12-31T23:59:59\", \"isActive\": true}"
+                example = "{\"discountCode\": \"WELCOME2026\", \"discountName\": \"Welcome Discount\", \"discountType\": \"discountTypeId\": 1, \"discountValue\": 15.0, \"minOrderAmount\": 100000, \"maxDiscountAmount\": 50000, \"totalUsageLimit\": 1000, \"startAt\": \"2026-01-01T00:00:00\", \"endAt\": \"2026-12-31T23:59:59\", \"isActive\": true}"
             )
-            @Valid @RequestBody DiscountDto discountDto) {
+            @Valid @RequestBody DiscountRequestDto discountRequestDto) {
         
         try {
-            logger.info("Creating new discount campaign: {}", discountDto.getDiscountCode());
+            logger.info("Creating new discount campaign: {}", discountRequestDto.getDiscountCode());
             
-            DiscountDto createdDiscount = discountService.createDiscount(discountDto);
+            DiscountDto createdDiscount = discountService.createDiscount(discountRequestDto);
             
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(BaseResponseDto.success("Discount campaign created successfully", createdDiscount));
@@ -461,12 +462,12 @@ public class DiscountController {
                 required = true,
                 example = "{\"discountCode\": \"WELCOME2026\", \"discountName\": \"Welcome Discount Updated\", \"discountValue\": 20.0, \"minOrderAmount\": 150000, \"maxDiscountAmount\": 75000, \"totalUsageLimit\": 2000, \"startAt\": \"2026-01-01T00:00:00\", \"endAt\": \"2026-12-31T23:59:59\", \"isActive\": true}"
             )
-            @Valid @RequestBody DiscountDto discountDto) {
+            @Valid @RequestBody DiscountRequestDto discountRequestDto) {
         
         try {
-            logger.info("Updating discount campaign ID: {} with code: {}", discountId, discountDto.getDiscountCode());
+            logger.info("Updating discount campaign ID: {} with code: {}", discountId, discountRequestDto.getDiscountCode());
             
-            DiscountDto updatedDiscount = discountService.updateDiscount(discountId, discountDto);
+            DiscountDto updatedDiscount = discountService.updateDiscount(discountId, discountRequestDto);
             
             return ResponseEntity.ok(BaseResponseDto.success("Discount campaign updated successfully", updatedDiscount));
         } catch (IllegalArgumentException e) {

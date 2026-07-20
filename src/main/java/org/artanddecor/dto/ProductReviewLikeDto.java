@@ -22,10 +22,10 @@ public class ProductReviewLikeDto {
     
     private Long productReviewLikeId;
     
-    @NotNull(message = "Review ID is required")
+    @NotNull(message = "Review ID là bắt buộc")
     private Long reviewId;
     
-    @NotNull(message = "User ID is required")
+    @NotNull(message = "User ID là bắt buộc")
     private Long userId;
     
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")

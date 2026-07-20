@@ -19,21 +19,21 @@ public class BlogDto {
     
     private Long blogId;
     
-    @NotBlank(message = "Blog title is required")
-    @Size(max = 256, message = "Blog title must not exceed 256 characters")
+    @NotBlank(message = "Tiêu đề blog là bắt buộc")
+    @Size(max = 256, message = "Tiêu đề blog không được vượt quá 256 ký tự")
     private String blogTitle;
     
-    @NotBlank(message = "Blog slug is required")
-    @Size(max = 64, message = "Blog slug must not exceed 64 characters")
+    @NotBlank(message = "Slug blog là bắt buộc")
+    @Size(max = 64, message = "Slug blog không được vượt quá 64 ký tự")
     private String blogSlug;
     
-    @NotBlank(message = "Blog content is required")
+    @NotBlank(message = "Nội dung blog là bắt buộc")
     private String blogContent;
     
     private Boolean blogEnabled;
     
-    @NotBlank(message = "Blog remark is required")
-    @Size(max = 256, message = "Blog remark must not exceed 256 characters")
+    @NotBlank(message = "Ghi chú blog là bắt buộc")
+    @Size(max = 256, message = "Ghi chú blog không được vượt quá 256 ký tự")
     private String blogRemark;
     
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")

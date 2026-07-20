@@ -94,4 +94,26 @@ public interface ProductCategoryRepository extends JpaRepository<ProductCategory
            "ORDER BY CASE WHEN pc.productCategoryDisplayOrder IS NULL THEN 1 ELSE 0 END ASC, " +
            "pc.productCategoryDisplayOrder ASC, pc.productCategoryName ASC")
     List<ProductCategory> findByParentCategoryId(@Param("parentId") Long parentId);
+
+       /**
+        * Count categories by product type for delete validation
+        */
+       Long countByProductType_ProductTypeId(Long productTypeId);
+
+       /**
+        * Count child categories by parent category for delete validation
+        */
+       Long countByParentCategory_ProductCategoryId(Long productCategoryId);
+
+       /**
+        * Get sample category ID by product type reference
+        */
+       @Query("SELECT MIN(pc.productCategoryId) FROM ProductCategory pc WHERE pc.productType.productTypeId = :productTypeId")
+       Long findSampleCategoryIdByProductTypeId(@Param("productTypeId") Long productTypeId);
+
+       /**
+        * Get sample child category ID by parent category reference
+        */
+       @Query("SELECT MIN(pc.productCategoryId) FROM ProductCategory pc WHERE pc.parentCategory.productCategoryId = :productCategoryId")
+       Long findSampleChildCategoryIdByParentId(@Param("productCategoryId") Long productCategoryId);
 }

@@ -89,4 +89,15 @@ public interface CartItemAttributeRepository extends JpaRepository<CartItemAttri
            "WHERE cia.cartItem.cartItemId IN :cartItemIds " +
            "ORDER BY cia.cartItem.cartItemId, attr.productAttrName, pa.productAttributeValue")
     List<CartItemAttribute> findByCartItemIdsWithDetails(@Param("cartItemIds") List<Long> cartItemIds);
+
+       /**
+        * Count cart item attributes by product attribute ID for delete validation
+        */
+       Long countByProductAttribute_ProductAttributeId(Long productAttributeId);
+
+       /**
+        * Get sample cart item attribute ID by product attribute reference
+        */
+       @Query("SELECT MIN(cia.cartItemAttributeId) FROM CartItemAttribute cia WHERE cia.productAttribute.productAttributeId = :productAttributeId")
+       Long findSampleCartItemAttributeIdByProductAttributeId(@Param("productAttributeId") Long productAttributeId);
 }

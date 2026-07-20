@@ -21,21 +21,21 @@ public class DiscountTypeDto {
     
     private Long discountTypeId;
     
-    @NotBlank(message = "Discount type name is required")
-    @Size(max = 64, message = "Discount type name must not exceed 64 characters")
+    @NotBlank(message = "Tên loại giảm giá là bắt buộc")
+    @Size(max = 64, message = "Tên loại giảm giá không được vượt quá 64 ký tự")
     private String discountTypeName;
     
-    @Size(max = 256, message = "Discount type display name must not exceed 256 characters")
+    @Size(max = 256, message = "Tên hiển thị loại giảm giá không được vượt quá 256 ký tự")
     private String discountTypeDisplayName;
     
-    @Size(max = 256, message = "Discount type description must not exceed 256 characters")
+    @Size(max = 256, message = "Mô tả loại giảm giá không được vượt quá 256 ký tự")
     private String discountTypeDescription;
     
-    @NotBlank(message = "Discount type remark is required")
-    @Size(max = 256, message = "Discount type remark must not exceed 256 characters")
+    @NotBlank(message = "Ghi chú loại giảm giá là bắt buộc")
+    @Size(max = 256, message = "Ghi chú loại giảm giá không được vượt quá 256 ký tự")
     private String discountTypeRemark;
     
-    @NotNull(message = "Discount type enabled flag is required")
+    @NotNull(message = "Cờ kích hoạt loại giảm giá là bắt buộc")
     private Boolean discountTypeEnabled;
     
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")

@@ -23,12 +23,12 @@ public class CartDto {
     
     private String sessionId;
     
-    @NotBlank(message = "Cart slug is required")
-    @Size(max = 64, message = "Cart slug must not exceed 64 characters")
+    @NotBlank(message = "Slug giỏ hàng là bắt buộc")
+    @Size(max = 64, message = "Slug giỏ hàng không được vượt quá 64 ký tự")
     private String cartSlug;
     
-    @NotNull(message = "Total quantity is required")
-    @Min(value = 0, message = "Total quantity must not be negative")
+    @NotNull(message = "Tổng số lượng là bắt buộc")
+    @Min(value = 0, message = "Tổng số lượng không được là số âm")
     private Integer totalQuantity;
     
     private Boolean cartEnabled;

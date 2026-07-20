@@ -20,19 +20,19 @@ import jakarta.validation.constraints.Size;
 @Schema(description = "Request data for creating/updating product attribute definition")
 public class ProductAttrRequestDto {
 
-    @NotBlank(message = "Product attribute name is required")
-    @Size(max = 64, message = "Product attribute name must not exceed 64 characters")
+    @NotBlank(message = "Tên thuộc tính là bắt buộc")
+    @Size(max = 64, message = "Tên thuộc tính không được vượt quá 64 ký tự")
     @Schema(description = "Name of the product attribute", 
             example = "Color")
     private String productAttrName;
 
-    @Size(max = 256, message = "Product attribute display name must not exceed 256 characters")
+    @Size(max = 256, message = "Tên hiển thị thuộc tính không được vượt quá 256 ký tự")
     @Schema(description = "Display name for the product attribute", 
             example = "Product Color")
     private String productAttrDisplayName;
 
-    @NotBlank(message = "Product attribute remark is required")
-    @Size(max = 256, message = "Product attribute remark must not exceed 256 characters")
+    @NotBlank(message = "Ghi chú thuộc tính là bắt buộc")
+    @Size(max = 256, message = "Ghi chú thuộc tính không được vượt quá 256 ký tự")
     @Schema(description = "Remark or description about the product attribute", 
             example = "Color variation of the product")
     private String productAttrRemark;

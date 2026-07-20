@@ -21,16 +21,16 @@ public class ProductAttrDto {
     
     private Long productAttrId;
     
-    @NotBlank(message = "Attribute name is required")
-    @Size(max = 64, message = "Attribute name must not exceed 64 characters")
+    @NotBlank(message = "Tên thuộc tính là bắt buộc")
+    @Size(max = 64, message = "Tên thuộc tính không được vượt quá 64 ký tự")
     private String productAttrName;
     
     private Boolean productAttrEnabled;
 
-    @Size(max = 256, message = "Attribute display name must not exceed 256 characters")
+    @Size(max = 256, message = "Tên hiển thị thuộc tính không được vượt quá 256 ký tự")
     private String productAttrDisplayName;
 
-    @Size(max = 256, message = "Remark must not exceed 256 characters")
+    @Size(max = 256, message = "Ghi chú thuộc tính không được vượt quá 256 ký tự")
     private String productAttrRemark;
     
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")

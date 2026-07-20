@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -29,6 +30,7 @@ import java.util.List;
  */
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfiguration {
 
@@ -99,18 +101,21 @@ public class SecurityConfiguration {
                         // Product Attribute management (Master Catalog - Admin/Manager only)
                         .requestMatchers(HttpMethod.POST, "/products/attributes").hasAnyRole("ADMIN", "MANAGER")
                         .requestMatchers(HttpMethod.PUT, "/products/attributes/{productAttributeId:[\\d+]}").hasAnyRole("ADMIN", "MANAGER")
-                        .requestMatchers(HttpMethod.DELETE, "/products/attributes/{productAttributeId:[\\d+]}").hasAnyRole("ADMIN", "MANAGER")
+                        .requestMatchers(HttpMethod.DELETE, "/products/attributes/{productAttributeId:[\\d+]}").hasRole("ADMIN")
                         
                         // Product Variant management (Product-Specific Stock - Admin/Manager only)
                         .requestMatchers(HttpMethod.POST, "/products/{productId:[\\d+]}/variants").hasAnyRole("ADMIN", "MANAGER")
                         .requestMatchers(HttpMethod.PATCH, "/products/variants/{variantId:[\\d+]}/quantity").hasAnyRole("ADMIN", "MANAGER")
-                        .requestMatchers(HttpMethod.DELETE, "/products/variants/{variantId:[\\d+]}").hasAnyRole("ADMIN", "MANAGER")
+                        .requestMatchers(HttpMethod.DELETE, "/products/variants/{variantId:[\\d+]}").hasRole("ADMIN")
                         
                         // Product Categories & Types management (Admin/Manager only)
                         .requestMatchers(HttpMethod.POST, "/products/types").hasAnyRole("ADMIN", "MANAGER")
                         .requestMatchers(HttpMethod.PUT, "/products/types/{productTypeId:[\\d+]}").hasAnyRole("ADMIN", "MANAGER")
+                        .requestMatchers(HttpMethod.DELETE, "/products/types/{productTypeId:[\\d+]}").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/products/categories").hasAnyRole("ADMIN", "MANAGER")
                         .requestMatchers(HttpMethod.PUT, "/products/categories/{productCategoryId:[\\d+]}").hasAnyRole("ADMIN", "MANAGER")
+                        .requestMatchers(HttpMethod.DELETE, "/products/categories/{productCategoryId:[\\d+]}").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/products/attrs/{productAttrId:[\\d+]}").hasRole("ADMIN")
 
                         // Cart endpoints - structured by functionality
                         // Public cart access (support both logged-in and guest users)
@@ -139,6 +144,8 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.POST, "/images/upload").permitAll()
                         .requestMatchers(HttpMethod.PUT, "/images/*/upload").permitAll()
                         .requestMatchers(HttpMethod.GET, "/images/stats/**").hasAnyRole("ADMIN", "MANAGER")
+                        // Admin-only: trigger AI embedding generation (sensitive operation)
+                        .requestMatchers(HttpMethod.POST, "/images/embeddings/trigger").hasRole("ADMIN")
                         .requestMatchers("/images/**").hasAnyRole("ADMIN", "MANAGER")
 
                         // Order endpoints - restructured according to new API requirements
@@ -224,6 +231,7 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.POST, "/users").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/users/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/users/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/users/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/users/change-password").authenticated()
 
                         // Health endpoints
@@ -244,6 +252,7 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.POST, "/blogs/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/blogs/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/blogs/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/blogs/**").hasRole("ADMIN")
 
                         // Page endpoints - structured by functionality and access control
                         // Public page read access (customer-facing)

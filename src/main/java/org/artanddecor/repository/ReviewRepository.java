@@ -113,4 +113,15 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
      * Find recent reviews for a product
      */
     List<Review> findTop10ByProduct_ProductIdAndIsDeletedFalseAndIsVisibleTrueOrderByCreatedDtDesc(Long productId);
+
+    /**
+     * Count reviews by user ID for delete validation
+     */
+    Long countByUser_UserId(Long userId);
+
+    /**
+     * Get sample review ID referencing a user
+     */
+    @Query("SELECT MIN(r.reviewId) FROM Review r WHERE r.user.userId = :userId")
+    Long findSampleReviewIdByUserId(@Param("userId") Long userId);
 }

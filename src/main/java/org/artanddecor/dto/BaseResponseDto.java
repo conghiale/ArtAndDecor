@@ -53,7 +53,7 @@ public class BaseResponseDto<T> {
      * @return Success response
      */
     public static <T> BaseResponseDto<T> success(T data) {
-        return new BaseResponseDto<>(200, "Success", data);
+        return new BaseResponseDto<>(200, "Thành công", data);
     }
 
     /**

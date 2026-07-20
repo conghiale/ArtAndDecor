@@ -229,12 +229,25 @@ public class ProductVariantServiceImpl implements ProductVariantService {
 
     @Override
     public void deleteProductVariant(Long productVariantId) {
-        logger.debug("Deleting product variant ID: {}", productVariantId);
-        if (!productVariantRepository.existsById(productVariantId)) {
-            throw new ResourceNotFoundException("Product variant not found with ID: " + productVariantId);
+        logger.info("Start delete productVariant, id={}", productVariantId);
+
+        if (productVariantId == null || productVariantId <= 0) {
+            logger.warn("Invalid productVariant id for delete, id={}", productVariantId);
+            throw new IllegalArgumentException("ID biến thể sản phẩm không hợp lệ.");
         }
-        productVariantRepository.deleteById(productVariantId);
-        logger.debug("Product variant {} deleted", productVariantId);
+
+        ProductVariant productVariant = productVariantRepository.findById(productVariantId)
+                .orElseThrow(() -> {
+                    logger.warn("ProductVariant not found for delete, id={}", productVariantId);
+                    return new ResourceNotFoundException("Không tìm thấy biến thể sản phẩm cần xoá.");
+                });
+
+        logger.debug("Checking references before deleting productVariant, id={}", productVariantId);
+        // Schema CREATE_DB_ART_AND_DECOR.sql currently has no FK referencing PRODUCT_VARIANT_ID.
+        // Safe to delete after existence validation. Database trigger will handle stock synchronization.
+
+        productVariantRepository.delete(productVariant);
+        logger.info("Deleted productVariant successfully, id={}", productVariantId);
     }
 
     @Override

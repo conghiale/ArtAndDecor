@@ -9,6 +9,7 @@ import org.artanddecor.model.BlogType;
 import org.artanddecor.model.Image;
 import org.artanddecor.model.SeoMeta;
 import org.artanddecor.repository.BlogTypeRepository;
+import org.artanddecor.repository.BlogCategoryRepository;
 import org.artanddecor.repository.ImageRepository;
 import org.artanddecor.repository.SeoMetaRepository;
 import org.artanddecor.services.BlogTypeService;
@@ -34,6 +35,7 @@ public class BlogTypeServiceImpl implements BlogTypeService {
     private static final Logger logger = LoggerFactory.getLogger(BlogTypeServiceImpl.class);
 
     private final BlogTypeRepository blogTypeRepository;
+    private final BlogCategoryRepository blogCategoryRepository;
     private final ImageRepository imageRepository;
     private final SeoMetaRepository seoMetaRepository;
     private final SeoMetaService seoMetaService;
@@ -158,5 +160,46 @@ public class BlogTypeServiceImpl implements BlogTypeService {
 
         BlogType savedBlogType = blogTypeRepository.save(blogType);
         return blogMapper.toBlogTypeDto(savedBlogType);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteBlogType(Long blogTypeId) {
+        logger.info("Start delete blogType, id={}", blogTypeId);
+
+        if (blogTypeId == null || blogTypeId <= 0) {
+            logger.warn("Invalid blogType id for delete, id={}", blogTypeId);
+            throw new IllegalArgumentException("ID loại bài viết không hợp lệ.");
+        }
+
+        BlogType blogType = blogTypeRepository.findById(blogTypeId)
+                .orElseThrow(() -> {
+                    logger.warn("BlogType not found for delete, id={}", blogTypeId);
+                    return new IllegalArgumentException("Không tìm thấy loại bài viết cần xoá.");
+                });
+
+        Long seoMetaId = blogType.getSeoMetaId();
+
+        logger.debug("Checking references before deleting blogType, id={}", blogTypeId);
+        Long referencedCount = blogCategoryRepository.countByBlogType_BlogTypeId(blogTypeId);
+        Long sampleReferencedId = blogCategoryRepository.findSampleBlogCategoryIdByBlogTypeId(blogTypeId);
+        if (referencedCount != null && referencedCount > 0) {
+            logger.warn(
+                    "Cannot delete BLOG_TYPE, id={}, referencedTable={}, referencedColumn={}, referencedCount={}, sampleReferencedId={}",
+                    blogTypeId, "BLOG_CATEGORY", "BLOG_TYPE_ID", referencedCount, sampleReferencedId);
+            String referenceDetail = String.format(
+                "Cannot delete BLOG_TYPE, id=%s, referencedTable=%s, referencedColumn=%s, referencedCount=%s, sampleReferencedId=%s",
+                blogTypeId, "BLOG_CATEGORY", "BLOG_TYPE_ID", referencedCount, sampleReferencedId);
+            throw new IllegalStateException(referenceDetail);
+        }
+
+        blogTypeRepository.delete(blogType);
+
+        if (seoMetaId != null) {
+            seoMetaService.deleteSeoMeta(seoMetaId);
+            logger.info("Deleted associated SEO meta for blogType, blogTypeId={}, seoMetaId={}", blogTypeId, seoMetaId);
+        }
+
+        logger.info("Deleted blogType successfully, id={}", blogTypeId);
     }
 }

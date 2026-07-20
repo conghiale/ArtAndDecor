@@ -134,6 +134,21 @@ public interface ImageRepository extends JpaRepository<Image, Long> {
     @Query("SELECT DISTINCT i.imageFormat FROM Image i WHERE i.imageFormat IS NOT NULL ORDER BY i.imageFormat")
     List<String> findDistinctImageFormats();
 
+       /**
+        * Get all image IDs.
+        */
+       @Query("SELECT i.imageId FROM Image i")
+       List<Long> findAllImageIds();
+
+       /**
+        * Find image IDs that can be retried for embedding creation.
+        * Includes images without any embedding row and images whose embedding status is FAILED.
+        */
+       @Query("SELECT i.imageId FROM Image i " +
+              "LEFT JOIN ImageEmbedding ie ON ie.imageId = i.imageId " +
+              "WHERE ie.imageId IS NULL OR ie.imageEmbeddingStatus = org.artanddecor.enums.ImageEmbeddingStatus.FAILED")
+       List<Long> findRetryableImageIdsForEmbedding();
+
     /**
      * Count images whose IDs are in the given collection (batch existence check)
      */

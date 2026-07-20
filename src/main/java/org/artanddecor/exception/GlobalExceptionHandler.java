@@ -6,6 +6,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -132,6 +134,34 @@ public class GlobalExceptionHandler {
         ResponseUtils.logResponse(400, ex.getMessage(), null);
         
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
+
+    /**
+     * Handle security access denied errors
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<BaseResponseDto<Object>> handleAccessDeniedException(AccessDeniedException ex, WebRequest request) {
+        logger.error("Access denied: {}", ex.getMessage());
+
+        BaseResponseDto<Object> response = BaseResponseDto.forbidden("Access denied");
+        ResponseUtils.logResponse(403, "Access denied", null);
+
+        return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
+    }
+
+    /**
+     * Handle missing authentication credentials for protected endpoints
+     */
+    @ExceptionHandler(AuthenticationCredentialsNotFoundException.class)
+    public ResponseEntity<BaseResponseDto<Object>> handleAuthenticationCredentialsNotFoundException(
+            AuthenticationCredentialsNotFoundException ex,
+            WebRequest request) {
+        logger.error("Authentication required: {}", ex.getMessage());
+
+        BaseResponseDto<Object> response = BaseResponseDto.unauthorized("Authentication required");
+        ResponseUtils.logResponse(401, "Authentication required", null);
+
+        return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
     }
 
     /**

@@ -22,20 +22,20 @@ public class PaymentDto {
     
     private Long paymentId;
     
-    @NotBlank(message = "Payment slug is required")
-    @Size(max = 64, message = "Payment slug must not exceed 64 characters")
+    @NotBlank(message = "Slug thanh toán là bắt buộc")
+    @Size(max = 64, message = "Slug thanh toán không được vượt quá 64 ký tự")
     private String paymentSlug;
     
-    @NotNull(message = "Amount is required")
-    @DecimalMin(value = "0.0", message = "Amount must not be negative")
+    @NotNull(message = "Số tiền là bắt buộc")
+    @DecimalMin(value = "0.0", message = "Số tiền không được là số âm")
     private BigDecimal amount;
     
-    @NotBlank(message = "Transaction ID is required")
-    @Size(max = 100, message = "Transaction ID must not exceed 100 characters")
+    @NotBlank(message = "Mã giao dịch là bắt buộc")
+    @Size(max = 100, message = "Mã giao dịch không được vượt quá 100 ký tự")
     private String transactionId;
     
-    @NotBlank(message = "Payment remark is required")
-    @Size(max = 256, message = "Payment remark must not exceed 256 characters")
+    @NotBlank(message = "Ghi chú thanh toán là bắt buộc")
+    @Size(max = 256, message = "Ghi chú thanh toán không được vượt quá 256 ký tự")
     private String paymentRemark;
     
     private Boolean paymentEnabled;

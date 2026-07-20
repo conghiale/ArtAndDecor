@@ -18,13 +18,13 @@ import java.util.List;
 @AllArgsConstructor
 public class CreateOrderRequest {
     
-    @NotNull(message = "Customer ID is required")
+    @NotNull(message = "ID khách hàng là bắt buộc")
     private Long customerId;
     
-    @NotNull(message = "Shipping address ID is required")
+    @NotNull(message = "ID địa chỉ giao hàng là bắt buộc")
     private Long shippingAddressId;
     
-    @NotEmpty(message = "Order items are required")
+    @NotEmpty(message = "Danh sách sản phẩm đặt hàng là bắt buộc")
     @Valid
     private List<CreateOrderItemRequest> orderItems;
     

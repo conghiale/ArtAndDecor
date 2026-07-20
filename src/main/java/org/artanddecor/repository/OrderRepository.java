@@ -141,4 +141,15 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
         @Param("shippedDateTo") LocalDateTime shippedDateTo,
         @Param("textSearch") String textSearch,
         Pageable pageable);
+
+    /**
+     * Count orders by user ID for delete validation
+     */
+    Long countByUser_UserId(Long userId);
+
+    /**
+     * Get sample order ID referencing a user
+     */
+    @Query("SELECT MIN(o.orderId) FROM Order o WHERE o.user.userId = :userId")
+    Long findSampleOrderIdByUserId(@Param("userId") Long userId);
 }

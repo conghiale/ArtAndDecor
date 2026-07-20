@@ -48,6 +48,12 @@ public interface ProductReviewLikeRepository extends JpaRepository<ProductReview
     Long countByUser_UserId(Long userId);
 
     /**
+     * Get sample like ID referencing a user
+     */
+    @Query("SELECT MIN(prl.productReviewLikeId) FROM ProductReviewLike prl WHERE prl.user.userId = :userId")
+    Long findSampleLikeIdByUserId(@Param("userId") Long userId);
+
+    /**
      * Complex query with multiple optional filters
      */
     @Query("SELECT prl FROM ProductReviewLike prl WHERE " +

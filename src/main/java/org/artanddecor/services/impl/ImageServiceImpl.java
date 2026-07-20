@@ -35,6 +35,10 @@ import java.io.StringReader;
 import java.util.concurrent.CompletableFuture;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
+import java.util.Objects;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.stream.Collectors;
 
 /**
  * Image Service Implementation
@@ -142,7 +146,7 @@ public class ImageServiceImpl implements ImageService {
 
             // Trigger AI embedding only when a brand-new file was uploaded to disk
             if (isNewPhysicalUpload) {
-                processImageEmbeddingsAsync(List.of(resultDto));
+                processImageEmbeddingsAsync(List.of(resultDto.getImageId()));
             }
 
             return resultDto;
@@ -229,7 +233,7 @@ public class ImageServiceImpl implements ImageService {
 
             // Trigger AI embedding only when a new physical file was uploaded
             if (isNewPhysicalUpload) {
-                processImageEmbeddingsAsync(List.of(updatedImageDto));
+                processImageEmbeddingsAsync(List.of(updatedImageDto.getImageId()));
             }
 
             return updatedImageDto;
@@ -320,6 +324,73 @@ public class ImageServiceImpl implements ImageService {
         return imageRepository.findDistinctImageFormats();
     }
 
+    @Override
+    @Transactional
+    public long triggerImageEmbeddings(List<Long> imageIds, boolean processAll, ImageEmbeddingStatus embeddingStatus, boolean onlyNotEmbedded) {
+        List<Long> normalizedIds = imageIds == null
+                ? List.of()
+                : imageIds.stream().filter(Objects::nonNull).distinct().toList();
+
+        Set<Long> statusIds = null;
+        if (embeddingStatus != null) {
+            statusIds = new HashSet<>(imageEmbeddingRepository.findImageIdsByEmbeddingStatus(embeddingStatus));
+        }
+
+        Set<Long> retryableIds = null;
+        if (onlyNotEmbedded) {
+            retryableIds = new HashSet<>(imageRepository.findRetryableImageIdsForEmbedding());
+        }
+
+        Set<Long> targetImageIds;
+
+        // Priority: explicit imageIds takes precedence over processAll.
+        if (!normalizedIds.isEmpty()) {
+            List<Long> existingIds = imageRepository.findAllById(normalizedIds).stream()
+                    .map(Image::getImageId)
+                    .filter(Objects::nonNull)
+                    .toList();
+
+            if (existingIds.size() != normalizedIds.size()) {
+                Set<Long> existingIdSet = existingIds.stream().collect(Collectors.toSet());
+                List<Long> missingIds = normalizedIds.stream()
+                        .filter(id -> !existingIdSet.contains(id))
+                        .toList();
+                throw new IllegalArgumentException("Image not found with IDs: " + missingIds);
+            }
+
+            targetImageIds = new HashSet<>(existingIds);
+        } else if (processAll) {
+            targetImageIds = imageRepository.findAllImageIds().stream()
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
+        } else if (onlyNotEmbedded) {
+            targetImageIds = retryableIds == null ? new HashSet<>() : new HashSet<>(retryableIds);
+        } else if (embeddingStatus != null) {
+            targetImageIds = statusIds == null ? new HashSet<>() : new HashSet<>(statusIds);
+        } else {
+            throw new IllegalArgumentException("imageIds is required when processAll is false");
+        }
+
+        if (statusIds != null) {
+            targetImageIds.retainAll(statusIds);
+        }
+
+        if (retryableIds != null) {
+            targetImageIds.retainAll(retryableIds);
+        }
+
+        if (targetImageIds.isEmpty()) {
+            return 0;
+        }
+
+        List<Long> targetImageIdList = targetImageIds.stream().toList();
+
+        logger.info("Triggering embedding for {} images (processAll={}, embeddingStatus={}, onlyNotEmbedded={})",
+            targetImageIdList.size(), processAll, embeddingStatus, onlyNotEmbedded);
+        processImageEmbeddingsAsync(targetImageIdList);
+        return targetImageIdList.size();
+    }
+
     // =============================================
     // FILE SERVING OPERATIONS
     // =============================================
@@ -378,22 +449,25 @@ public class ImageServiceImpl implements ImageService {
 
     /**
      * Process image embeddings asynchronously for uploaded images
-     * This method doesn't affect the main response flow
-     * @param uploadedImages List of successfully uploaded images
+     * This method doesn't affect the main response flow.
+     * @param imageIds List of image IDs to process
      */
-    private void processImageEmbeddingsAsync(List<ImageDto> uploadedImages) {
-        if (uploadedImages == null || uploadedImages.isEmpty()) {
+    private void processImageEmbeddingsAsync(List<Long> imageIds) {
+        if (imageIds == null || imageIds.isEmpty()) {
             return;
         }
 
         // Process embeddings asynchronously to not block the main response
         CompletableFuture.runAsync(() -> {
-            for (ImageDto imageDto : uploadedImages) {
+            for (Long imageId : imageIds) {
+                if (imageId == null) {
+                    continue;
+                }
                 try {
-                    processImageEmbedding(imageDto.getImageId());
+                    processImageEmbedding(imageId);
                 } catch (Exception e) {
                     logger.error("Failed to process embedding for image ID {}: {}", 
-                               imageDto.getImageId(), e.getMessage(), e);
+                               imageId, e.getMessage(), e);
                 }
             }
         });

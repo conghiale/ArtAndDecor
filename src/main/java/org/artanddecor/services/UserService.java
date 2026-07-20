@@ -43,6 +43,12 @@ public interface UserService {
      */
     UserDto updateUserStatus(Long userId, Boolean enabled);
 
+    /**
+     * Delete user by ID after validating all references
+     * @param userId User ID
+     */
+    void deleteUser(Long userId);
+
 
 
 

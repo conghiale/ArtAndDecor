@@ -24,20 +24,20 @@ public class CartItemDto {
     
     private Long cartItemId;
     
-    @NotNull(message = "Quantity is required")
-    @Min(value = 1, message = "Quantity must be at least 1")
+    @NotNull(message = "Số lượng là bắt buộc")
+    @Min(value = 1, message = "Số lượng phải lớn hơn hoặc bằng 1")
     @Builder.Default
     private Integer quantity = 1;
     
-    @DecimalMin(value = "0.0", inclusive = true, message = "Unit price from frontend must not be negative")
+    @DecimalMin(value = "0.0", inclusive = true, message = "Đơn giá từ frontend không được là số âm")
     private BigDecimal cartItemUnitPrice;
     
-    @NotNull(message = "Unit price is required")
-    @DecimalMin(value = "0.0", inclusive = false, message = "Unit price must be greater than 0")
+    @NotNull(message = "Đơn giá là bắt buộc")
+    @DecimalMin(value = "0.0", inclusive = false, message = "Đơn giá phải lớn hơn 0")
     private BigDecimal unitPrice;
     
-    @NotNull(message = "Total price is required")
-    @DecimalMin(value = "0.0", inclusive = false, message = "Total price must be greater than 0")
+    @NotNull(message = "Tổng tiền là bắt buộc")
+    @DecimalMin(value = "0.0", inclusive = false, message = "Tổng tiền phải lớn hơn 0")
     private BigDecimal totalPrice;
     
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
@@ -150,13 +150,13 @@ public class CartItemDto {
      */
     public String getFormattedAttributes() {
         if (!hasAttributes()) {
-            return "No attributes selected";
+            return "Chưa chọn thuộc tính nào";
         }
         
         return cartItemAttributes.stream()
                 .map(CartItemAttributeDto::getFormattedDisplay)
                 .reduce((a, b) -> a + ", " + b)
-                .orElse("No attributes selected");
+                .orElse("Chưa chọn thuộc tính nào");
     }
     
     /**

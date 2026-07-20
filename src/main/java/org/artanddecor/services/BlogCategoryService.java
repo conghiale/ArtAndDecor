@@ -35,4 +35,9 @@ public interface BlogCategoryService {
      * Create new blog category
      */
     BlogCategoryDto createBlogCategory(BlogCategoryRequest request);
+
+    /**
+     * Delete blog category by ID with reference validation
+     */
+    void deleteBlogCategory(Long blogCategoryId);
 }

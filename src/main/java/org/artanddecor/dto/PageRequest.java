@@ -17,32 +17,32 @@ import jakarta.validation.constraints.*;
 @AllArgsConstructor
 public class PageRequest {
     
-    @NotNull(message = "Page position ID is required")
-    @Positive(message = "Page position ID must be positive")
+    @NotNull(message = "ID vị trí trang là bắt buộc")
+    @Positive(message = "ID vị trí trang phải lớn hơn 0")
     private Long pagePositionId;
     
-    @NotNull(message = "Page group ID is required")
-    @Positive(message = "Page group ID must be positive")
+    @NotNull(message = "ID nhóm trang là bắt buộc")
+    @Positive(message = "ID nhóm trang phải lớn hơn 0")
     private Long pageGroupId;
     
-    @Size(max = 256, message = "Target URL must not exceed 256 characters")
+    @Size(max = 256, message = "URL đích không được vượt quá 256 ký tự")
     private String targetUrl;
     
-    @Size(max = 64, message = "Page slug must not exceed 64 characters")
+    @Size(max = 64, message = "Slug trang không được vượt quá 64 ký tự")
     private String pageSlug;
     
-    @NotBlank(message = "Page name is required")
-    @Size(max = 100, message = "Page name must not exceed 100 characters")
+    @NotBlank(message = "Tên trang là bắt buộc")
+    @Size(max = 100, message = "Tên trang không được vượt quá 100 ký tự")
     private String pageName;
     
     private String pageContent;
     
     private Boolean pageEnabled;
     
-    @Size(max = 256, message = "Page display name must not exceed 256 characters")
+    @Size(max = 256, message = "Tên hiển thị trang không được vượt quá 256 ký tự")
     private String pageDisplayName;
     
-    @NotBlank(message = "Page remark is required")
-    @Size(max = 256, message = "Page remark must not exceed 256 characters")
+    @NotBlank(message = "Ghi chú trang là bắt buộc")
+    @Size(max = 256, message = "Ghi chú trang không được vượt quá 256 ký tự")
     private String pageRemark;
 }

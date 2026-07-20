@@ -14,6 +14,6 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class ForgotPasswordRequest {
 
-    @NotBlank(message = "Username or email is required")
+    @NotBlank(message = "Tên đăng nhập hoặc email là bắt buộc")
     private String identifier;
 }

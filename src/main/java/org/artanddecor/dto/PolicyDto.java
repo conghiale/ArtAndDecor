@@ -21,21 +21,21 @@ public class PolicyDto {
     
     private Long policyId;
     
-    @NotBlank(message = "Policy name is required")
-    @Size(max = 64, message = "Policy name must not exceed 64 characters")
+    @NotBlank(message = "Tên chính sách là bắt buộc")
+    @Size(max = 64, message = "Tên chính sách không được vượt quá 64 ký tự")
     private String policyName;
     
-    @Size(max = 64, message = "Policy slug must not exceed 64 characters")
+    @Size(max = 64, message = "Slug chính sách không được vượt quá 64 ký tự")
     private String policySlug;
     
-    @NotBlank(message = "Policy value is required")
+    @NotBlank(message = "Giá trị chính sách là bắt buộc")
     private String policyValue;
     
-    @Size(max = 256, message = "Policy display name must not exceed 256 characters")
+    @Size(max = 256, message = "Tên hiển thị chính sách không được vượt quá 256 ký tự")
     private String policyDisplayName;
     
-    @NotBlank(message = "Policy remark is required")
-    @Size(max = 256, message = "Remark must not exceed 256 characters")
+    @NotBlank(message = "Ghi chú chính sách là bắt buộc")
+    @Size(max = 256, message = "Ghi chú chính sách không được vượt quá 256 ký tự")
     private String policyRemark;
     
     private Boolean policyEnabled;

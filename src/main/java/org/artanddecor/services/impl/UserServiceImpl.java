@@ -9,6 +9,12 @@ import org.artanddecor.model.UserRole;
 import org.artanddecor.repository.UserRepository;
 import org.artanddecor.repository.UserProviderRepository;
 import org.artanddecor.repository.UserRoleRepository;
+import org.artanddecor.repository.ReviewRepository;
+import org.artanddecor.repository.ProductReviewLikeRepository;
+import org.artanddecor.repository.WishlistRepository;
+import org.artanddecor.repository.CartRepository;
+import org.artanddecor.repository.OrderRepository;
+import org.artanddecor.repository.OrderStateHistoryRepository;
 import org.artanddecor.services.UserService;
 import org.artanddecor.services.EmailService;
 import org.artanddecor.utils.UserMapperUtil;
@@ -38,6 +44,12 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final UserProviderRepository userProviderRepository;
     private final UserRoleRepository userRoleRepository;
+    private final ReviewRepository reviewRepository;
+    private final ProductReviewLikeRepository productReviewLikeRepository;
+    private final WishlistRepository wishlistRepository;
+    private final CartRepository cartRepository;
+    private final OrderRepository orderRepository;
+    private final OrderStateHistoryRepository orderStateHistoryRepository;
     private final EmailService emailService;
 
     private final PasswordEncoder passwordEncoder;
@@ -115,6 +127,51 @@ public class UserServiceImpl implements UserService {
         User savedUser = userRepository.save(user);
         
         return convertToDto(savedUser);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteUser(Long userId) {
+        logger.info("Start delete user, id={}", userId);
+
+        if (userId == null || userId <= 0) {
+            logger.warn("Invalid user id for delete, id={}", userId);
+            throw new IllegalArgumentException("ID người dùng không hợp lệ.");
+        }
+
+        if (!userRepository.existsById(userId)) {
+            logger.warn("User not found for delete, id={}", userId);
+            throw new IllegalArgumentException("Không tìm thấy người dùng cần xoá.");
+        }
+
+        logger.debug("Checking references before deleting user, id={}", userId);
+
+        ensureNoReference("USER", userId, "REVIEW", "USER_ID",
+            reviewRepository.countByUser_UserId(userId),
+            reviewRepository.findSampleReviewIdByUserId(userId));
+
+        ensureNoReference("USER", userId, "PRODUCT_REVIEW_LIKE", "USER_ID",
+            productReviewLikeRepository.countByUser_UserId(userId),
+            productReviewLikeRepository.findSampleLikeIdByUserId(userId));
+
+        ensureNoReference("USER", userId, "WISHLIST", "USER_ID",
+            wishlistRepository.countByUserUserId(userId),
+            wishlistRepository.findSampleWishlistIdByUserId(userId));
+
+        ensureNoReference("USER", userId, "CART", "USER_ID",
+            cartRepository.countCartsByUser(userId),
+            cartRepository.findSampleCartIdByUserId(userId));
+
+        ensureNoReference("USER", userId, "ORDERS", "USER_ID",
+            orderRepository.countByUser_UserId(userId),
+            orderRepository.findSampleOrderIdByUserId(userId));
+
+        ensureNoReference("USER", userId, "ORDER_STATE_HISTORY", "CHANGED_BY_USER_ID",
+            orderStateHistoryRepository.countByChangedByUser_UserId(userId),
+            orderStateHistoryRepository.findSampleHistoryIdByChangedByUserId(userId));
+
+        userRepository.deleteById(userId);
+        logger.info("Deleted user successfully, id={}", userId);
     }
 
     @Override
@@ -380,6 +437,24 @@ public class UserServiceImpl implements UserService {
             UserRole role = userRoleRepository.findById(UserMapperUtil.getUserRoleId(userDto))
                 .orElseThrow(() -> new IllegalArgumentException("Role not found with ID: " + UserMapperUtil.getUserRoleId(userDto)));
             user.setUserRole(role);
+        }
+    }
+
+    private void ensureNoReference(String entityName,
+                                   Long entityId,
+                                   String referencedTable,
+                                   String referencedColumn,
+                                   Long referencedCount,
+                                   Long sampleReferencedId) {
+        long count = referencedCount == null ? 0L : referencedCount;
+        if (count > 0) {
+            logger.warn(
+                    "Cannot delete {}, id={}, referencedTable={}, referencedColumn={}, referencedCount={}, sampleReferencedId={}",
+                    entityName, entityId, referencedTable, referencedColumn, count, sampleReferencedId);
+            String referenceDetail = String.format(
+                "Cannot delete %s, id=%s, referencedTable=%s, referencedColumn=%s, referencedCount=%s, sampleReferencedId=%s",
+                entityName, entityId, referencedTable, referencedColumn, count, sampleReferencedId);
+            throw new IllegalStateException(referenceDetail);
         }
     }
 }

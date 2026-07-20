@@ -21,11 +21,11 @@ public class TestimonialDto {
 
     private Long testimonialId;
 
-    @NotBlank(message = "Name is required")
-    @Size(max = 150, message = "Name must not exceed 150 characters")
+    @NotBlank(message = "Tên là bắt buộc")
+    @Size(max = 150, message = "Tên không được vượt quá 150 ký tự")
     private String testimonialName;
 
-    @NotBlank(message = "Quote is required")
+    @NotBlank(message = "Trích dẫn là bắt buộc")
     private String testimonialQuote;
 
     private Boolean testimonialEnabled;

@@ -18,26 +18,26 @@ import jakarta.validation.constraints.*;
 @AllArgsConstructor
 public class SeoMetaRequestDto {
     
-    @Size(max = 150, message = "SEO meta title must not exceed 150 characters")
+    @Size(max = 150, message = "SEO meta title không được vượt quá 150 ký tự")
     private String seoMetaTitle;
     
-    @Size(max = 500, message = "SEO meta description must not exceed 500 characters")
+    @Size(max = 500, message = "SEO meta description không được vượt quá 500 ký tự")
     private String seoMetaDescription;
     
-    @Size(max = 300, message = "SEO meta keywords must not exceed 300 characters")
+    @Size(max = 300, message = "SEO meta keywords không được vượt quá 300 ký tự")
     private String seoMetaKeywords;
     
-    @Size(max = 500, message = "Canonical URL must not exceed 500 characters")
+    @Size(max = 500, message = "Canonical URL không được vượt quá 500 ký tự")
     private String seoMetaCanonicalUrl;
     
     private Boolean seoMetaIndex = true;
     
     private Boolean seoMetaFollow = true;
     
-    @Size(max = 50, message = "Schema type must not exceed 50 characters")
+    @Size(max = 50, message = "Schema type không được vượt quá 50 ký tự")
     private String seoMetaSchemaType;
     
-    @Size(max = 2000, message = "Schema markup must not exceed 2000 characters")
+    @Size(max = 2000, message = "Schema markup không được vượt quá 2000 ký tự")
     private String seoMetaCustomJson;
     
     private Boolean seoMetaEnabled = true;

@@ -152,8 +152,8 @@ public class CartController {
         description = "Remove an item from cart (permanently delete from database). Works for both logged-in users and guest sessions."
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Cart item removed successfully"),
-        @ApiResponse(responseCode = "404", description = "Cart item not found")
+        @ApiResponse(responseCode = "200", description = "Xoá sản phẩm khỏi giỏ hàng thành công"),
+        @ApiResponse(responseCode = "404", description = "Không tìm thấy sản phẩm trong giỏ hàng")
     })
     @DeleteMapping("/items/{cartItemId}")
     public ResponseEntity<BaseResponseDto<CartItemDto>> removeCartItem(
@@ -164,11 +164,11 @@ public class CartController {
 
         try {
             CartItemDto cartItem = cartItemService.removeCartItem(cartItemId);
-            return ResponseEntity.ok(BaseResponseDto.success("Cart item removed successfully", cartItem));
+            return ResponseEntity.ok(BaseResponseDto.success("Xoá sản phẩm khỏi giỏ hàng thành công.", cartItem));
             
         } catch (Exception e) {
             logger.error("Error removing cart item {}: {}", cartItemId, e.getMessage(), e);
-            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to remove cart item: " + e.getMessage()));
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Không thể xoá sản phẩm khỏi giỏ hàng."));
         }
     }
 

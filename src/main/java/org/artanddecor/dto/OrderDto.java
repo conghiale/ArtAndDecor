@@ -23,19 +23,19 @@ public class OrderDto {
     
     private Long orderId;
     
-    @NotBlank(message = "Order code is required")
-    @Size(max = 50, message = "Order code must not exceed 50 characters")
+    @NotBlank(message = "Mã đơn hàng là bắt buộc")
+    @Size(max = 50, message = "Mã đơn hàng không được vượt quá 50 ký tự")
     private String orderCode;
     
-    @NotBlank(message = "Order slug is required")
-    @Size(max = 64, message = "Order slug must not exceed 64 characters")
+    @NotBlank(message = "Slug đơn hàng là bắt buộc")
+    @Size(max = 64, message = "Slug đơn hàng không được vượt quá 64 ký tự")
     private String orderSlug;
     
     // User reference for easy API usage
     private Long userId;
     
     // Session ID for guest users (from cart session)
-    @Size(max = 100, message = "Session ID must not exceed 100 characters")
+    @Size(max = 100, message = "ID phiên không được vượt quá 100 ký tự")
     private String sessionId;
     
     // Order state reference for easy API usage
@@ -49,16 +49,16 @@ public class OrderDto {
     
     // Customer information snapshot (from USER table or CART.SESSION_ID)
     // Maps to USER.USER_NAME if USER_ID is not null, otherwise CART.SESSION_ID
-    @Size(max = 150, message = "Customer name must not exceed 150 characters")
+    @Size(max = 150, message = "Tên khách hàng không được vượt quá 150 ký tự")
     private String customerName;
     
     // Maps to USER.PHONE_NUMBER or manual input
-    @Size(max = 15, message = "Customer phone number must not exceed 15 characters")
+    @Size(max = 15, message = "Số điện thoại khách hàng không được vượt quá 15 ký tự")
     private String customerPhoneNumber;
     
     // Maps to USER.EMAIL or manual input
-    @Email(message = "Invalid customer email format")
-    @Size(max = 100, message = "Customer email must not exceed 100 characters")
+    @Email(message = "Định dạng email khách hàng không hợp lệ")
+    @Size(max = 100, message = "Email khách hàng không được vượt quá 100 ký tự")
     private String customerEmail;
     
     // Customer address (manual input or from USER address)
@@ -66,51 +66,51 @@ public class OrderDto {
     
     // Receiver information snapshot (from SHIPMENT table)
     // Maps to SHIPMENT.RECEIVER_NAME
-    @Size(max = 150, message = "Receiver name must not exceed 150 characters")
+    @Size(max = 150, message = "Tên người nhận không được vượt quá 150 ký tự")
     private String receiverName;
     
     // Maps to SHIPMENT.RECEIVER_PHONE
-    @Size(max = 20, message = "Receiver phone must not exceed 20 characters")
+    @Size(max = 20, message = "Số điện thoại người nhận không được vượt quá 20 ký tự")
     private String receiverPhone;
     
     // Maps to SHIPMENT.RECEIVER_EMAIL
-    @Email(message = "Invalid receiver email format")
-    @Size(max = 150, message = "Receiver email must not exceed 150 characters")
+    @Email(message = "Định dạng email người nhận không hợp lệ")
+    @Size(max = 150, message = "Email người nhận không được vượt quá 150 ký tự")
     private String receiverEmail;
     
     // Receiver address details (from SHIPMENT table fields)
-    @Size(max = 255, message = "Address line must not exceed 255 characters")
+    @Size(max = 255, message = "Địa chỉ chi tiết không được vượt quá 255 ký tự")
     private String addressLine;
     
-    @Size(max = 100, message = "City must not exceed 100 characters") 
+    @Size(max = 100, message = "Thành phố không được vượt quá 100 ký tự") 
     private String city;
     
-    @Size(max = 100, message = "Ward must not exceed 100 characters")
+    @Size(max = 100, message = "Phường/Xã không được vượt quá 100 ký tự")
     private String ward;
     
-    @Size(max = 100, message = "Country must not exceed 100 characters")
+    @Size(max = 100, message = "Quốc gia không được vượt quá 100 ký tự")
     private String country;
     
     // Financial breakdown (ORDER table fields)
     // Maps to ORDER.SUBTOTAL_AMOUNT - original order amount before any adjustments
-    @NotNull(message = "Subtotal amount is required")
-    @DecimalMin(value = "0.0", message = "Subtotal amount must not be negative")
+    @NotNull(message = "Tạm tính là bắt buộc")
+    @DecimalMin(value = "0.0", message = "Tạm tính không được là số âm")
     private BigDecimal subtotalAmount;
     
     // Maps to ORDER.DISCOUNT_AMOUNT - snapshot from DISCOUNT calculation
-    @DecimalMin(value = "0.0", message = "Discount amount must not be negative")
+    @DecimalMin(value = "0.0", message = "Số tiền giảm giá không được là số âm")
     private BigDecimal discountAmount;
     
     // Maps to ORDER.SHIPPING_FEE_AMOUNT - snapshot from SHIPMENT.SHIPPING_FEE_AMOUNT
-    @DecimalMin(value = "0.0", message = "Shipping fee amount must not be negative")
+    @DecimalMin(value = "0.0", message = "Phí vận chuyển không được là số âm")
     private BigDecimal shippingFeeAmount;
     
     // Maps to ORDER.TOTAL_AMOUNT - final amount = SUBTOTAL_AMOUNT + SHIPPING_FEE_AMOUNT - DISCOUNT_AMOUNT
-    @NotNull(message = "Total amount is required")
-    @DecimalMin(value = "0.0", message = "Total amount must not be negative")
+    @NotNull(message = "Tổng thanh toán là bắt buộc")
+    @DecimalMin(value = "0.0", message = "Tổng thanh toán không được là số âm")
     private BigDecimal totalAmount;
     
-    @Size(max = 1000, message = "Order note must not exceed 1000 characters")
+    @Size(max = 1000, message = "Ghi chú đơn hàng không được vượt quá 1000 ký tự")
     private String orderNote;
     
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
@@ -120,15 +120,15 @@ public class OrderDto {
     private LocalDateTime modifiedDt;
     
     // Payment information snapshot (từ PAYMENT table tại thời điểm thanh toán)
-    @Size(max = 100, message = "Payment method must not exceed 100 characters")
+    @Size(max = 100, message = "Phương thức thanh toán không được vượt quá 100 ký tự")
     private String paymentMethod;
     
     private PaymentStateDto paymentState;
     
-    @Size(max = 100, message = "Transaction ID must not exceed 100 characters")
+    @Size(max = 100, message = "Mã giao dịch không được vượt quá 100 ký tự")
     private String transactionId;
     
-    @Size(max = 256, message = "Payment remark must not exceed 256 characters")
+    @Size(max = 256, message = "Ghi chú thanh toán không được vượt quá 256 ký tự")
     private String paymentRemark;
     
     // =============================================

@@ -19,19 +19,19 @@ import jakarta.validation.constraints.*;
 @Schema(description = "Request data for creating/updating product variants")
 public class ProductVariantRequestDto {
 
-    @Min(value = 1, message = "Product ID must be positive")
+        @Min(value = 1, message = "ID sản phẩm phải lớn hơn 0")
     @Schema(description = "Database product identifier. Optional when creating product with variants", 
             example = "1")
     private Long productId;
     
-    @NotNull(message = "Product attribute ID is required")
-    @Min(value = 1, message = "Product attribute ID must be positive")
+        @NotNull(message = "ID thuộc tính sản phẩm là bắt buộc")
+        @Min(value = 1, message = "ID thuộc tính sản phẩm phải lớn hơn 0")
     @Schema(description = "Database product attribute identifier from PRODUCT_ATTRIBUTE table", 
             example = "5")
     private Long productAttributeId;
     
-    @NotNull(message = "Product variant stock is required")
-    @Min(value = 0, message = "Product variant stock must not be negative")
+        @NotNull(message = "Tồn kho biến thể sản phẩm là bắt buộc")
+        @Min(value = 0, message = "Tồn kho biến thể sản phẩm không được là số âm")
     @Schema(description = "Available stock quantity for this product-attribute combination", 
             example = "25")
     private Integer productVariantStock;

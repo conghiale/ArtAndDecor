@@ -819,7 +819,7 @@ public class ReviewController {
         security = {@SecurityRequirement(name = "bearerAuth")}
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Review deleted successfully",
+        @ApiResponse(responseCode = "200", description = "Xoá đánh giá thành công",
                     content = @Content(schema = @Schema(implementation = ReviewDto.class))),
         @ApiResponse(responseCode = "401", description = "Authentication required"),
         @ApiResponse(responseCode = "403", description = "Admin access required"),
@@ -835,7 +835,7 @@ public class ReviewController {
             ReviewDto deletedReview = reviewService.softDeleteReview(reviewId);
 
             BaseResponseDto<ReviewDto> response = BaseResponseDto.success(
-                "Review deleted successfully", deletedReview);
+                "Xoá đánh giá thành công.", deletedReview);
             
             logger.info("Successfully soft deleted review with ID: {}", reviewId);
             return ResponseEntity.ok(response);
@@ -847,7 +847,7 @@ public class ReviewController {
         } catch (Exception e) {
             logger.error("Error deleting review {}: {}", reviewId, e.getMessage(), e);
             BaseResponseDto<ReviewDto> response = BaseResponseDto.serverError(
-                "Failed to delete review: " + e.getMessage());
+                "Không thể xoá đánh giá. Vui lòng thử lại.");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
@@ -915,7 +915,7 @@ public class ReviewController {
         security = {}
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Review like deleted successfully"),
+        @ApiResponse(responseCode = "200", description = "Bỏ thích đánh giá thành công"),
         @ApiResponse(responseCode = "400", description = "Like not found for this user and review"),
         @ApiResponse(responseCode = "404", description = "Review or user not found"),
         @ApiResponse(responseCode = "500", description = "Internal server error occurred while deleting like")
@@ -931,7 +931,7 @@ public class ReviewController {
             productReviewLikeService.deleteProductReviewLike(userId, reviewId);
 
             BaseResponseDto<String> response = BaseResponseDto.success(
-                "Review unliked successfully", "Like removed");
+                "Bỏ thích đánh giá thành công.", "Đã bỏ thích");
             
             logger.info("Successfully deleted like for review {} by user {}", reviewId, userId);
             return ResponseEntity.ok(response);
@@ -943,7 +943,7 @@ public class ReviewController {
         } catch (Exception e) {
             logger.error("Error deleting like for review {}: {}", reviewId, e.getMessage(), e);
             BaseResponseDto<String> response = BaseResponseDto.serverError(
-                "Failed to delete like: " + e.getMessage());
+                "Không thể bỏ thích đánh giá. Vui lòng thử lại.");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }}

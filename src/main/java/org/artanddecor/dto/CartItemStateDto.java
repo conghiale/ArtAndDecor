@@ -19,18 +19,18 @@ public class CartItemStateDto {
     
     private Long cartItemStateId;
     
-    @NotBlank(message = "Cart item state name is required")
-    @Size(max = 64, message = "Cart item state name must not exceed 64 characters")
+    @NotBlank(message = "Tên trạng thái mục giỏ hàng là bắt buộc")
+    @Size(max = 64, message = "Tên trạng thái mục giỏ hàng không được vượt quá 64 ký tự")
     private String cartItemStateName;
     
-    @Size(max = 256, message = "Display name must not exceed 256 characters")
+    @Size(max = 256, message = "Tên hiển thị không được vượt quá 256 ký tự")
     private String cartItemStateDisplayName;
     
-    @NotBlank(message = "Cart item state remark is required")
-    @Size(max = 256, message = "Remark must not exceed 256 characters")
+    @NotBlank(message = "Ghi chú trạng thái mục giỏ hàng là bắt buộc")
+    @Size(max = 256, message = "Ghi chú không được vượt quá 256 ký tự")
     private String cartItemStateRemark;
     
-    @NotNull(message = "Cart item state enabled flag is required")
+    @NotNull(message = "Cờ kích hoạt trạng thái mục giỏ hàng là bắt buộc")
     private Boolean cartItemStateEnabled;
     
     // Additional information for reporting

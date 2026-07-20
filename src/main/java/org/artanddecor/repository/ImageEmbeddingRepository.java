@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -46,6 +47,14 @@ public interface ImageEmbeddingRepository extends JpaRepository<ImageEmbedding, 
      */
     @Query("SELECT ie FROM ImageEmbedding ie WHERE ie.imageId = :imageId AND ie.embedding IS NOT NULL")
     Optional<ImageEmbedding> findByImageIdWithEmbedding(@Param("imageId") Long imageId);
+
+    /**
+     * Find image IDs by embedding status.
+     * @param status embedding status to filter by
+     * @return list of image IDs having the given status
+     */
+    @Query("SELECT ie.imageId FROM ImageEmbedding ie WHERE ie.imageEmbeddingStatus = :status")
+    List<Long> findImageIdsByEmbeddingStatus(@Param("status") ImageEmbeddingStatus status);
 
     /**
      * Update embedding status by image ID (targeted update — avoids full entity merge)

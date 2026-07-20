@@ -18,21 +18,21 @@ import jakarta.validation.constraints.*;
 @AllArgsConstructor
 public class ReviewRequestDto {
 
-    @NotNull(message = "Product ID is required")
+    @NotNull(message = "ID sản phẩm là bắt buộc")
     private Long productId;
 
-    @NotNull(message = "User ID is required") 
+    @NotNull(message = "ID người dùng là bắt buộc") 
     private Long userId;
 
     private Long parentReviewId; // Optional - null for top-level reviews
 
-    @NotNull(message = "Rating is required")
-    @Min(value = 1, message = "Rating must be at least 1")
-    @Max(value = 5, message = "Rating must not exceed 5")
+    @NotNull(message = "Điểm đánh giá là bắt buộc")
+    @Min(value = 1, message = "Điểm đánh giá phải lớn hơn hoặc bằng 1")
+    @Max(value = 5, message = "Điểm đánh giá không được vượt quá 5")
     private Integer rating;
 
-    @NotBlank(message = "Review content is required")
-    @Size(max = 65535, message = "Review content must not exceed 65535 characters")
+    @NotBlank(message = "Nội dung đánh giá là bắt buộc")
+    @Size(max = 65535, message = "Nội dung đánh giá không được vượt quá 65535 ký tự")
     private String reviewContent;
 
     /**

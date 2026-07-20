@@ -25,47 +25,47 @@ public class ShipmentDto {
     // Order reference
     private Long orderId;
     
-    @NotBlank(message = "Shipment code is required")
-    @Size(max = 64, message = "Shipment code must not exceed 64 characters")
+    @NotBlank(message = "Shipment code là bắt buộc")
+    @Size(max = 64, message = "Shipment code không được vượt quá 64 ký tự")
     private String shipmentCode;
     
     // Receiver information snapshot
-    @NotBlank(message = "Receiver name is required")
-    @Size(max = 150, message = "Receiver name must not exceed 150 characters")
+    @NotBlank(message = "Tên người nhận là bắt buộc")
+    @Size(max = 150, message = "Tên người nhận không được vượt quá 150 ký tự")
     private String receiverName;
     
-    @NotBlank(message = "Receiver phone is required")
+    @NotBlank(message = "Số điện thoại người nhận là bắt buộc")
     @Pattern(regexp = "^(\\+84|0)(3[2-9]|5[689]|7[06-9]|8[1-689]|9[0-46-9])[0-9]{7}$", 
-             message = "Invalid phone number format")
-    @Size(max = 20, message = "Receiver phone must not exceed 20 characters")
+             message = "Định dạng số điện thoại không hợp lệ")
+    @Size(max = 20, message = "Số điện thoại người nhận không được vượt quá 20 ký tự")
     private String receiverPhone;
     
-    @Email(message = "Invalid receiver email format")
-    @Size(max = 150, message = "Receiver email must not exceed 150 characters")
+    @Email(message = "Định dạng email người nhận không hợp lệ")
+    @Size(max = 150, message = "Email người nhận không được vượt quá 150 ký tự")
     private String receiverEmail;
     
     // Address information
-    @NotBlank(message = "Address line is required")
-    @Size(max = 255, message = "Address line must not exceed 255 characters")
+    @NotBlank(message = "Địa chỉ chi tiết là bắt buộc")
+    @Size(max = 255, message = "Địa chỉ chi tiết không được vượt quá 255 ký tự")
     private String addressLine;
     
-    @NotBlank(message = "City is required")
-    @Size(max = 100, message = "City must not exceed 100 characters")
+    @NotBlank(message = "Thành phố là bắt buộc")
+    @Size(max = 100, message = "Thành phố không được vượt quá 100 ký tự")
     private String city;
     
-    @Size(max = 100, message = "Ward must not exceed 100 characters")
+    @Size(max = 100, message = "Phường/Xã không được vượt quá 100 ký tự")
     private String ward;
     
-    @NotBlank(message = "Country is required")
-    @Size(max = 100, message = "Country must not exceed 100 characters")
+    @NotBlank(message = "Quốc gia là bắt buộc")
+    @Size(max = 100, message = "Quốc gia không được vượt quá 100 ký tự")
     private String country;
     
     // Shipping fee snapshot
-    @NotNull(message = "Shipping fee amount is required")
-    @DecimalMin(value = "0.0", message = "Shipping fee amount must not be negative")
+    @NotNull(message = "Phí vận chuyển là bắt buộc")
+    @DecimalMin(value = "0.0", message = "Phí vận chuyển không được là số âm")
     private BigDecimal shippingFeeAmount;
     
-    @Size(max = 256, message = "Shipment remark must not exceed 256 characters")
+    @Size(max = 256, message = "Shipment remark không được vượt quá 256 ký tự")
     private String shipmentRemark;
     
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")

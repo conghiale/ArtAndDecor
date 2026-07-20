@@ -6,8 +6,10 @@ import org.artanddecor.dto.ProductAttributeRequestDto;
 import org.artanddecor.exception.ResourceNotFoundException;
 import org.artanddecor.model.ProductAttr;
 import org.artanddecor.model.ProductAttribute;
+import org.artanddecor.repository.CartItemAttributeRepository;
 import org.artanddecor.repository.ProductAttrRepository;
 import org.artanddecor.repository.ProductAttributeRepository;
+import org.artanddecor.repository.ProductVariantRepository;
 import org.artanddecor.services.ProductAttributeService;
 import org.artanddecor.utils.ProductMapperUtil;
 import org.slf4j.Logger;
@@ -34,6 +36,8 @@ public class ProductAttributeServiceImpl implements ProductAttributeService {
     
     private final ProductAttributeRepository productAttributeRepository;
     private final ProductAttrRepository productAttrRepository;
+    private final ProductVariantRepository productVariantRepository;
+    private final CartItemAttributeRepository cartItemAttributeRepository;
 
     // =============================================
     // FIND OPERATIONS
@@ -194,14 +198,47 @@ public class ProductAttributeServiceImpl implements ProductAttributeService {
     @Override
     @Transactional
     public void deleteProductAttribute(Long productAttributeId) {
-        logger.info("Deleting product attribute ID: {}", productAttributeId);
-        
-        if (!productAttributeRepository.existsById(productAttributeId)) {
-            throw new ResourceNotFoundException("Product attribute not found with ID: " + productAttributeId);
+        logger.info("Start delete productAttribute, id={}", productAttributeId);
+
+        if (productAttributeId == null || productAttributeId <= 0) {
+            logger.warn("Invalid productAttribute id for delete, id={}", productAttributeId);
+            throw new IllegalArgumentException("ID thuộc tính sản phẩm không hợp lệ.");
         }
-        
-        productAttributeRepository.deleteById(productAttributeId);
-        logger.info("Product attribute deleted successfully");
+
+        ProductAttribute productAttribute = productAttributeRepository.findById(productAttributeId)
+                .orElseThrow(() -> {
+                    logger.warn("ProductAttribute not found for delete, id={}", productAttributeId);
+                    return new ResourceNotFoundException("Không tìm thấy thuộc tính sản phẩm cần xoá.");
+                });
+
+        logger.debug("Checking references before deleting productAttribute, id={}", productAttributeId);
+
+        Long productVariantRefCount = productVariantRepository.countByProductAttribute_ProductAttributeId(productAttributeId);
+        Long productVariantSampleId = productVariantRepository.findSampleVariantIdByProductAttributeId(productAttributeId);
+        if (productVariantRefCount != null && productVariantRefCount > 0) {
+            logger.warn(
+                    "Cannot delete PRODUCT_ATTRIBUTE, id={}, referencedTable={}, referencedColumn={}, referencedCount={}, sampleReferencedId={}",
+                    productAttributeId, "PRODUCT_VARIANT", "PRODUCT_ATTRIBUTE_ID", productVariantRefCount, productVariantSampleId);
+            String referenceDetail = String.format(
+                "Cannot delete PRODUCT_ATTRIBUTE, id=%s, referencedTable=%s, referencedColumn=%s, referencedCount=%s, sampleReferencedId=%s",
+                productAttributeId, "PRODUCT_VARIANT", "PRODUCT_ATTRIBUTE_ID", productVariantRefCount, productVariantSampleId);
+            throw new IllegalStateException(referenceDetail);
+        }
+
+        Long cartItemAttrRefCount = cartItemAttributeRepository.countByProductAttribute_ProductAttributeId(productAttributeId);
+        Long cartItemAttrSampleId = cartItemAttributeRepository.findSampleCartItemAttributeIdByProductAttributeId(productAttributeId);
+        if (cartItemAttrRefCount != null && cartItemAttrRefCount > 0) {
+            logger.warn(
+                    "Cannot delete PRODUCT_ATTRIBUTE, id={}, referencedTable={}, referencedColumn={}, referencedCount={}, sampleReferencedId={}",
+                    productAttributeId, "CART_ITEM_ATTRIBUTE", "PRODUCT_ATTRIBUTE_ID", cartItemAttrRefCount, cartItemAttrSampleId);
+            String referenceDetail = String.format(
+                "Cannot delete PRODUCT_ATTRIBUTE, id=%s, referencedTable=%s, referencedColumn=%s, referencedCount=%s, sampleReferencedId=%s",
+                productAttributeId, "CART_ITEM_ATTRIBUTE", "PRODUCT_ATTRIBUTE_ID", cartItemAttrRefCount, cartItemAttrSampleId);
+            throw new IllegalStateException(referenceDetail);
+        }
+
+        productAttributeRepository.delete(productAttribute);
+        logger.info("Deleted productAttribute successfully, id={}", productAttributeId);
     }
 
     // =============================================

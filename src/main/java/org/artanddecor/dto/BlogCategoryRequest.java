@@ -16,31 +16,31 @@ import jakarta.validation.Valid;
 @AllArgsConstructor
 public class BlogCategoryRequest {
     
-    @NotBlank(message = "Blog category slug is required")
-    @Size(max = 64, message = "Blog category slug must not exceed 64 characters")
-    @Pattern(regexp = "^[a-z0-9-]+$", message = "Blog category slug must contain only lowercase letters, numbers, and hyphens")
+    @NotBlank(message = "Slug danh mục blog là bắt buộc")
+    @Size(max = 64, message = "Slug danh mục blog không được vượt quá 64 ký tự")
+    @Pattern(regexp = "^[a-z0-9-]+$", message = "Slug danh mục blog chỉ được chứa chữ thường, số và dấu gạch nối")
     private String blogCategorySlug;
     
-    @NotBlank(message = "Blog category name is required")
-    @Size(max = 64, message = "Blog category name must not exceed 64 characters")
+    @NotBlank(message = "Tên danh mục blog là bắt buộc")
+    @Size(max = 64, message = "Tên danh mục blog không được vượt quá 64 ký tự")
     private String blogCategoryName;
     
-    @Size(max = 256, message = "Blog category display name must not exceed 256 characters")
+    @Size(max = 256, message = "Tên hiển thị danh mục blog không được vượt quá 256 ký tự")
     private String blogCategoryDisplayName;
     
-    @NotBlank(message = "Blog category remark is required")
-    @Size(max = 256, message = "Blog category remark must not exceed 256 characters")
+    @NotBlank(message = "Ghi chú danh mục blog là bắt buộc")
+    @Size(max = 256, message = "Ghi chú danh mục blog không được vượt quá 256 ký tự")
     private String blogCategoryRemark;
     
-    @NotNull(message = "Blog category enabled status is required")
+    @NotNull(message = "Trạng thái bật danh mục blog là bắt buộc")
     private Boolean blogCategoryEnabled;
     
     // Foreign key IDs only (not nested DTOs)
-    @NotNull(message = "Blog type ID is required")
-    @Positive(message = "Blog type ID must be positive")
+    @NotNull(message = "ID loại blog là bắt buộc")
+    @Positive(message = "ID loại blog phải lớn hơn 0")
     private Long blogTypeId;
     
-    @Positive(message = "Image ID must be positive")
+    @Positive(message = "ID ảnh phải lớn hơn 0")
     private Long imageId;
     
     // SEO Meta information for creating SEO metadata

@@ -27,36 +27,36 @@ public class OrderItemDto {
     private Long productId;
     
     // Product snapshot information
-    @NotBlank(message = "Product name is required")
-    @Size(max = 255, message = "Product name must not exceed 255 characters")
+    @NotBlank(message = "Tên sản phẩm là bắt buộc")
+    @Size(max = 255, message = "Tên sản phẩm không được vượt quá 255 ký tự")
     private String productName;
     
-    @NotBlank(message = "Product code is required")
-    @Size(max = 64, message = "Product code must not exceed 64 characters")
+    @NotBlank(message = "Mã sản phẩm là bắt buộc")
+    @Size(max = 64, message = "Mã sản phẩm không được vượt quá 64 ký tự")
     private String productCode;
     
-    @NotBlank(message = "Product category name is required")
-    @Size(max = 100, message = "Product category name must not exceed 100 characters")
+    @NotBlank(message = "Tên danh mục sản phẩm là bắt buộc")
+    @Size(max = 100, message = "Tên danh mục sản phẩm không được vượt quá 100 ký tự")
     private String productCategoryName;
     
-    @NotBlank(message = "Product type name is required")
-    @Size(max = 100, message = "Product type name must not exceed 100 characters")
+    @NotBlank(message = "Tên loại sản phẩm là bắt buộc")
+    @Size(max = 100, message = "Tên loại sản phẩm không được vượt quá 100 ký tự")
     private String productTypeName;
     
     private String productAttrJson;
     
-    @NotNull(message = "Unit price is required")
-    @DecimalMin(value = "0.0", message = "Unit price must not be negative")
-    @Digits(integer = 13, fraction = 2, message = "Invalid unit price format")
+    @NotNull(message = "Đơn giá là bắt buộc")
+    @DecimalMin(value = "0.0", message = "Đơn giá không được là số âm")
+    @Digits(integer = 13, fraction = 2, message = "Định dạng đơn giá không hợp lệ")
     private BigDecimal unitPrice;
     
-    @NotNull(message = "Quantity is required")
-    @Min(value = 1, message = "Quantity must be at least 1")
+    @NotNull(message = "Số lượng là bắt buộc")
+    @Min(value = 1, message = "Số lượng phải lớn hơn hoặc bằng 1")
     private Integer quantity;
     
-    @NotNull(message = "Total price is required")
-    @DecimalMin(value = "0.0", message = "Total price must not be negative")
-    @Digits(integer = 13, fraction = 2, message = "Invalid total price format")
+    @NotNull(message = "Tổng tiền là bắt buộc")
+    @DecimalMin(value = "0.0", message = "Tổng tiền không được là số âm")
+    @Digits(integer = 13, fraction = 2, message = "Định dạng tổng tiền không hợp lệ")
     private BigDecimal totalPrice;
     
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
@@ -92,7 +92,7 @@ public class OrderItemDto {
         if (productName != null && !productName.isEmpty()) {
             return productName + " (x" + quantity + ")";
         }
-        return "Unknown Product (x" + (quantity != null ? quantity : 0) + ")";
+        return "Sản phẩm không xác định (x" + (quantity != null ? quantity : 0) + ")";
     }
     
     /**
@@ -118,7 +118,7 @@ public class OrderItemDto {
      */
     public String getFormattedAttributes() {
         if (!hasAttributes()) {
-            return "No attributes selected";
+            return "Chưa chọn thuộc tính nào";
         }
         
         // For now, return simplified JSON content

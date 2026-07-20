@@ -18,32 +18,32 @@ import jakarta.validation.constraints.*;
 @AllArgsConstructor
 public class ContactRequest {
 
-    @NotBlank(message = "Contact name is required")
-    @Size(min = 2, max = 255, message = "Contact name must be between 2 and 255 characters")
+    @NotBlank(message = "Tên liên hệ là bắt buộc")
+    @Size(min = 2, max = 255, message = "Tên liên hệ phải có từ 2 đến 255 ký tự")
     private String contactName;
 
-    @Pattern(regexp = "^[a-z0-9-]*$", message = "Contact slug must contain only lowercase letters, numbers, and hyphens")
-    @Size(max = 255, message = "Contact slug must not exceed 255 characters")
+    @Pattern(regexp = "^[a-z0-9-]*$", message = "Slug liên hệ chỉ được chứa chữ thường, số và dấu gạch nối")
+    @Size(max = 255, message = "Slug liên hệ không được vượt quá 255 ký tự")
     private String contactSlug;
 
-    @Size(max = 500, message = "Contact address must not exceed 500 characters") 
+    @Size(max = 500, message = "Địa chỉ liên hệ không được vượt quá 500 ký tự") 
     private String contactAddress;
 
-    @Email(message = "Invalid email format")
-    @Size(max = 255, message = "Contact email must not exceed 255 characters")
+    @Email(message = "Định dạng email không hợp lệ")
+    @Size(max = 255, message = "Email liên hệ không được vượt quá 255 ký tự")
     private String contactEmail;
 
-    @Pattern(regexp = "^[+]?[0-9\\s\\-\\(\\)]*$", message = "Invalid phone number format")
-    @Size(max = 50, message = "Contact phone must not exceed 50 characters")
+    @Pattern(regexp = "^[+]?[0-9\\s\\-\\(\\)]*$", message = "Định dạng số điện thoại không hợp lệ")
+    @Size(max = 50, message = "Số điện thoại liên hệ không được vượt quá 50 ký tự")
     private String contactPhone;
 
-    @Size(max = 255, message = "Contact fanpage must not exceed 255 characters")
+    @Size(max = 255, message = "Fanpage liên hệ không được vượt quá 255 ký tự")
     private String contactFanpage;
 
-    @NotNull(message = "Contact enabled status is required")
+    @NotNull(message = "Trạng thái bật liên hệ là bắt buộc")
     private Boolean contactEnabled;
 
-    @Size(max = 1000, message = "Contact remark must not exceed 1000 characters")
+    @Size(max = 1000, message = "Ghi chú liên hệ không được vượt quá 1000 ký tự")
     private String contactRemark;
 
     @Valid

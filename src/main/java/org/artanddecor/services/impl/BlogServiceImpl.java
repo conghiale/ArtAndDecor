@@ -181,4 +181,36 @@ public class BlogServiceImpl implements BlogService {
         Blog savedBlog = blogRepository.save(blog);
         return blogMapper.toBlogDto(savedBlog);
     }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteBlog(Long blogId) {
+        logger.info("Start delete blog, id={}", blogId);
+
+        if (blogId == null || blogId <= 0) {
+            logger.warn("Invalid blog id for delete, id={}", blogId);
+            throw new IllegalArgumentException("ID bài viết không hợp lệ.");
+        }
+
+        Blog blog = blogRepository.findById(blogId)
+                .orElseThrow(() -> {
+                    logger.warn("Blog not found for delete, id={}", blogId);
+                    return new IllegalArgumentException("Không tìm thấy bài viết cần xoá.");
+                });
+
+        Long seoMetaId = blog.getSeoMetaId();
+
+        logger.debug("Checking references before deleting blog, id={}", blogId);
+        // Schema CREATE_DB_ART_AND_DECOR.sql currently has no FK referencing BLOG_ID.
+        // Safe to delete after existence validation.
+
+        blogRepository.delete(blog);
+
+        if (seoMetaId != null) {
+            seoMetaService.deleteSeoMeta(seoMetaId);
+            logger.info("Deleted associated SEO meta for blog, blogId={}, seoMetaId={}", blogId, seoMetaId);
+        }
+
+        logger.info("Deleted blog successfully, id={}", blogId);
+    }
 }

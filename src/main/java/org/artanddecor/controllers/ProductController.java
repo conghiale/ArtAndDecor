@@ -1,11 +1,13 @@
 package org.artanddecor.controllers;
 
 import lombok.RequiredArgsConstructor;
+import org.artanddecor.exception.ResourceNotFoundException;
 import org.artanddecor.dto.*;
 import org.artanddecor.services.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -363,7 +365,7 @@ public class ProductController {
             "In that case, disable the product instead. Admin/Manager access required."
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Product deleted successfully"),
+        @ApiResponse(responseCode = "200", description = "Xoá sản phẩm thành công"),
         @ApiResponse(responseCode = "400", description = "Invalid product ID"),
         @ApiResponse(responseCode = "401", description = "Authentication required"),
         @ApiResponse(responseCode = "403", description = "Access denied - ADMIN or MANAGER role required"),
@@ -378,7 +380,7 @@ public class ProductController {
         logger.info("Deleting product ID: {}", productId);
         try {
             productService.deleteProduct(productId);
-            return ResponseEntity.ok(BaseResponseDto.success("Product deleted successfully", null));
+            return ResponseEntity.ok(BaseResponseDto.success("Xoá sản phẩm thành công.", null));
         } catch (IllegalArgumentException e) {
             logger.error("Product not found for deletion: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(BaseResponseDto.notFound(e.getMessage()));
@@ -388,7 +390,7 @@ public class ProductController {
         } catch (Exception e) {
             logger.error("Error deleting product {}: {}", productId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(BaseResponseDto.serverError("Failed to delete product: " + e.getMessage()));
+                    .body(BaseResponseDto.serverError("Không thể xoá sản phẩm. Vui lòng thử lại."));
         }
     }
 
@@ -546,10 +548,10 @@ public class ProductController {
         logger.info("Removing image {} from product {}", imageId, productId);
         try {
             productService.removeImageFromProduct(productId, imageId);
-            return ResponseEntity.ok(BaseResponseDto.success("Image removed from product successfully", null));
+            return ResponseEntity.ok(BaseResponseDto.success("Xoá ảnh khỏi sản phẩm thành công.", null));
         } catch (Exception e) {
             logger.error("Error removing image from product: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to remove image from product: " + e.getMessage()));
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Không thể xoá ảnh khỏi sản phẩm."));
         }
     }
 
@@ -690,10 +692,10 @@ public class ProductController {
      * Delete product attribute by ID (Master catalog)
      */
     @DeleteMapping("/attributes/{productAttributeId}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(
         summary = "Delete product attribute (Master catalog)",
-        description = "Delete a master product attribute by its ID. This action cannot be undone. Admin/Manager access required."
+        description = "Delete a master product attribute by its ID. This action cannot be undone. Admin access required."
     )
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<BaseResponseDto<Void>> deleteProductAttributeById(
@@ -704,13 +706,27 @@ public class ProductController {
         
         try {
             productAttributeService.deleteProductAttribute(productAttributeId);
-            return ResponseEntity.ok(BaseResponseDto.success("Product attribute deleted successfully", null));
-        } catch (IllegalArgumentException e) {
+            return ResponseEntity.ok(BaseResponseDto.success("Xoá thuộc tính sản phẩm thành công.", null));
+        } catch (ResourceNotFoundException e) {
             logger.error("Product attribute not found: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(BaseResponseDto.notFound(e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            logger.error("Validation error deleting product attribute: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(e.getMessage()));
+        } catch (IllegalStateException e) {
+            logger.error("Product attribute is referenced, cannot delete: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(BaseResponseDto.error(HttpStatus.CONFLICT.value(),
+                    buildReferenceConflictMessage("thuộc tính sản phẩm", e.getMessage())));
+        } catch (DataIntegrityViolationException e) {
+            logger.error("Product attribute delete blocked by database reference constraint: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(BaseResponseDto.error(HttpStatus.CONFLICT.value(),
+                    buildReferenceConflictMessage("thuộc tính sản phẩm", e.getMessage())));
         } catch (Exception e) {
             logger.error("Error deleting product attribute {}: {}", productAttributeId, e.getMessage(), e);
-            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to delete product attribute: " + e.getMessage()));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(BaseResponseDto.serverError("Không thể xoá thuộc tính sản phẩm. Vui lòng thử lại."));
         }
     }
 
@@ -841,10 +857,10 @@ public class ProductController {
      * Delete product variant
      */
     @DeleteMapping("/variants/{variantId}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(
         summary = "Delete product variant",
-        description = "Delete a product variant by its ID. This removes the product-attribute association. Admin/Manager access required."
+        description = "Delete a product variant by its ID. This removes the product-attribute association. Admin access required."
     )
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<BaseResponseDto<Void>> deleteProductVariant(
@@ -855,13 +871,27 @@ public class ProductController {
         
         try {
             productVariantService.deleteProductVariant(variantId);
-            return ResponseEntity.ok(BaseResponseDto.success("Product variant deleted successfully", null));
-        } catch (IllegalArgumentException e) {
+            return ResponseEntity.ok(BaseResponseDto.success("Xoá biến thể sản phẩm thành công.", null));
+        } catch (ResourceNotFoundException e) {
             logger.error("Product variant not found: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(BaseResponseDto.notFound(e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            logger.error("Validation error deleting product variant: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(e.getMessage()));
+        } catch (IllegalStateException e) {
+            logger.error("Product variant is referenced, cannot delete: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(BaseResponseDto.error(HttpStatus.CONFLICT.value(),
+                    buildReferenceConflictMessage("biến thể sản phẩm", e.getMessage())));
+        } catch (DataIntegrityViolationException e) {
+            logger.error("Product variant delete blocked by database reference constraint: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(BaseResponseDto.error(HttpStatus.CONFLICT.value(),
+                    buildReferenceConflictMessage("biến thể sản phẩm", e.getMessage())));
         } catch (Exception e) {
             logger.error("Error deleting product variant {}: {}", variantId, e.getMessage(), e);
-            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to delete product variant: " + e.getMessage()));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(BaseResponseDto.serverError("Không thể xoá biến thể sản phẩm. Vui lòng thử lại."));
         }
     }
 
@@ -943,6 +973,41 @@ public class ProductController {
         } catch (Exception e) {
             logger.error("Error updating product type {}: {}", productTypeId, e.getMessage(), e);
             return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to update product type: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Delete product type (Admin/Manager only)
+     */
+    @DeleteMapping("/types/{productTypeId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Delete product type", description = "Delete product type when no category references it. Admin access required.")
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<BaseResponseDto<Void>> deleteProductType(@PathVariable Long productTypeId) {
+        logger.info("Deleting product type ID: {}", productTypeId);
+        try {
+            productTypeService.deleteProductType(productTypeId);
+            return ResponseEntity.ok(BaseResponseDto.success("Xoá loại sản phẩm thành công.", null));
+        } catch (IllegalArgumentException e) {
+            logger.error("Delete product type validation/not-found error: {}", e.getMessage());
+            if (e.getMessage() != null && e.getMessage().startsWith("Không tìm thấy")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(BaseResponseDto.notFound(e.getMessage()));
+            }
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(e.getMessage()));
+        } catch (IllegalStateException e) {
+            logger.error("Delete product type blocked by references: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(BaseResponseDto.error(HttpStatus.CONFLICT.value(),
+                    buildReferenceConflictMessage("loại sản phẩm", e.getMessage())));
+        } catch (DataIntegrityViolationException e) {
+            logger.error("Delete product type blocked by database reference constraint: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(BaseResponseDto.error(HttpStatus.CONFLICT.value(),
+                    buildReferenceConflictMessage("loại sản phẩm", e.getMessage())));
+        } catch (Exception e) {
+            logger.error("Error deleting product type {}: {}", productTypeId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(BaseResponseDto.serverError("Không thể xoá loại sản phẩm. Vui lòng thử lại."));
         }
     }
 
@@ -1093,6 +1158,41 @@ public class ProductController {
         }
     }
 
+    /**
+     * Delete product category (Admin/Manager only)
+     */
+    @DeleteMapping("/categories/{productCategoryId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Delete product category", description = "Delete product category when there are no products and no child categories. Admin access required.")
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<BaseResponseDto<Void>> deleteProductCategory(@PathVariable Long productCategoryId) {
+        logger.info("Deleting product category ID: {}", productCategoryId);
+        try {
+            productCategoryService.deleteProductCategory(productCategoryId);
+            return ResponseEntity.ok(BaseResponseDto.success("Xoá danh mục sản phẩm thành công.", null));
+        } catch (IllegalArgumentException e) {
+            logger.error("Delete product category validation/not-found error: {}", e.getMessage());
+            if (e.getMessage() != null && e.getMessage().startsWith("Không tìm thấy")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(BaseResponseDto.notFound(e.getMessage()));
+            }
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(e.getMessage()));
+        } catch (IllegalStateException e) {
+            logger.error("Delete product category blocked by references: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(BaseResponseDto.error(HttpStatus.CONFLICT.value(),
+                    buildReferenceConflictMessage("danh mục sản phẩm", e.getMessage())));
+        } catch (DataIntegrityViolationException e) {
+            logger.error("Delete product category blocked by database reference constraint: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(BaseResponseDto.error(HttpStatus.CONFLICT.value(),
+                    buildReferenceConflictMessage("danh mục sản phẩm", e.getMessage())));
+        } catch (Exception e) {
+            logger.error("Error deleting product category {}: {}", productCategoryId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(BaseResponseDto.serverError("Không thể xoá danh mục sản phẩm. Vui lòng thử lại."));
+        }
+    }
+
     /*=============================================
      PRODUCT STATE ENDPOINTS
      =============================================*/
@@ -1211,5 +1311,50 @@ public class ProductController {
             logger.error("Error updating product attribute: {}", e.getMessage(), e);
             return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to update product attribute: " + e.getMessage()));
         }
+    }
+
+    /**
+     * Delete product attr (Admin/Manager only)
+     */
+    @DeleteMapping("/attrs/{productAttrId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Delete product attr", description = "Delete product attribute group when no product attribute references it. Admin access required.")
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<BaseResponseDto<Void>> deleteProductAttr(@PathVariable Long productAttrId) {
+        logger.info("Deleting product attr ID: {}", productAttrId);
+        try {
+            productAttrService.deleteProductAttr(productAttrId);
+            return ResponseEntity.ok(BaseResponseDto.success("Xoá nhóm thuộc tính sản phẩm thành công.", null));
+        } catch (IllegalArgumentException e) {
+            logger.error("Delete product attr validation/not-found error: {}", e.getMessage());
+            if (e.getMessage() != null && e.getMessage().startsWith("Không tìm thấy")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(BaseResponseDto.notFound(e.getMessage()));
+            }
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(e.getMessage()));
+        } catch (IllegalStateException e) {
+            logger.error("Delete product attr blocked by references: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(BaseResponseDto.error(HttpStatus.CONFLICT.value(),
+                            buildReferenceConflictMessage("nhóm thuộc tính sản phẩm", e.getMessage())));
+        } catch (DataIntegrityViolationException e) {
+            logger.error("Delete product attr blocked by database reference constraint: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(BaseResponseDto.error(HttpStatus.CONFLICT.value(),
+                            buildReferenceConflictMessage("nhóm thuộc tính sản phẩm", e.getMessage())));
+        } catch (Exception e) {
+            logger.error("Error deleting product attr {}: {}", productAttrId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(BaseResponseDto.serverError("Không thể xoá nhóm thuộc tính sản phẩm. Vui lòng thử lại."));
+        }
+    }
+
+    private String buildReferenceConflictMessage(String entityDisplayName, String detail) {
+        String message = "Không thể xoá " + entityDisplayName +
+                " vì bản ghi này đang được tham chiếu bởi dữ liệu liên quan. " +
+                "Vui lòng kiểm tra và xử lý dữ liệu phụ thuộc trước khi thử lại.";
+        if (detail != null && !detail.isBlank()) {
+            message = message + " Chi tiết: " + detail;
+        }
+        return message;
     }
 }

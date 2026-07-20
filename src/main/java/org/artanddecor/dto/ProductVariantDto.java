@@ -26,8 +26,8 @@ public class ProductVariantDto {
     
     private Long productAttributeId;
     
-    @NotNull(message = "Product variant stock is required")
-    @Min(value = 0, message = "Product variant stock must not be negative")
+    @NotNull(message = "Số lượng biến thể sản phẩm là bắt buộc")
+    @Min(value = 0, message = "Số lượng biến thể sản phẩm không được là số âm")
     private Integer productVariantStock;
     
     @Builder.Default

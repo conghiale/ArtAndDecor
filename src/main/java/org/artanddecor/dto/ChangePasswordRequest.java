@@ -14,16 +14,16 @@ import lombok.*;
 public class ChangePasswordRequest {
 
     // Getters and Setters
-    @NotBlank(message = "Current password is required")
+    @NotBlank(message = "Mật khẩu hiện tại là bắt buộc")
     private String currentPassword;
     
-    @NotBlank(message = "New password is required")
-    @Size(min = 8, max = 150, message = "Password must be between 8 and 150 characters")
+    @NotBlank(message = "Mật khẩu mới là bắt buộc")
+    @Size(min = 8, max = 150, message = "Mật khẩu phải có từ 8 đến 150 ký tự")
     @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).*$", 
-             message = "Password must contain at least one uppercase letter, one lowercase letter, and one number")
+             message = "Mật khẩu phải chứa ít nhất một chữ hoa, một chữ thường và một chữ số")
     private String newPassword;
     
-    @NotBlank(message = "Confirm password is required")
+    @NotBlank(message = "Xác nhận mật khẩu là bắt buộc")
     private String confirmPassword;
 
     /**

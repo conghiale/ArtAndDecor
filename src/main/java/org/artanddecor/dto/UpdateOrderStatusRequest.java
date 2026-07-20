@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class UpdateOrderStatusRequest {
     
-    @NotNull(message = "New order status ID is required")
+    @NotNull(message = "ID trạng thái mới là bắt buộc")
     private Long newOrderStateId;
     
     private String statusNote;  // Optional note for status change

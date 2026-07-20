@@ -19,19 +19,19 @@ public class BlogTypeDto {
     
     private Long blogTypeId;
     
-    @NotBlank(message = "Blog type slug is required")
-    @Size(max = 64, message = "Blog type slug must not exceed 64 characters")
+    @NotBlank(message = "Blog type slug là bắt buộc")
+    @Size(max = 64, message = "Blog type slug không được vượt quá 64 ký tự")
     private String blogTypeSlug;
     
-    @NotBlank(message = "Blog type name is required")
-    @Size(max = 64, message = "Blog type name must not exceed 64 characters")
+    @NotBlank(message = "Blog type name là bắt buộc")
+    @Size(max = 64, message = "Blog type name không được vượt quá 64 ký tự")
     private String blogTypeName;
     
-    @Size(max = 256, message = "Blog type display name must not exceed 256 characters")
+    @Size(max = 256, message = "Blog type display name không được vượt quá 256 ký tự")
     private String blogTypeDisplayName;
     
-    @NotBlank(message = "Blog type remark is required")
-    @Size(max = 256, message = "Remark must not exceed 256 characters")
+    @NotBlank(message = "Blog type remark là bắt buộc")
+    @Size(max = 256, message = "Blog type remark không được vượt quá 256 ký tự")
     private String blogTypeRemark;
     
     private Boolean blogTypeEnabled;

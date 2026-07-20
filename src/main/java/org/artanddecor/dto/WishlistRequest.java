@@ -18,13 +18,13 @@ import jakarta.validation.constraints.Size;
 @AllArgsConstructor
 public class WishlistRequest {
     
-    @NotNull(message = "Product ID is required")
+    @NotNull(message = "ID sản phẩm là bắt buộc")
     private Long productId;
     
     // For authenticated users - will be extracted from JWT token
     private Long userId;
     
     // For anonymous users - session ID from frontend
-    @Size(max = 128, message = "Session ID must not exceed 128 characters")
+    @Size(max = 128, message = "ID phiên không được vượt quá 128 ký tự")
     private String sessionId;
 }

@@ -16,20 +16,20 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class ResetPasswordWithOtpRequest {
 
-    @NotBlank(message = "Username or email is required")
+    @NotBlank(message = "Tên đăng nhập hoặc email là bắt buộc")
     private String identifier;
 
-    @NotBlank(message = "OTP code is required")
-    @Size(min = 6, max = 6, message = "OTP code must be exactly 6 digits")
+    @NotBlank(message = "Mã OTP là bắt buộc")
+    @Size(min = 6, max = 6, message = "Mã OTP phải gồm đúng 6 chữ số")
     private String otpCode;
 
-    @NotBlank(message = "New password is required")
-    @Size(min = 8, max = 150, message = "Password must be between 8 and 150 characters")
+    @NotBlank(message = "Mật khẩu mới là bắt buộc")
+    @Size(min = 8, max = 150, message = "Mật khẩu phải có từ 8 đến 150 ký tự")
     @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).*$",
-             message = "Password must contain at least one uppercase letter, one lowercase letter, and one number")
+             message = "Mật khẩu phải chứa ít nhất một chữ hoa, một chữ thường và một chữ số")
     private String newPassword;
 
-    @NotBlank(message = "Confirm password is required")
+    @NotBlank(message = "Xác nhận mật khẩu là bắt buộc")
     private String confirmPassword;
 
     /**

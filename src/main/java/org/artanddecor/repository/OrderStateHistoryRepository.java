@@ -41,4 +41,15 @@ public interface OrderStateHistoryRepository extends JpaRepository<OrderStateHis
             @Param("oldStateId") Long oldStateId,
             @Param("newStateId") Long newStateId,
             Pageable pageable);
+
+       /**
+        * Count state history records by changed user ID
+        */
+       Long countByChangedByUser_UserId(Long userId);
+
+       /**
+        * Get sample order state history ID referencing changed user
+        */
+       @Query("SELECT MIN(osh.orderStateHistoryId) FROM OrderStateHistory osh WHERE osh.changedByUser.userId = :userId")
+       Long findSampleHistoryIdByChangedByUserId(@Param("userId") Long userId);
 }

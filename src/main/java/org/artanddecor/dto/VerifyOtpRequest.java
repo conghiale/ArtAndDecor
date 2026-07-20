@@ -15,10 +15,10 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class VerifyOtpRequest {
 
-    @NotBlank(message = "Username or email is required")
+    @NotBlank(message = "Tên đăng nhập hoặc email là bắt buộc")
     private String identifier;
 
-    @NotBlank(message = "OTP code is required")
-    @Size(min = 6, max = 6, message = "OTP code must be exactly 6 digits")
+    @NotBlank(message = "Mã OTP là bắt buộc")
+    @Size(min = 6, max = 6, message = "Mã OTP phải gồm đúng 6 chữ số")
     private String otpCode;
 }

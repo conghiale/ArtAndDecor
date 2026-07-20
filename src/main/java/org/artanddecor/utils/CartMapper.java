@@ -2,6 +2,8 @@ package org.artanddecor.utils;
 
 import org.artanddecor.dto.*;
 import org.artanddecor.model.*;
+import org.artanddecor.repository.ProductVariantRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -18,7 +20,10 @@ import java.util.stream.Collectors;
  * - Consistent null-safety checks
  */
 @Component
+@RequiredArgsConstructor
 public class CartMapper {
+
+    private final ProductVariantRepository productVariantRepository;
 
     /**
      * Convert Cart entity to DTO
@@ -121,9 +126,7 @@ public class CartMapper {
      */
     private void setComputedFields(CartItemDto dto, CartItem cartItem) {
         if (cartItem.getProduct() != null) {
-            // Check if product is available (in stock and enabled)
-            dto.setIsAvailable(cartItem.getProduct().getStockQuantity() > 0 && 
-                              Boolean.TRUE.equals(cartItem.getProduct().getProductEnabled()));
+            dto.setIsAvailable(isCartItemAvailable(cartItem));
             
             // Check price difference between current calculated price and stored total
             BigDecimal currentCalculatedUnitPrice = cartItem.calculateUnitPrice();
@@ -142,6 +145,69 @@ public class CartMapper {
             dto.setIsPriceChanged(false);
             dto.setPriceDifference(BigDecimal.ZERO);
         }
+    }
+
+    /**
+     * Determine whether the cart item is still available for purchase.
+     * Checks product availability and the stock of each selected attribute variant.
+     */
+    private boolean isCartItemAvailable(CartItem cartItem) {
+        Product product = cartItem.getProduct();
+        if (product == null) {
+            return false;
+        }
+
+        Integer requestedQuantity = cartItem.getCartItemQuantity() != null ? cartItem.getCartItemQuantity() : 0;
+        Integer productStock = product.getStockQuantity() != null ? product.getStockQuantity() : 0;
+
+        if (!Boolean.TRUE.equals(product.getProductEnabled())) {
+            return false;
+        }
+
+        if (product.getProductState() != null
+                && product.getProductState().getProductStateName() != null
+                && !"ACTIVE".equalsIgnoreCase(product.getProductState().getProductStateName())) {
+            return false;
+        }
+
+        if (productStock < requestedQuantity) {
+            return false;
+        }
+
+        if (cartItem.getCartItemAttributes() == null || cartItem.getCartItemAttributes().isEmpty()) {
+            return productStock > 0;
+        }
+
+        Long productId = product.getProductId();
+        if (productId == null) {
+            return false;
+        }
+
+        for (CartItemAttribute cartItemAttribute : cartItem.getCartItemAttributes()) {
+            if (cartItemAttribute == null || cartItemAttribute.getProductAttribute() == null
+                    || cartItemAttribute.getProductAttribute().getProductAttributeId() == null) {
+                return false;
+            }
+
+            ProductVariant variant = productVariantRepository
+                    .findByProductIdAndProductAttributeId(productId, cartItemAttribute.getProductAttribute().getProductAttributeId())
+                    .orElse(null);
+
+            if (variant == null || !variant.isAvailable()) {
+                return false;
+            }
+
+            if (variant.getProductAttribute() == null || !Boolean.TRUE.equals(variant.getProductAttribute().getProductAttributeEnabled())) {
+                return false;
+            }
+
+            Integer variantStock = variant.getProductVariantStock() != null ? variant.getProductVariantStock() : 0;
+            if (variantStock < requestedQuantity) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**

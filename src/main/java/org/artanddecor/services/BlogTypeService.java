@@ -34,4 +34,9 @@ public interface BlogTypeService {
      * Create new blog type
      */
     BlogTypeDto createBlogType(BlogTypeRequest request);
+
+    /**
+     * Delete blog type by ID with reference validation
+     */
+    void deleteBlogType(Long blogTypeId);
 }

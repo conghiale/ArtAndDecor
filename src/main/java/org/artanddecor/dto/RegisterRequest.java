@@ -2,6 +2,7 @@ package org.artanddecor.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -17,30 +18,32 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class RegisterRequest {
     
-    @NotBlank(message = "Username is required")
-    @Size(min = 3, max = 64, message = "Username must be between 3 and 64 characters")
+    @NotBlank(message = "Tên đăng nhập là bắt buộc")
+    @Size(min = 3, max = 64, message = "Tên đăng nhập phải có từ 3 đến 64 ký tự")
     private String userName;
     
-    @NotBlank(message = "Password is required")
-    @Size(min = 6, max = 150, message = "Password must be between 6 and 150 characters")
+    @NotBlank(message = "Mật khẩu là bắt buộc")
+    @Size(min = 8, max = 150, message = "Mật khẩu phải có từ 8 đến 150 ký tự")
+    @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).*$", 
+             message = "Mật khẩu phải chứa ít nhất một chữ hoa, một chữ thường và một chữ số")
     private String password;
     
-    @NotBlank(message = "First name is required")
-    @Size(max = 50, message = "First name must not exceed 50 characters")
+    @NotBlank(message = "Tên là bắt buộc")
+    @Size(max = 50, message = "Tên không được vượt quá 50 ký tự")
     private String firstName;
     
-    @Size(max = 50, message = "Last name must not exceed 50 characters")
+    @Size(max = 50, message = "Họ không được vượt quá 50 ký tự")
     private String lastName;
     
-    @NotBlank(message = "Email is required")
-    @Email(message = "Email must be valid")
-    @Size(max = 100, message = "Email must not exceed 100 characters")
+    @NotBlank(message = "Email là bắt buộc")
+    @Email(message = "Email không hợp lệ")
+    @Size(max = 100, message = "Email không được vượt quá 100 ký tự")
     private String email;
     
-    @Size(max = 15, message = "Phone number must not exceed 15 characters")
+    @Size(max = 15, message = "Số điện thoại không được vượt quá 15 ký tự")
     private String phoneNumber;
     
-    @Size(max = 150, message = "Avatar name must not exceed 150 characters")
+    @Size(max = 150, message = "Tên ảnh đại diện không được vượt quá 150 ký tự")
     private String imageAvatarName;
     
     private String socialMedia;

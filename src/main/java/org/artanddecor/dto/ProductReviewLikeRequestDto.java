@@ -17,9 +17,9 @@ import jakarta.validation.constraints.NotNull;
 @AllArgsConstructor
 public class ProductReviewLikeRequestDto {
 
-    @NotNull(message = "User ID is required")
+    @NotNull(message = "User ID là bắt buộc")
     private Long userId;
 
-    @NotNull(message = "Review ID is required") 
+    @NotNull(message = "Review ID là bắt buộc") 
     private Long reviewId;
 }

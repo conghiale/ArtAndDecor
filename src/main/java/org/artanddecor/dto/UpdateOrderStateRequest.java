@@ -14,9 +14,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class UpdateOrderStateRequest {
     
-    @NotNull(message = "New state is required")
+    @NotNull(message = "Trạng thái mới là bắt buộc")
     private Long newState;
     
-    @Size(max = 1000, message = "Remarks must not exceed 1000 characters")
+    @Size(max = 1000, message = "Ghi chú không được vượt quá 1000 ký tự")
     private String remarks;
 }

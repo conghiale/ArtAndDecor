@@ -18,12 +18,12 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class PaymentQRRequestDto {
     
-    @NotBlank(message = "Order code is required")
-    @Size(max = 64, message = "Order code must not exceed 64 characters")
+    @NotBlank(message = "Mã đơn hàng là bắt buộc")
+    @Size(max = 64, message = "Mã đơn hàng không được vượt quá 64 ký tự")
     private String orderCode;
     
-    @NotNull(message = "Amount is required")
-    @DecimalMin(value = "1000", message = "Amount must be at least 1,000 VND")
-    @DecimalMax(value = "999999999", message = "Amount must not exceed 999,999,999 VND")
+    @NotNull(message = "Số tiền là bắt buộc")
+    @DecimalMin(value = "1000", message = "Số tiền phải từ 1.000 VND trở lên")
+    @DecimalMax(value = "999999999", message = "Số tiền không được vượt quá 999.999.999 VND")
     private BigDecimal amount;
 }

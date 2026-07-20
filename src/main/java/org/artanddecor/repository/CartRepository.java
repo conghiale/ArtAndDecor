@@ -168,4 +168,10 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
            "FROM Cart c LEFT JOIN CartItem ci ON c.cartId = ci.cart.cartId " +
            "GROUP BY c.cartId")
     Page<Object[]> findCartsWithItemCount(Pageable pageable);
+
+       /**
+        * Get sample cart ID referencing a user
+        */
+       @Query("SELECT MIN(c.cartId) FROM Cart c WHERE c.user.userId = :userId")
+       Long findSampleCartIdByUserId(@Param("userId") Long userId);
 }

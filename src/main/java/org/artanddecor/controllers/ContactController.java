@@ -351,11 +351,11 @@ public class ContactController {
         security = @SecurityRequirement(name = "bearerAuth")
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Contact deleted successfully",
+        @ApiResponse(responseCode = "200", description = "Xoá liên hệ thành công",
             content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
-        @ApiResponse(responseCode = "404", description = "Contact not found with the provided ID",
+        @ApiResponse(responseCode = "404", description = "Không tìm thấy liên hệ với ID đã cung cấp",
             content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
-        @ApiResponse(responseCode = "400", description = "Invalid request or system error",
+        @ApiResponse(responseCode = "400", description = "Yêu cầu không hợp lệ hoặc lỗi hệ thống",
             content = @Content(schema = @Schema(implementation = BaseResponseDto.class))),
         @ApiResponse(responseCode = "401", description = "Unauthorized - Authentication required"),
         @ApiResponse(responseCode = "403", description = "Forbidden - Admin role required")
@@ -369,16 +369,16 @@ public class ContactController {
         try {
             contactService.deleteContact(contactId);
             return ResponseEntity.ok(BaseResponseDto.success(
-                    "Contact deleted successfully",
+                    "Xoá liên hệ thành công.",
                     null));
         } catch (IllegalArgumentException e) {
             logger.error("Error deleting contact {}: {}", contactId, e.getMessage());
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                    BaseResponseDto.notFound(e.getMessage()));
+                    BaseResponseDto.notFound("Không tìm thấy liên hệ cần xoá."));
         } catch (Exception e) {
             logger.error("Error deleting contact {}: {}", contactId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
-                    BaseResponseDto.serverError("Failed to delete contact: " + e.getMessage()));
+                    BaseResponseDto.serverError("Không thể xoá liên hệ. Vui lòng thử lại."));
         }
     }
     

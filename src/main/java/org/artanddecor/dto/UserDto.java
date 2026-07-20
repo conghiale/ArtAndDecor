@@ -24,29 +24,29 @@ public class UserDto {
     
     private Boolean userEnabled;
     
-    @NotBlank(message = "Username is required")
-    @Size(max = 64, message = "Username must not exceed 64 characters")
+    @NotBlank(message = "Tên đăng nhập là bắt buộc")
+    @Size(max = 64, message = "Tên đăng nhập không được vượt quá 64 ký tự")
     private String userName;
     
-    @Size(max = 150, message = "Password must not exceed 150 characters")
+    @Size(max = 150, message = "Mật khẩu không được vượt quá 150 ký tự")
     private String password;
     
-    @Size(max = 50, message = "First name must not exceed 50 characters")
+    @Size(max = 50, message = "Tên không được vượt quá 50 ký tự")
     private String firstName;
     
-    @Size(max = 50, message = "Last name must not exceed 50 characters")
+    @Size(max = 50, message = "Họ không được vượt quá 50 ký tự")
     private String lastName;
     
     @Pattern(regexp = "^(\\+84|0)(3[2-9]|5[689]|7[06-9]|8[1-689]|9[0-46-9])[0-9]{7}$", 
-             message = "Invalid phone number format")
+             message = "Định dạng số điện thoại không hợp lệ")
     private String phoneNumber;
     
-    @NotBlank(message = "Email is required")
-    @Email(message = "Invalid email format")
-    @Size(max = 100, message = "Email must not exceed 100 characters")
+    @NotBlank(message = "Email là bắt buộc")
+    @Email(message = "Định dạng email không hợp lệ")
+    @Size(max = 100, message = "Email không được vượt quá 100 ký tự")
     private String email;
     
-    @Size(max = 150, message = "Image avatar name must not exceed 150 characters")
+    @Size(max = 150, message = "Tên ảnh đại diện không được vượt quá 150 ký tự")
     private String imageAvatarName;
     
     private String socialMedia;

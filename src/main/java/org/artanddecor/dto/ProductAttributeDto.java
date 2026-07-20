@@ -22,15 +22,15 @@ public class ProductAttributeDto {
     
     private Long productAttributeId;
     
-    @NotBlank(message = "Product attribute value is required")
-    @Size(max = 256, message = "Product attribute value must not exceed 256 characters")
+    @NotBlank(message = "Giá trị thuộc tính là bắt buộc")
+    @Size(max = 256, message = "Giá trị thuộc tính không được vượt quá 256 ký tự")
     private String productAttributeValue;
     
-    @Size(max = 256, message = "Product attribute display name must not exceed 256 characters")
+    @Size(max = 256, message = "Tên hiển thị thuộc tính không được vượt quá 256 ký tự")
     private String productAttributeDisplayName;
     
-    @DecimalMin(value = "0.0", inclusive = true, message = "Product attribute price must not be negative")
-    @Digits(integer = 13, fraction = 2, message = "Product attribute price must have at most 13 integer digits and 2 decimal places")
+    @DecimalMin(value = "0.0", inclusive = true, message = "Giá trị giá thuộc tính không được là số âm")
+    @Digits(integer = 13, fraction = 2, message = "Giá trị giá thuộc tính được phép tối đa 13 chữ số phần nguyên và 2 chữ số phần thập phân")
     private BigDecimal productAttributePrice;
     
     @Builder.Default

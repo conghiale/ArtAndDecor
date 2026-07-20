@@ -25,20 +25,20 @@ public class ReviewDto {
     
     private Long rootReviewId;
     
-    @Min(value = 0, message = "Review level must not be negative")
+    @Min(value = 0, message = "Cấp độ đánh giá không được là số âm")
     @Builder.Default
     private Integer reviewLevel = 0;
     
-    @NotNull(message = "Rating is required")
-    @Min(value = 1, message = "Rating must be at least 1")
-    @Max(value = 5, message = "Rating must not exceed 5")
+    @NotNull(message = "Điểm đánh giá là bắt buộc")
+    @Min(value = 1, message = "Điểm đánh giá phải lớn hơn hoặc bằng 1")
+    @Max(value = 5, message = "Điểm đánh giá không được vượt quá 5")
     private int rating;
     
-    @NotBlank(message = "Review content is required")
-    @Size(max = 65535, message = "Review content must not exceed 65535 characters")
+    @NotBlank(message = "Nội dung đánh giá là bắt buộc")
+    @Size(max = 65535, message = "Nội dung đánh giá không được vượt quá 65535 ký tự")
     private String reviewContent;
     
-    @Min(value = 0, message = "Count like must not be negative")
+    @Min(value = 0, message = "Số lượt thích không được là số âm")
     @Builder.Default
     private Integer countLike = 0;
     
@@ -66,14 +66,14 @@ public class ReviewDto {
      */
     public String generateFullName() {
         if (user == null) {
-            return "Unknown User";
+            return "Người dùng không xác định";
         }
         String firstName = user.getFirstName();
         String lastName = user.getLastName();
         String userName = user.getUserName();
         
         if (firstName == null && lastName == null) {
-            return userName != null ? userName : "Unknown User";
+            return userName != null ? userName : "Người dùng không xác định";
         }
         if (firstName == null) {
             return lastName;

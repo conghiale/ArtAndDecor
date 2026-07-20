@@ -21,36 +21,36 @@ import java.util.List;
 @AllArgsConstructor
 public class ProductRequestDto {
     
-    @NotBlank(message = "Product name is required")
-    @Size(max = 100, message = "Product name must not exceed 100 characters")
+    @NotBlank(message = "Tên sản phẩm là bắt buộc")
+    @Size(max = 100, message = "Tên sản phẩm không được vượt quá 100 ký tự")
     private String productName;
     
-    @NotBlank(message = "Product slug is required")
-    @Size(max = 64, message = "Product slug must not exceed 64 characters")
+    @NotBlank(message = "Slug sản phẩm là bắt buộc")
+    @Size(max = 64, message = "Slug sản phẩm không được vượt quá 64 ký tự")
     private String productSlug;
     
-    @NotBlank(message = "Product code is required")
-    @Size(max = 64, message = "Product code must not exceed 64 characters")
+    @NotBlank(message = "Mã sản phẩm là bắt buộc")
+    @Size(max = 64, message = "Mã sản phẩm không được vượt quá 64 ký tự")
     private String productCode;
 
-    @NotNull(message = "Product category ID is required")
+    @NotNull(message = "ID danh mục sản phẩm là bắt buộc")
     private Long productCategoryId;
 
-    @NotNull(message = "Product state ID is required")
+    @NotNull(message = "ID trạng thái sản phẩm là bắt buộc")
     private Long productStateId;
 
-    @DecimalMin(value = "0.0", message = "Product price must not be negative")
-    @Digits(integer = 13, fraction = 2, message = "Invalid price format")
+    @DecimalMin(value = "0.0", message = "Giá sản phẩm không được là số âm")
+    @Digits(integer = 13, fraction = 2, message = "Định dạng giá không hợp lệ")
     private BigDecimal productPrice;
     
-    @NotNull(message = "Stock quantity is required")
-    @Min(value = 0, message = "Stock quantity must not be negative")
+    @NotNull(message = "Số lượng tồn kho là bắt buộc")
+    @Min(value = 0, message = "Số lượng tồn kho không được là số âm")
     private Integer stockQuantity;
     
-    @Min(value = 0, message = "Sold quantity must not be negative")
+    @Min(value = 0, message = "Số lượng đã bán không được là số âm")
     private Integer soldQuantity = 0;
     
-    @Size(max = 65535, message = "Product description is too long")
+    @Size(max = 65535, message = "Mô tả sản phẩm không được vượt quá 65535 ký tự")
     private String productDescription;
     
     private Boolean productEnabled = true;

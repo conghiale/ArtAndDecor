@@ -184,4 +184,15 @@ public interface ProductAttributeRepository extends JpaRepository<ProductAttribu
            "WHERE pa.productAttr.productAttrId = :attrId " +
            "AND pa.productAttributeEnabled = true")
     Long countByProductAttrId(@Param("attrId") Long attrId);
+
+       /**
+        * Count product attributes by product attr ID for delete validation
+        */
+       Long countByProductAttr_ProductAttrId(Long productAttrId);
+
+       /**
+        * Get sample product attribute ID by product attr reference
+        */
+       @Query("SELECT MIN(pa.productAttributeId) FROM ProductAttribute pa WHERE pa.productAttr.productAttrId = :productAttrId")
+       Long findSampleProductAttributeIdByProductAttrId(@Param("productAttrId") Long productAttrId);
 }

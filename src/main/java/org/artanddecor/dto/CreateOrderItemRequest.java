@@ -14,12 +14,12 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CreateOrderItemRequest {
     
-    @NotNull(message = "Product ID is required")
+    @NotNull(message = "ID sản phẩm là bắt buộc")
     private Long productId;
     
     private Long variantId; // Optional for products with variants
     
-    @NotNull(message = "Quantity is required")
-    @Min(value = 1, message = "Quantity must be at least 1")
+    @NotNull(message = "Số lượng là bắt buộc")
+    @Min(value = 1, message = "Số lượng phải lớn hơn hoặc bằng 1")
     private Integer quantity;
 }

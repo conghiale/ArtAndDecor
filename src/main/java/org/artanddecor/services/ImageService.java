@@ -1,8 +1,8 @@
 package org.artanddecor.services;
 
 import org.artanddecor.dto.ImageDto;
-import org.artanddecor.dto.ImageDto;
 import org.artanddecor.dto.ImageUploadDto;
+import org.artanddecor.enums.ImageEmbeddingStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -102,6 +102,17 @@ public interface ImageService {
      * Used for UI combobox/dropdown options
      */
     List<String> getAllImageFormats();
+
+    /**
+     * Trigger AI embedding generation for existing images.
+     *
+     * @param imageIds Optional list of image IDs to process when {@code processAll} is false
+     * @param processAll When true, process all existing images in database
+    * @param embeddingStatus Optional image embedding status filter
+     * @param onlyNotEmbedded When true, process only images that do not yet have embedding records
+     * @return Number of images scheduled for embedding
+     */
+    long triggerImageEmbeddings(List<Long> imageIds, boolean processAll, ImageEmbeddingStatus embeddingStatus, boolean onlyNotEmbedded);
 
     // =============================================
     // FILE SERVING OPERATIONS

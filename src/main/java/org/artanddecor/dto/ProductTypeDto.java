@@ -20,20 +20,20 @@ public class ProductTypeDto {
     
     private Long productTypeId;
     
-    @NotBlank(message = "Product type name is required")
-    @Size(max = 64, message = "Product type name must not exceed 64 characters")
+    @NotBlank(message = "Tên loại sản phẩm là bắt buộc")
+    @Size(max = 64, message = "Tên loại sản phẩm không được vượt quá 64 ký tự")
     private String productTypeName;
     
-    @NotBlank(message = "Product type slug is required")
-    @Size(max = 64, message = "Product type slug must not exceed 64 characters")
+    @NotBlank(message = "Slug loại sản phẩm là bắt buộc")
+    @Size(max = 64, message = "Slug loại sản phẩm không được vượt quá 64 ký tự")
     private String productTypeSlug;
     
-    @Size(max = 256, message = "Product type display name must not exceed 256 characters")
+    @Size(max = 256, message = "Tên hiển thị loại sản phẩm không được vượt quá 256 ký tự")
     private String productTypeDisplayName;
 
     private String productTypeContent;
 
-    @Size(max = 256, message = "Remark must not exceed 256 characters")
+    @Size(max = 256, message = "Ghi chú loại sản phẩm không được vượt quá 256 ký tự")
     private String productTypeRemark;
 
     private Boolean productTypeEnabled;

@@ -22,19 +22,19 @@ import jakarta.validation.constraints.Size;
 @Schema(description = "Request data for creating/updating product type")
 public class ProductTypeRequestDto {
 
-    @NotBlank(message = "Product type name is required")
-    @Size(max = 64, message = "Product type name must not exceed 64 characters")
+    @NotBlank(message = "Tên loại sản phẩm là bắt buộc")
+    @Size(max = 64, message = "Tên loại sản phẩm không được vượt quá 64 ký tự")
     @Schema(description = "Name of the product type", 
             example = "Art Decor")
     private String productTypeName;
 
-    @NotBlank(message = "Product type slug is required")
-    @Size(max = 64, message = "Product type slug must not exceed 64 characters")
+    @NotBlank(message = "Slug loại sản phẩm là bắt buộc")
+    @Size(max = 64, message = "Slug loại sản phẩm không được vượt quá 64 ký tự")
     @Schema(description = "URL-friendly slug for the product type", 
             example = "art-decor")
     private String productTypeSlug;
 
-    @Size(max = 256, message = "Product type display name must not exceed 256 characters")
+    @Size(max = 256, message = "Tên hiển thị loại sản phẩm không được vượt quá 256 ký tự")
     @Schema(description = "Display name for the product type", 
             example = "Art & Decor Items")
     private String productTypeDisplayName;
@@ -43,8 +43,8 @@ public class ProductTypeRequestDto {
             example = "Detailed content about this product type for storefront pages")
     private String productTypeContent;
 
-    @NotBlank(message = "Product type remark is required")
-    @Size(max = 256, message = "Remark must not exceed 256 characters")
+    @NotBlank(message = "Ghi chú loại sản phẩm là bắt buộc")
+    @Size(max = 256, message = "Ghi chú loại sản phẩm không được vượt quá 256 ký tự")
     @Schema(description = "Remark or description about the product type", 
             example = "Category for artistic and decorative items")
     private String productTypeRemark;
@@ -54,7 +54,7 @@ public class ProductTypeRequestDto {
             example = "true")
     private Boolean productTypeEnabled = true;
 
-    @Min(value = 0, message = "Product type display order must not be negative")
+    @Min(value = 0, message = "Thứ tự hiển thị loại sản phẩm không được là số âm")
     @Schema(description = "Display order for product type in UI lists (optional)",
             example = "1")
     private Integer productTypeDisplayOrder;

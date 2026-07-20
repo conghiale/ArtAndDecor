@@ -8,6 +8,7 @@ import org.artanddecor.model.Image;
 import org.artanddecor.model.ProductType;
 import org.artanddecor.repository.ImageRepository;
 import org.artanddecor.repository.ProductTypeRepository;
+import org.artanddecor.repository.ProductCategoryRepository;
 import org.artanddecor.services.ProductTypeService;
 import org.artanddecor.services.SeoMetaService;
 import org.artanddecor.utils.ProductMapperUtil;
@@ -33,6 +34,7 @@ public class ProductTypeServiceImpl implements ProductTypeService {
     private static final Logger logger = LoggerFactory.getLogger(ProductTypeServiceImpl.class);
     
     private final ProductTypeRepository productTypeRepository;
+    private final ProductCategoryRepository productCategoryRepository;
     private final ImageRepository imageRepository;
     private final SeoMetaService seoMetaService;
 
@@ -156,6 +158,47 @@ public class ProductTypeServiceImpl implements ProductTypeService {
         logger.info("Product type updated successfully with ID: {}", savedProductType.getProductTypeId());
         
         return convertToDto(savedProductType);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteProductType(Long productTypeId) {
+        logger.info("Start delete productType, id={}", productTypeId);
+
+        if (productTypeId == null || productTypeId <= 0) {
+            logger.warn("Invalid productType id for delete, id={}", productTypeId);
+            throw new IllegalArgumentException("ID loại sản phẩm không hợp lệ.");
+        }
+
+        ProductType productType = productTypeRepository.findById(productTypeId)
+                .orElseThrow(() -> {
+                    logger.warn("ProductType not found for delete, id={}", productTypeId);
+                    return new IllegalArgumentException("Không tìm thấy loại sản phẩm cần xoá.");
+                });
+
+        Long seoMetaId = productType.getSeoMetaId();
+
+        logger.debug("Checking references before deleting productType, id={}", productTypeId);
+        Long referencedCount = productCategoryRepository.countByProductType_ProductTypeId(productTypeId);
+        Long sampleReferencedId = productCategoryRepository.findSampleCategoryIdByProductTypeId(productTypeId);
+        if (referencedCount != null && referencedCount > 0) {
+            logger.warn(
+                    "Cannot delete PRODUCT_TYPE, id={}, referencedTable={}, referencedColumn={}, referencedCount={}, sampleReferencedId={}",
+                    productTypeId, "PRODUCT_CATEGORY", "PRODUCT_TYPE_ID", referencedCount, sampleReferencedId);
+            String referenceDetail = String.format(
+                "Cannot delete PRODUCT_TYPE, id=%s, referencedTable=%s, referencedColumn=%s, referencedCount=%s, sampleReferencedId=%s",
+                productTypeId, "PRODUCT_CATEGORY", "PRODUCT_TYPE_ID", referencedCount, sampleReferencedId);
+            throw new IllegalStateException(referenceDetail);
+        }
+
+        productTypeRepository.delete(productType);
+
+        if (seoMetaId != null) {
+            seoMetaService.deleteSeoMeta(seoMetaId);
+            logger.info("Deleted associated SEO meta for productType, productTypeId={}, seoMetaId={}", productTypeId, seoMetaId);
+        }
+
+        logger.info("Deleted productType successfully, id={}", productTypeId);
     }
 
     // =============================================

@@ -2,6 +2,9 @@ package org.artanddecor.controllers;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.Explode;
+import io.swagger.v3.oas.annotations.enums.ParameterStyle;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -13,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.artanddecor.dto.BaseResponseDto;
 import org.artanddecor.dto.ImageDto;
 import org.artanddecor.dto.ImageUploadDto;
+import org.artanddecor.enums.ImageEmbeddingStatus;
 import org.artanddecor.services.ImageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -284,7 +288,6 @@ public class ImageController {
      * @return Total number of images stored in the database
      */
     @GetMapping("/stats/count")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     @Operation(summary = "Get total image count for dashboard",
                description = "Retrieve the total number of images stored in the system. Used for administrative dashboards and system monitoring. Requires Admin or Manager role access.")
     @ApiResponses(value = {
@@ -301,6 +304,76 @@ public class ImageController {
         } catch (Exception e) {
             logger.error("Error getting total image count: {}", e.getMessage(), e);
             return ResponseEntity.badRequest().body(BaseResponseDto.badRequest("Failed to get total count: " + e.getMessage()));
+        }
+    }
+
+    /**
+        * Trigger image embeddings for selected IDs or all existing images.
+     * Admin-only endpoint for backfilling/reprocessing embedding data.
+     *
+     * @param imageIds Optional list of image IDs to process when processAll=false
+     * @param processAll Optional flag to process all existing images in database
+        * @param embeddingStatus Optional embedding status filter
+        * @param onlyNotEmbedded Optional flag to process images without embedding records, plus FAILED ones
+     * @return Number of images scheduled for embedding processing
+     */
+    @PostMapping("/embeddings/trigger")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Trigger embeddings for existing images",
+                description = "Trigger AI embedding generation for existing uploaded images. Provide imageIds to process specific images, set processAll=true to process all images, filter by embeddingStatus, or set onlyNotEmbedded=true to process images without embedding records plus FAILED ones. Requires Admin role.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Embedding process triggered successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid request input"),
+        @ApiResponse(responseCode = "403", description = "Access denied - Admin role required"),
+        @ApiResponse(responseCode = "404", description = "One or more image IDs not found"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<BaseResponseDto<Long>> triggerImageEmbeddings(
+            @Parameter(description = "Optional image IDs to process. Prefer repeated query params, e.g. ?imageIds=1&imageIds=2",
+                   style = ParameterStyle.FORM,
+                   explode = Explode.TRUE,
+                   array = @ArraySchema(schema = @Schema(type = "integer", format = "int64")))
+            @RequestParam(value = "imageIds", required = false) List<Long> imageIds,
+            @Parameter(description = "Set true to process all existing images in database", example = "false")
+            @RequestParam(value = "processAll", required = false, defaultValue = "false") boolean processAll,
+            @Parameter(description = "Optional embedding status filter", example = "FAILED")
+            @RequestParam(value = "embeddingStatus", required = false) ImageEmbeddingStatus embeddingStatus,
+            @Parameter(description = "Set true to process only images that do not have records in IMAGE_EMBEDDING", example = "false")
+            @RequestParam(value = "onlyNotEmbedded", required = false, defaultValue = "false") boolean onlyNotEmbedded) {
+
+        logger.info("Triggering image embeddings - processAll: {}, embeddingStatus: {}, onlyNotEmbedded: {}, imageIds: {}",
+            processAll, embeddingStatus, onlyNotEmbedded, imageIds);
+
+        try {
+            if (!processAll && !onlyNotEmbedded && embeddingStatus == null && (imageIds == null || imageIds.isEmpty())) {
+                return ResponseEntity.badRequest().body(
+                BaseResponseDto.badRequest("Provide imageIds, set processAll=true, set embeddingStatus, or set onlyNotEmbedded=true"));
+            }
+
+            long scheduledCount = imageService.triggerImageEmbeddings(imageIds, processAll, embeddingStatus, onlyNotEmbedded);
+                boolean hasImageIds = imageIds != null && !imageIds.isEmpty();
+                String message = hasImageIds
+                    ? "Embedding triggered for selected images"
+                    : (processAll
+                    ? "Embedding triggered for all existing images"
+                    : (onlyNotEmbedded
+                    ? "Embedding triggered for images not yet embedded"
+                    : "Embedding triggered for selected images"));
+            return ResponseEntity.ok(BaseResponseDto.success(message, scheduledCount));
+
+        } catch (IllegalArgumentException e) {
+            logger.error("Invalid embedding trigger request: {}", e.getMessage());
+            String message = e.getMessage() == null ? "Invalid embedding trigger request" : e.getMessage();
+            if (message.contains("not found")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(BaseResponseDto.notFound(message));
+            }
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(message));
+        } catch (Exception e) {
+            logger.error("Error triggering image embeddings: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(BaseResponseDto.serverError("Failed to trigger embeddings: " + e.getMessage()));
         }
     }
 
@@ -532,10 +605,10 @@ public class ImageController {
     @Operation(summary = "Delete image by ID",
                description = "Permanently delete an image record and its associated file from storage. This is a destructive operation that cannot be undone. Requires Admin or Manager role access.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Image deleted successfully"),
+        @ApiResponse(responseCode = "200", description = "Xoá ảnh thành công"),
         @ApiResponse(responseCode = "403", description = "Access denied - Admin or Manager role required"),
-        @ApiResponse(responseCode = "404", description = "Image not found with provided ID"),
-        @ApiResponse(responseCode = "500", description = "Internal server error or file deletion failure")
+        @ApiResponse(responseCode = "404", description = "Không tìm thấy ảnh với ID đã cung cấp"),
+        @ApiResponse(responseCode = "500", description = "Lỗi hệ thống hoặc lỗi xoá tệp ảnh")
     })
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<BaseResponseDto<Void>> deleteImage(
@@ -546,16 +619,16 @@ public class ImageController {
         
         try {
             imageService.deleteImageById(imageId);
-            return ResponseEntity.ok(BaseResponseDto.success("Image deleted successfully"));
+            return ResponseEntity.ok(BaseResponseDto.success("Xoá ảnh thành công."));
             
         } catch (IllegalArgumentException e) {
             logger.error("Image not found for deletion - ID: {}", imageId);
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(BaseResponseDto.notFound("Image not found with ID: " + imageId));
+                    .body(BaseResponseDto.notFound("Không tìm thấy ảnh cần xoá."));
         } catch (Exception e) {
             logger.error("Error deleting image {}: {}", imageId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(BaseResponseDto.serverError("Failed to delete image: " + e.getMessage()));
+                    .body(BaseResponseDto.serverError("Không thể xoá ảnh. Vui lòng thử lại."));
         }
     }
 }

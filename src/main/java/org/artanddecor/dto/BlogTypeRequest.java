@@ -16,27 +16,27 @@ import jakarta.validation.Valid;
 @AllArgsConstructor
 public class BlogTypeRequest {
     
-    @NotBlank(message = "Blog type slug is required")
-    @Size(max = 64, message = "Blog type slug must not exceed 64 characters")
-    @Pattern(regexp = "^[a-z0-9-]+$", message = "Blog type slug must contain only lowercase letters, numbers, and hyphens")
+    @NotBlank(message = "Slug loại blog là bắt buộc")
+    @Size(max = 64, message = "Slug loại blog không được vượt quá 64 ký tự")
+    @Pattern(regexp = "^[a-z0-9-]+$", message = "Slug loại blog chỉ được chứa chữ thường, số và dấu gạch nối")
     private String blogTypeSlug;
     
-    @NotBlank(message = "Blog type name is required")
-    @Size(max = 64, message = "Blog type name must not exceed 64 characters")
+    @NotBlank(message = "Tên loại blog là bắt buộc")
+    @Size(max = 64, message = "Tên loại blog không được vượt quá 64 ký tự")
     private String blogTypeName;
     
-    @Size(max = 256, message = "Blog type display name must not exceed 256 characters")
+    @Size(max = 256, message = "Tên hiển thị loại blog không được vượt quá 256 ký tự")
     private String blogTypeDisplayName;
     
-    @NotBlank(message = "Blog type remark is required")
-    @Size(max = 256, message = "Remark must not exceed 256 characters")
+    @NotBlank(message = "Ghi chú loại blog là bắt buộc")
+    @Size(max = 256, message = "Ghi chú không được vượt quá 256 ký tự")
     private String blogTypeRemark;
     
-    @NotNull(message = "Blog type enabled status is required")
+    @NotNull(message = "Trạng thái bật loại blog là bắt buộc")
     private Boolean blogTypeEnabled;
     
     // Foreign key IDs only (not nested DTOs)
-    @Positive(message = "Image ID must be positive")
+    @Positive(message = "ID ảnh phải lớn hơn 0")
     private Long imageId;
     
     // SEO Meta information for creating SEO metadata

@@ -42,4 +42,9 @@ public interface BlogService {
      * Create new blog
      */
     BlogDto createBlog(BlogRequest request);
+
+    /**
+     * Delete blog by ID
+     */
+    void deleteBlog(Long blogId);
 }

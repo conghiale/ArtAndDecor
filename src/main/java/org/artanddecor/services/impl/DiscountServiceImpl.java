@@ -1,6 +1,7 @@
 package org.artanddecor.services.impl;
 
 import org.artanddecor.dto.DiscountDto;
+import org.artanddecor.dto.DiscountRequestDto;
 import org.artanddecor.dto.DiscountTypeDto;
 import org.artanddecor.dto.DiscountValidationResult;
 import org.artanddecor.exception.ResourceNotFoundException;
@@ -92,19 +93,18 @@ public class DiscountServiceImpl implements DiscountService {
     }
 
     @Override
-    public DiscountDto createDiscount(DiscountDto discountDto) {
+    public DiscountDto createDiscount(DiscountRequestDto discountRequestDto) {
         // Validate uniqueness
-        if (discountDto.getDiscountCode() != null && !isDiscountCodeUnique(discountDto.getDiscountCode(), null)) {
-            throw new IllegalArgumentException("Discount code already exists: " + discountDto.getDiscountCode());
+        if (discountRequestDto.getDiscountCode() != null && !isDiscountCodeUnique(discountRequestDto.getDiscountCode(), null)) {
+            throw new IllegalArgumentException("Discount code already exists: " + discountRequestDto.getDiscountCode());
         }
 
         // Validate discount type exists
-        if (discountDto.getDiscountType() != null && discountDto.getDiscountType().getDiscountTypeId() != null) {
-            DiscountType discountType = discountTypeRepository.findById(discountDto.getDiscountType().getDiscountTypeId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Discount Type not found with ID: " + discountDto.getDiscountType().getDiscountTypeId()));
+        if (discountRequestDto.getDiscountTypeId() == null || discountRequestDto.getDiscountTypeId() > 0) {
+            throw new IllegalArgumentException("Discount Type ID is required and must be greater than 0");
         }
 
-        Discount discount = discountMapperUtil.mapDiscountToEntity(discountDto);
+        Discount discount = discountMapperUtil.mapDiscountToEntity(discountRequestDto);
         discount.setCreatedDt(LocalDateTime.now());
         discount.setModifiedDt(LocalDateTime.now());
         
@@ -113,44 +113,25 @@ public class DiscountServiceImpl implements DiscountService {
     }
 
     @Override
-    public DiscountDto updateDiscount(Long discountId, DiscountDto discountDto) {
+    public DiscountDto updateDiscount(Long discountId, DiscountRequestDto discountRequestDto) {
         Discount existingDiscount = discountRepository.findById(discountId)
                 .orElseThrow(() -> new ResourceNotFoundException("Discount not found with ID: " + discountId));
 
         // Validate uniqueness (excluding current record)
-        if (discountDto.getDiscountCode() != null && !isDiscountCodeUnique(discountDto.getDiscountCode(), discountId)) {
-            throw new IllegalArgumentException("Discount code already exists: " + discountDto.getDiscountCode());
+        if (discountRequestDto.getDiscountCode() != null && !isDiscountCodeUnique(discountRequestDto.getDiscountCode(), discountId)) {
+            throw new IllegalArgumentException("Discount code already exists: " + discountRequestDto.getDiscountCode());
+        }
+
+        // Validate discount type exists
+        if (discountRequestDto.getDiscountTypeId() == null || discountRequestDto.getDiscountTypeId() <= 0) {
+            throw new IllegalArgumentException("Discount Type ID is required and must be greater than 0");
         }
 
         // Update fields
-        if (discountDto.getDiscountCode() != null) {
-            existingDiscount.setDiscountCode(discountDto.getDiscountCode());
-        }
-        if (discountDto.getDiscountName() != null) {
-            existingDiscount.setDiscountName(discountDto.getDiscountName());
-        }
-        if (discountDto.getDiscountRemark() != null) {
-            existingDiscount.setDiscountRemark(discountDto.getDiscountRemark());
-        }
-        if (discountDto.getDiscountValue() != null) {
-            existingDiscount.setDiscountValue(discountDto.getDiscountValue());
-        }
-        if (discountDto.getTotalUsageLimit() != null) {
-            existingDiscount.setTotalUsageLimit(discountDto.getTotalUsageLimit());
-        }
-        if (discountDto.getStartAt() != null) {
-            existingDiscount.setStartAt(discountDto.getStartAt());
-        }
-        if (discountDto.getEndAt() != null) {
-            existingDiscount.setEndAt(discountDto.getEndAt());
-        }
-        if (discountDto.getIsActive() != null) {
-            existingDiscount.setIsActive(discountDto.getIsActive());
-        }
+        Discount discount = discountMapperUtil.updateDiscountEntityFromDto(existingDiscount, discountRequestDto);
+        discount.setModifiedDt(LocalDateTime.now());
 
-        existingDiscount.setModifiedDt(LocalDateTime.now());
-
-        Discount updatedDiscount = discountRepository.save(existingDiscount);
+        Discount updatedDiscount = discountRepository.save(discount);
         return discountMapperUtil.mapDiscountToDto(updatedDiscount);
     }
 

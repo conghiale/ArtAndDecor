@@ -15,9 +15,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class AuthRequest {
     
-    @NotBlank(message = "Username or email is required")
+    @NotBlank(message = "Tên đăng nhập hoặc email là bắt buộc")
     private String usernameOrEmail;
     
-    @NotBlank(message = "Password is required")
+    @NotBlank(message = "Mật khẩu là bắt buộc")
     private String password;
 }

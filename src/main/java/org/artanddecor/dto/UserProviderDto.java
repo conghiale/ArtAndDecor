@@ -18,18 +18,18 @@ public class UserProviderDto {
     
     private Long userProviderId;
     
-    @NotBlank(message = "User provider name is required")
-    @Size(max = 50, message = "User provider name must not exceed 50 characters")
+    @NotBlank(message = "Tên nhà cung cấp là bắt buộc")
+    @Size(max = 50, message = "Tên nhà cung cấp không được vượt quá 50 ký tự")
     private String userProviderName;
     
-    @Size(max = 256, message = "User provider display name must not exceed 256 characters")
+    @Size(max = 256, message = "Tên hiển thị nhà cung cấp không được vượt quá 256 ký tự")
     private String userProviderDisplayName;
     
-    @NotBlank(message = "User provider remark is required")
-    @Size(max = 256, message = "User provider remark must not exceed 256 characters")
+    @NotBlank(message = "Ghi chú nhà cung cấp là bắt buộc")
+    @Size(max = 256, message = "Ghi chú nhà cung cấp không được vượt quá 256 ký tự")
     private String userProviderRemark;
     
-    @NotNull(message = "User provider enabled flag is required")
+    @NotNull(message = "Cờ kích hoạt nhà cung cấp là bắt buộc")
     private Boolean userProviderEnabled;
     
     // Additional information for reporting

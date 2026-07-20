@@ -16,35 +16,35 @@ import jakarta.validation.Valid;
 @AllArgsConstructor
 public class BlogRequest {
     
-    @NotBlank(message = "Blog title is required")
-    @Size(max = 256, message = "Blog title must not exceed 256 characters")
+    @NotBlank(message = "Tiêu đề blog là bắt buộc")
+    @Size(max = 256, message = "Tiêu đề blog không được vượt quá 256 ký tự")
     private String blogTitle;
     
-    @NotBlank(message = "Blog slug is required")
-    @Size(max = 64, message = "Blog slug must not exceed 64 characters")
-    @Pattern(regexp = "^[a-z0-9-]+$", message = "Blog slug must contain only lowercase letters, numbers, and hyphens")
+    @NotBlank(message = "Slug blog là bắt buộc")
+    @Size(max = 64, message = "Slug blog không được vượt quá 64 ký tự")
+    @Pattern(regexp = "^[a-z0-9-]+$", message = "Slug blog chỉ được chứa chữ thường, số và dấu gạch nối")
     private String blogSlug;
     
-    @NotBlank(message = "Blog content is required")
-    @Size(min = 50, message = "Blog content must be at least 50 characters")
+    @NotBlank(message = "Nội dung blog là bắt buộc")
+    @Size(min = 50, message = "Nội dung blog phải có ít nhất 50 ký tự")
     private String blogContent;
     
-    @NotNull(message = "Blog enabled status is required")
+    @NotNull(message = "Trạng thái bật blog là bắt buộc")
     private Boolean blogEnabled;
     
-    @NotBlank(message = "Blog remark is required")
-    @Size(max = 256, message = "Blog remark must not exceed 256 characters")
+    @NotBlank(message = "Ghi chú blog là bắt buộc")
+    @Size(max = 256, message = "Ghi chú blog không được vượt quá 256 ký tự")
     private String blogRemark;
     
     // Foreign key IDs only (not nested DTOs)
-    @NotNull(message = "Blog category ID is required")
-    @Positive(message = "Blog category ID must be positive")
+    @NotNull(message = "ID danh mục blog là bắt buộc")
+    @Positive(message = "ID danh mục blog phải lớn hơn 0")
     private Long blogCategoryId;
     
     // SEO Meta information for creating SEO metadata
     @Valid
     private SeoMetaRequestDto seoMeta;
     
-    @Positive(message = "Image ID must be positive")
+    @Positive(message = "ID ảnh phải lớn hơn 0")
     private Long imageId;
 }

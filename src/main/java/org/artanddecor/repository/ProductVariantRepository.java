@@ -167,4 +167,15 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     List<Long> findValidAttributeIdsByProductIdAndAttributeIds(
             @Param("productId") Long productId,
             @Param("attributeIds") List<Long> attributeIds);
+
+    /**
+     * Count variants by product attribute ID for delete validation
+     */
+    Long countByProductAttribute_ProductAttributeId(Long productAttributeId);
+
+    /**
+     * Get sample variant ID by product attribute reference
+     */
+    @Query("SELECT MIN(pv.productVariantId) FROM ProductVariant pv WHERE pv.productAttribute.productAttributeId = :productAttributeId")
+    Long findSampleVariantIdByProductAttributeId(@Param("productAttributeId") Long productAttributeId);
 }

@@ -45,4 +45,9 @@ public interface ProductTypeService {
      * Update existing product type using request DTO
      */
     ProductTypeDto updateProductType(Long productTypeId, ProductTypeRequestDto requestDto);
+
+    /**
+     * Delete product type by ID with reference validation
+     */
+    void deleteProductType(Long productTypeId);
 }

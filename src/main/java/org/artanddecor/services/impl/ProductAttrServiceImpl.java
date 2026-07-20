@@ -5,6 +5,7 @@ import org.artanddecor.dto.ProductAttrDto;
 import org.artanddecor.dto.ProductAttrRequestDto;
 import org.artanddecor.model.ProductAttr;
 import org.artanddecor.repository.ProductAttrRepository;
+import org.artanddecor.repository.ProductAttributeRepository;
 import org.artanddecor.services.ProductAttrService;
 import org.artanddecor.utils.ProductMapperUtil;
 import org.slf4j.Logger;
@@ -29,6 +30,7 @@ public class ProductAttrServiceImpl implements ProductAttrService {
     private static final Logger logger = LoggerFactory.getLogger(ProductAttrServiceImpl.class);
     
     private final ProductAttrRepository productAttrRepository;
+    private final ProductAttributeRepository productAttributeRepository;
 
     // =============================================
     // ADMIN-FOCUSED OPERATIONS
@@ -104,6 +106,38 @@ public class ProductAttrServiceImpl implements ProductAttrService {
         logger.info("Product attribute updated successfully with ID: {}", savedProductAttr.getProductAttrId());
         
         return convertToDto(savedProductAttr);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteProductAttr(Long productAttrId) {
+        logger.info("Start delete productAttr, id={}", productAttrId);
+
+        if (productAttrId == null || productAttrId <= 0) {
+            logger.warn("Invalid productAttr id for delete, id={}", productAttrId);
+            throw new IllegalArgumentException("ID nhóm thuộc tính sản phẩm không hợp lệ.");
+        }
+
+        if (!productAttrRepository.existsById(productAttrId)) {
+            logger.warn("ProductAttr not found for delete, id={}", productAttrId);
+            throw new IllegalArgumentException("Không tìm thấy nhóm thuộc tính sản phẩm cần xoá.");
+        }
+
+        logger.debug("Checking references before deleting productAttr, id={}", productAttrId);
+        Long referencedCount = productAttributeRepository.countByProductAttr_ProductAttrId(productAttrId);
+        Long sampleReferencedId = productAttributeRepository.findSampleProductAttributeIdByProductAttrId(productAttrId);
+        if (referencedCount != null && referencedCount > 0) {
+            logger.warn(
+                    "Cannot delete PRODUCT_ATTR, id={}, referencedTable={}, referencedColumn={}, referencedCount={}, sampleReferencedId={}",
+                    productAttrId, "PRODUCT_ATTRIBUTE", "PRODUCT_ATTR_ID", referencedCount, sampleReferencedId);
+            String referenceDetail = String.format(
+                "Cannot delete PRODUCT_ATTR, id=%s, referencedTable=%s, referencedColumn=%s, referencedCount=%s, sampleReferencedId=%s",
+                productAttrId, "PRODUCT_ATTRIBUTE", "PRODUCT_ATTR_ID", referencedCount, sampleReferencedId);
+            throw new IllegalStateException(referenceDetail);
+        }
+
+        productAttrRepository.deleteById(productAttrId);
+        logger.info("Deleted productAttr successfully, id={}", productAttrId);
     }
 
     // =============================================

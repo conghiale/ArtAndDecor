@@ -59,7 +59,11 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
            "     p.productCategory.productType.productTypeContent LIKE CONCAT('%', :textSearch, '%')" +
            ")) " +
            "AND (:enabled IS NULL OR p.productEnabled = :enabled) " +
-           "AND (:categoryId IS NULL OR p.productCategory.productCategoryId = :categoryId) " +
+           "AND (" +
+           "    :categoryId IS NULL " +
+           "    OR p.productCategory.productCategoryId = :categoryId " +
+           "    OR p.productCategory.parentCategory.productCategoryId = :categoryId " +
+           ") " +
            "AND (:typeId IS NULL OR p.productCategory.productType.productTypeId = :typeId) " +
            "AND (:stateId IS NULL OR p.productState.productStateId = :stateId) " +
            "AND (:minPrice IS NULL OR p.productPrice >= :minPrice) " +
@@ -128,4 +132,15 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         @Param("isSelling") Boolean isSelling,
         Pageable pageable
     );
+
+       /**
+        * Count products by product category ID for delete validation
+        */
+       Long countByProductCategory_ProductCategoryId(Long productCategoryId);
+
+       /**
+        * Get sample product ID by product category reference
+        */
+       @Query("SELECT MIN(p.productId) FROM Product p WHERE p.productCategory.productCategoryId = :productCategoryId")
+       Long findSampleProductIdByProductCategoryId(@Param("productCategoryId") Long productCategoryId);
 }

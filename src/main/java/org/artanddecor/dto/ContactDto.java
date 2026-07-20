@@ -21,35 +21,35 @@ public class ContactDto {
     
     private Long contactId;
     
-    @NotBlank(message = "Contact name is required")
-    @Size(max = 64, message = "Contact name must not exceed 64 characters")
+    @NotBlank(message = "Tên liên hệ là bắt buộc")
+    @Size(max = 64, message = "Tên liên hệ không được vượt quá 64 ký tự")
     private String contactName;
     
-    @Size(max = 64, message = "Contact slug must not exceed 64 characters")
+    @Size(max = 64, message = "Slug liên hệ không được vượt quá 64 ký tự")
     private String contactSlug;
     
-    @NotBlank(message = "Contact address is required")
-    @Size(max = 256, message = "Contact address must not exceed 256 characters")
+    @NotBlank(message = "Địa chỉ liên hệ là bắt buộc")
+    @Size(max = 256, message = "Địa chỉ liên hệ không được vượt quá 256 ký tự")
     private String contactAddress;
     
-    @NotBlank(message = "Contact email is required")
-    @Email(message = "Invalid email format")
-    @Size(max = 64, message = "Contact email must not exceed 64 characters")
+    @NotBlank(message = "Email liên hệ là bắt buộc")
+    @Email(message = "Định dạng email không hợp lệ")
+    @Size(max = 64, message = "Email liên hệ không được vượt quá 64 ký tự")
     private String contactEmail;
     
-    @NotBlank(message = "Contact phone is required")
+    @NotBlank(message = "Số điện thoại liên hệ là bắt buộc")
     @Pattern(regexp = "^(\\+84|0)(3[2-9]|5[689]|7[06-9]|8[1-689]|9[0-46-9])[0-9]{7}$", 
-             message = "Invalid phone number format")
-    @Size(max = 15, message = "Contact phone must not exceed 15 characters")
+             message = "Định dạng số điện thoại không hợp lệ")
+    @Size(max = 15, message = "Số điện thoại liên hệ không được vượt quá 15 ký tự")
     private String contactPhone;
     
-    @Size(max = 256, message = "Contact fanpage must not exceed 256 characters")
+    @Size(max = 256, message = "Fanpage liên hệ không được vượt quá 256 ký tự")
     private String contactFanpage;
     
     private Boolean contactEnabled;
     
-    @NotBlank(message = "Remark is required")
-    @Size(max = 256, message = "Remark must not exceed 256 characters")
+    @NotBlank(message = "Ghi chú liên hệ là bắt buộc")
+    @Size(max = 256, message = "Ghi chú liên hệ không được vượt quá 256 ký tự")
     private String contactRemark;
     
     private Long seoMetaId;

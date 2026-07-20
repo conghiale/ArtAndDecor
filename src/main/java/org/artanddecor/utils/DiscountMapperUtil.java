@@ -1,9 +1,13 @@
 package org.artanddecor.utils;
 
 import org.artanddecor.dto.DiscountDto;
+import org.artanddecor.dto.DiscountRequestDto;
 import org.artanddecor.dto.DiscountTypeDto;
+import org.artanddecor.exception.ResourceNotFoundException;
 import org.artanddecor.model.Discount;
 import org.artanddecor.model.DiscountType;
+import org.artanddecor.repository.DiscountTypeRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
@@ -12,6 +16,9 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class DiscountMapperUtil {
+
+    @Autowired
+    private DiscountTypeRepository discountTypeRepository;
 
     // =================================================================
     // DISCOUNT MAPPING OPERATIONS
@@ -88,58 +95,78 @@ public class DiscountMapperUtil {
     }
 
     /**
+     * Map DiscountDto to Discount entity
+     * @param discountRequestDto DiscountDto
+     * @return Discount entity
+     */
+    public Discount mapDiscountToEntity(DiscountRequestDto discountRequestDto) {
+        if (discountRequestDto == null) {
+            return null;
+        }
+
+        Discount entity = new Discount();
+
+        if (discountRequestDto.getDiscountId() != null && discountRequestDto.getDiscountId() > 0) {
+            entity.setDiscountId(discountRequestDto.getDiscountId());
+        }
+
+        entity.setDiscountCode(discountRequestDto.getDiscountCode());
+        entity.setDiscountName(discountRequestDto.getDiscountName());
+        entity.setDiscountRemark(discountRequestDto.getDiscountRemark());
+        entity.setDiscountValue(discountRequestDto.getDiscountValue());
+        entity.setMaxDiscountAmount(discountRequestDto.getMaxDiscountAmount());
+        entity.setMinOrderAmount(discountRequestDto.getMinOrderAmount());
+        entity.setTotalUsageLimit(discountRequestDto.getTotalUsageLimit());
+        entity.setUsedCount(discountRequestDto.getUsedCount() != null ? discountRequestDto.getUsedCount() : 0);
+        entity.setStartAt(discountRequestDto.getStartAt());
+        entity.setEndAt(discountRequestDto.getEndAt());
+        entity.setIsActive(discountRequestDto.getIsActive() != null ? discountRequestDto.getIsActive() : true);
+        entity.setDiscountDisplayName(discountRequestDto.getDiscountDisplayName());
+        entity.setCreatedDt(discountRequestDto.getCreatedDt());
+        entity.setModifiedDt(discountRequestDto.getModifiedDt());
+
+        // Map nested DiscountType
+        if (discountRequestDto.getDiscountTypeId() != null && discountRequestDto.getDiscountTypeId() > 0) {
+            DiscountType discountType = discountTypeRepository.findById(discountRequestDto.getDiscountTypeId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Discount Type not found with ID: " + discountRequestDto.getDiscountTypeId()));
+            entity.setDiscountType(discountType);
+        }
+
+        return entity;
+    }
+
+    /**
      * Update existing Discount entity with data from DTO
      * @param existingEntity Existing Discount entity
-     * @param dto DiscountDto with updated data
+     * @param discountRequestDto DiscountDto with updated data
      * @return Updated Discount entity
      */
-    public Discount updateDiscountEntityFromDto(Discount existingEntity, DiscountDto dto) {
-        if (existingEntity == null || dto == null) {
+    public Discount updateDiscountEntityFromDto(Discount existingEntity, DiscountRequestDto discountRequestDto) {
+        if (existingEntity == null || discountRequestDto == null) {
             return existingEntity;
         }
 
-        if (dto.getDiscountCode() != null) {
-            existingEntity.setDiscountCode(dto.getDiscountCode());
-        }
-        if (dto.getDiscountName() != null) {
-            existingEntity.setDiscountName(dto.getDiscountName());
-        }
-        if (dto.getDiscountRemark() != null) {
-            existingEntity.setDiscountRemark(dto.getDiscountRemark());
-        }
-        if (dto.getDiscountValue() != null) {
-            existingEntity.setDiscountValue(dto.getDiscountValue());
-        }
-        if (dto.getMaxDiscountAmount() != null) {
-            existingEntity.setMaxDiscountAmount(dto.getMaxDiscountAmount());
-        }
-        if (dto.getMinOrderAmount() != null) {
-            existingEntity.setMinOrderAmount(dto.getMinOrderAmount());
-        }
-        if (dto.getTotalUsageLimit() != null) {
-            existingEntity.setTotalUsageLimit(dto.getTotalUsageLimit());
-        }
-        if (dto.getUsedCount() != null) {
-            existingEntity.setUsedCount(dto.getUsedCount());
-        }
-        if (dto.getStartAt() != null) {
-            existingEntity.setStartAt(dto.getStartAt());
-        }
-        if (dto.getEndAt() != null) {
-            existingEntity.setEndAt(dto.getEndAt());
-        }
-        if (dto.getIsActive() != null) {
-            existingEntity.setIsActive(dto.getIsActive());
-        }
-        if (dto.getDiscountDisplayName() != null) {
-            existingEntity.setDiscountDisplayName(dto.getDiscountDisplayName());
-        }
+        existingEntity.setDiscountCode(discountRequestDto.getDiscountCode());
+        existingEntity.setDiscountName(discountRequestDto.getDiscountName());
+        existingEntity.setDiscountRemark(discountRequestDto.getDiscountRemark());
+        existingEntity.setDiscountValue(discountRequestDto.getDiscountValue());
+        existingEntity.setMaxDiscountAmount(discountRequestDto.getMaxDiscountAmount());
+        existingEntity.setMinOrderAmount(discountRequestDto.getMinOrderAmount());
+        existingEntity.setTotalUsageLimit(discountRequestDto.getTotalUsageLimit());
+        existingEntity.setUsedCount(discountRequestDto.getUsedCount() != null ? discountRequestDto.getUsedCount() : 0);
+        existingEntity.setStartAt(discountRequestDto.getStartAt());
+        existingEntity.setEndAt(discountRequestDto.getEndAt());
+        existingEntity.setIsActive(discountRequestDto.getIsActive() != null ? discountRequestDto.getIsActive() : true);
+        existingEntity.setDiscountDisplayName(discountRequestDto.getDiscountDisplayName());
 
-        // Update DiscountType if provided
-        if (dto.getDiscountType() != null && existingEntity.getDiscountType() != null) {
-            updateDiscountTypeEntityFromDto(existingEntity.getDiscountType(), dto.getDiscountType());
-        } else if (dto.getDiscountType() != null) {
-            existingEntity.setDiscountType(mapDiscountTypeToEntity(dto.getDiscountType()));
+        if (discountRequestDto.getCreatedDt() != null)
+            existingEntity.setCreatedDt(discountRequestDto.getCreatedDt());
+
+        // Map nested DiscountType
+        if (discountRequestDto.getDiscountTypeId() != null && discountRequestDto.getDiscountTypeId() > 0) {
+            DiscountType discountType = discountTypeRepository.findById(discountRequestDto.getDiscountTypeId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Discount Type not found with ID: " + discountRequestDto.getDiscountTypeId()));
+            existingEntity.setDiscountType(discountType);
         }
 
         return existingEntity;
@@ -193,35 +220,5 @@ public class DiscountMapperUtil {
         entity.setModifiedDt(discountTypeDto.getDiscountTypeModifiedDate());
 
         return entity;
-    }
-
-    /**
-     * Update existing DiscountType entity with data from DTO
-     * @param existingEntity Existing DiscountType entity
-     * @param dto DiscountTypeDto with updated data
-     * @return Updated DiscountType entity
-     */
-    public DiscountType updateDiscountTypeEntityFromDto(DiscountType existingEntity, DiscountTypeDto dto) {
-        if (existingEntity == null || dto == null) {
-            return existingEntity;
-        }
-
-        if (dto.getDiscountTypeName() != null) {
-            existingEntity.setDiscountTypeName(dto.getDiscountTypeName());
-        }
-        if (dto.getDiscountTypeDisplayName() != null) {
-            existingEntity.setDiscountTypeDisplayName(dto.getDiscountTypeDisplayName());
-        }
-        if (dto.getDiscountTypeDescription() != null) {
-            existingEntity.setDiscountTypeRemark(dto.getDiscountTypeDescription()); // Map description to remark
-        }
-        if (dto.getDiscountTypeRemark() != null) {
-            existingEntity.setDiscountTypeRemark(dto.getDiscountTypeRemark());
-        }
-        if (dto.getDiscountTypeEnabled() != null) {
-            existingEntity.setDiscountTypeEnabled(dto.getDiscountTypeEnabled());
-        }
-
-        return existingEntity;
     }
 }

@@ -21,18 +21,18 @@ public class OrderStateDto {
     
     private Long orderStateId;
     
-    @NotBlank(message = "Order state name is required")
-    @Size(max = 64, message = "Order state name must not exceed 64 characters")
+    @NotBlank(message = "Tên trạng thái đơn hàng là bắt buộc")
+    @Size(max = 64, message = "Tên trạng thái đơn hàng không được vượt quá 64 ký tự")
     private String orderStateName;
     
-    @Size(max = 256, message = "Order state display name must not exceed 256 characters")
+    @Size(max = 256, message = "Tên hiển thị trạng thái đơn hàng không được vượt quá 256 ký tự")
     private String orderStateDisplayName;
     
-    @NotBlank(message = "Order state remark is required")
-    @Size(max = 256, message = "Order state remark must not exceed 256 characters")
+    @NotBlank(message = "Ghi chú trạng thái đơn hàng là bắt buộc")
+    @Size(max = 256, message = "Ghi chú trạng thái đơn hàng không được vượt quá 256 ký tự")
     private String orderStateRemark;
     
-    @NotNull(message = "Order state enabled flag is required")
+    @NotNull(message = "Cờ kích hoạt trạng thái đơn hàng là bắt buộc")
     private Boolean orderStateEnabled;
     
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")

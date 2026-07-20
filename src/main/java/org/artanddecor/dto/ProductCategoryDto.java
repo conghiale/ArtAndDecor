@@ -21,20 +21,20 @@ public class ProductCategoryDto {
     
     private Long productCategoryId;
     
-    @NotBlank(message = "Product category name is required")
-    @Size(max = 64, message = "Product category name must not exceed 64 characters")
+    @NotBlank(message = "Tên danh mục sản phẩm là bắt buộc")
+    @Size(max = 64, message = "Tên danh mục sản phẩm không được vượt quá 64 ký tự")
     private String productCategoryName;
     
-    @NotBlank(message = "Product category slug is required")
-    @Size(max = 64, message = "Product category slug must not exceed 64 characters")
+    @NotBlank(message = "Slug danh mục sản phẩm là bắt buộc")
+    @Size(max = 64, message = "Slug danh mục sản phẩm không được vượt quá 64 ký tự")
     private String productCategorySlug;
     
-    @Size(max = 256, message = "Product category display name must not exceed 256 characters")
+    @Size(max = 256, message = "Tên hiển thị danh mục sản phẩm không được vượt quá 256 ký tự")
     private String productCategoryDisplayName;
 
     private String productCategoryContent;
 
-    @Size(max = 256, message = "Remark must not exceed 256 characters")
+    @Size(max = 256, message = "Ghi chú danh mục sản phẩm không được vượt quá 256 ký tự")
     private String productCategoryRemark;
 
     private Boolean productCategoryEnabled;

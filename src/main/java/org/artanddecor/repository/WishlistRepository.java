@@ -94,4 +94,15 @@ public interface WishlistRepository extends JpaRepository<Wishlist, Long> {
      * @return Optional wishlist item
      */
     Optional<Wishlist> findBySessionIdAndProductProductId(String sessionId, Long productId);
+
+    /**
+     * Count wishlist records by user ID for delete validation
+     */
+    Long countByUserUserId(Long userId);
+
+    /**
+     * Get sample wishlist ID referencing a user
+     */
+    @Query("SELECT MIN(w.wishlistId) FROM Wishlist w WHERE w.user.userId = :userId")
+    Long findSampleWishlistIdByUserId(@Param("userId") Long userId);
 }

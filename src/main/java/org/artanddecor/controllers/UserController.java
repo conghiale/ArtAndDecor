@@ -14,6 +14,7 @@ import org.artanddecor.services.UserRoleService;
 import org.artanddecor.services.UserProviderService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -467,6 +468,60 @@ public class UserController {
         } catch (Exception e) {
             logger.error("Error updating user status: {}", e.getMessage(), e);
             return ResponseEntity.badRequest().body(BaseResponseDto.serverError("Failed to update user status: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Delete user account (hard delete with reference checks)
+     *
+     * @param userId User ID to delete
+     * @return Delete result
+     */
+    @DeleteMapping("/{userId}")
+    @Operation(summary = "Delete user",
+               description = "Delete user when there is no related data referencing this account.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Xoá người dùng thành công"),
+        @ApiResponse(responseCode = "400", description = "ID người dùng không hợp lệ"),
+        @ApiResponse(responseCode = "404", description = "Không tìm thấy người dùng"),
+        @ApiResponse(responseCode = "409", description = "Người dùng đang được tham chiếu bởi dữ liệu liên quan"),
+        @ApiResponse(responseCode = "500", description = "Lỗi hệ thống")
+    })
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<BaseResponseDto<Void>> deleteUser(
+            @Parameter(description = "Unique identifier of the user to delete")
+            @PathVariable Long userId) {
+
+        logger.info("Deleting user by ID: {}", userId);
+
+        try {
+            userService.deleteUser(userId);
+            return ResponseEntity.ok(BaseResponseDto.success("Xoá người dùng thành công.", null));
+        } catch (IllegalArgumentException e) {
+            logger.warn("Delete user validation/not-found error, id={}, reason={}", userId, e.getMessage());
+            if (e.getMessage() != null && e.getMessage().startsWith("Không tìm thấy")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(BaseResponseDto.notFound(e.getMessage()));
+            }
+            return ResponseEntity.badRequest().body(BaseResponseDto.badRequest(e.getMessage()));
+        } catch (IllegalStateException e) {
+            logger.warn("Delete user blocked by references, id={}, reason={}", userId, e.getMessage());
+            String clientMessage = "Không thể xoá người dùng vì bản ghi này đang được tham chiếu bởi dữ liệu liên quan. " +
+                    "Vui lòng kiểm tra các dữ liệu như REVIEW, PRODUCT_REVIEW_LIKE, WISHLIST, CART, ORDERS hoặc ORDER_STATE_HISTORY trước khi thử lại.";
+            if (e.getMessage() != null && !e.getMessage().isBlank()) {
+                clientMessage = clientMessage + " Chi tiết: " + e.getMessage();
+            }
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(BaseResponseDto.error(HttpStatus.CONFLICT.value(), clientMessage));
+        } catch (DataIntegrityViolationException e) {
+            logger.warn("Delete user failed by database reference constraint, id={}, reason={}", userId, e.getMessage());
+            String clientMessage = "Không thể xoá người dùng vì bản ghi này đang được tham chiếu bởi dữ liệu liên quan. " +
+                    "Vui lòng kiểm tra các dữ liệu như REVIEW, PRODUCT_REVIEW_LIKE, WISHLIST, CART, ORDERS hoặc ORDER_STATE_HISTORY trước khi thử lại.";
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(BaseResponseDto.error(HttpStatus.CONFLICT.value(), clientMessage));
+        } catch (Exception e) {
+            logger.error("Error deleting user {}, reason={}", userId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(BaseResponseDto.serverError("Không thể xoá người dùng. Vui lòng thử lại."));
         }
     }
 

@@ -17,19 +17,19 @@ import jakarta.validation.constraints.*;
 @AllArgsConstructor
 public class PagePositionRequest {
     
-    @Size(max = 64, message = "Page position slug must not exceed 64 characters")
+    @Size(max = 64, message = "Page position slug không được vượt quá 64 ký tự")
     private String pagePositionSlug;
     
-    @NotBlank(message = "Page position name is required")
-    @Size(max = 100, message = "Page position name must not exceed 100 characters")
+    @NotBlank(message = "Page position name là bắt buộc")
+    @Size(max = 100, message = "Page position name không được vượt quá 100 ký tự")
     private String pagePositionName;
     
     private Boolean pagePositionEnabled;
     
-    @Size(max = 256, message = "Page position display name must not exceed 256 characters")
+    @Size(max = 256, message = "Page position display name không được vượt quá 256 ký tự")
     private String pagePositionDisplayName;
     
-    @NotBlank(message = "Page position remark is required")
-    @Size(max = 256, message = "Page position remark must not exceed 256 characters")
+    @NotBlank(message = "Page position remark là bắt buộc")
+    @Size(max = 256, message = "Page position remark không được vượt quá 256 ký tự")
     private String pagePositionRemark;
 }

@@ -19,14 +19,14 @@ import java.util.List;
 public class CheckoutCartRequest {
     
     // Cart Items Selection (NEW)
-    @NotEmpty(message = "Selected cart item IDs are required")
+    @NotEmpty(message = "Danh sách ID mục giỏ hàng được chọn là bắt buộc")
     private List<Long> selectedCartItemIds;
     
-    @NotNull(message = "Cart ID is required")
+    @NotNull(message = "ID giỏ hàng là bắt buộc")
     private Long cartId;
     
     // Customer Information (người đặt hàng)
-    @NotBlank(message = "Customer name is required")
+    @NotBlank(message = "Tên khách hàng là bắt buộc")
     private String customerName;
     
     private String customerPhoneNumber;
@@ -34,28 +34,28 @@ public class CheckoutCartRequest {
     private String customerAddress;
     
     // Receiver Information (người nhận)
-    @NotBlank(message = "Receiver name is required")
+    @NotBlank(message = "Tên người nhận là bắt buộc")
     private String receiverName;
     
-    @NotBlank(message = "Receiver phone is required")
+    @NotBlank(message = "Số điện thoại người nhận là bắt buộc")
     private String receiverPhone;
     
     private String receiverEmail;
     
     // Delivery Address (địa chỉ giao hàng chi tiết)
-    @NotBlank(message = "Address line is required")
+    @NotBlank(message = "Địa chỉ chi tiết là bắt buộc")
     private String addressLine;
     
-    @NotBlank(message = "City is required")
+    @NotBlank(message = "Thành phố là bắt buộc")
     private String city;
     
-    @NotBlank(message = "Ward is required")
+    @NotBlank(message = "Phường/Xã là bắt buộc")
     private String ward;
     
     private String country = "Vietnam"; // Default value
     
     // Payment Information
-    @NotNull(message = "Payment method ID is required")
+    @NotNull(message = "ID phương thức thanh toán là bắt buộc")
     private Long paymentMethodId;
     
     // Optional Information

@@ -17,19 +17,19 @@ import jakarta.validation.constraints.*;
 @AllArgsConstructor
 public class PageGroupRequest {
     
-    @Size(max = 64, message = "Page group slug must not exceed 64 characters")
+    @Size(max = 64, message = "Page group slug không được vượt quá 64 ký tự")
     private String pageGroupSlug;
     
-    @NotBlank(message = "Page group name is required")
-    @Size(max = 100, message = "Page group name must not exceed 100 characters")
+    @NotBlank(message = "Page group name là bắt buộc")
+    @Size(max = 100, message = "Page group name không được vượt quá 100 ký tự")
     private String pageGroupName;
     
     private Boolean pageGroupEnabled;
     
-    @Size(max = 256, message = "Page group display name must not exceed 256 characters")
+    @Size(max = 256, message = "Page group display name không được vượt quá 256 ký tự")
     private String pageGroupDisplayName;
     
-    @NotBlank(message = "Page group remark is required")
-    @Size(max = 256, message = "Page group remark must not exceed 256 characters")
+    @NotBlank(message = "Page group remark là bắt buộc")
+    @Size(max = 256, message = "Page group remark không được vượt quá 256 ký tự")
     private String pageGroupRemark;
 }

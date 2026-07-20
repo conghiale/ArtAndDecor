@@ -41,4 +41,15 @@ public interface BlogRepository extends JpaRepository<Blog, Long> {
                                @Param("blogCategorySlug") String blogCategorySlug,
                                @Param("blogTypeSlug") String blogTypeSlug,
                                Pageable pageable);
+
+    /**
+     * Count blogs by blog category ID for delete validation
+     */
+    Long countByBlogCategory_BlogCategoryId(Long blogCategoryId);
+
+    /**
+     * Get sample blog ID by blog category reference
+     */
+    @Query("SELECT MIN(b.blogId) FROM Blog b WHERE b.blogCategory.blogCategoryId = :blogCategoryId")
+    Long findSampleBlogIdByBlogCategoryId(@Param("blogCategoryId") Long blogCategoryId);
 }

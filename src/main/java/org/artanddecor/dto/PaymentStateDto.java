@@ -21,18 +21,18 @@ public class PaymentStateDto {
     
     private Long paymentStateId;
     
-    @NotBlank(message = "Payment state name is required")
-    @Size(max = 64, message = "Payment state name must not exceed 64 characters")
+    @NotBlank(message = "Tên trạng thái thanh toán là bắt buộc")
+    @Size(max = 64, message = "Tên trạng thái thanh toán không được vượt quá 64 ký tự")
     private String paymentStateName;
     
-    @Size(max = 256, message = "Payment state display name must not exceed 256 characters")
+    @Size(max = 256, message = "Tên hiển thị trạng thái thanh toán không được vượt quá 256 ký tự")
     private String paymentStateDisplayName;
     
-    @NotBlank(message = "Payment state remark is required")
-    @Size(max = 256, message = "Payment state remark must not exceed 256 characters")
+    @NotBlank(message = "Ghi chú trạng thái thanh toán là bắt buộc")
+    @Size(max = 256, message = "Ghi chú trạng thái thanh toán không được vượt quá 256 ký tự")
     private String paymentStateRemark;
     
-    @NotNull(message = "Payment state enabled flag is required")
+    @NotNull(message = "Cờ kích hoạt trạng thái thanh toán là bắt buộc")
     private Boolean paymentStateEnabled;
     
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
