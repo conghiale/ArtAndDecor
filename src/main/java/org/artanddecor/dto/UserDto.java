@@ -37,7 +37,7 @@ public class UserDto {
     @Size(max = 50, message = "Họ không được vượt quá 50 ký tự")
     private String lastName;
     
-    @Pattern(regexp = "^(\\+84|0)(3[2-9]|5[689]|7[06-9]|8[1-689]|9[0-46-9])[0-9]{7}$", 
+    @Pattern(regexp = "^(|(?:\\+84|0)(?:3[2-9]|5[689]|7[06-9]|8[1-689]|9[0-46-9])[0-9]{7})$",
              message = "Định dạng số điện thoại không hợp lệ")
     private String phoneNumber;
     

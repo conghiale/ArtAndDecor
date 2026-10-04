@@ -40,6 +40,8 @@ import java.util.Optional;
 public class UserServiceImpl implements UserService {
 
     private static final Logger logger = LoggerFactory.getLogger(UserServiceImpl.class);
+    private static final long DEFAULT_PROVIDER_ID = 1L;
+    private static final long DEFAULT_ROLE_ID = 1L;
 
     private final UserRepository userRepository;
     private final UserProviderRepository userProviderRepository;
@@ -62,17 +64,15 @@ public class UserServiceImpl implements UserService {
         
         // Set defaults
         if (user.getUserProvider() == null) {
-            // Default to LOCAL provider (ID = 1)
-            UserProvider localProvider = userProviderRepository.findById(1L)
-                .orElseThrow(() -> new IllegalArgumentException("Default LOCAL provider not found"));
+            UserProvider localProvider = userProviderRepository.findById(DEFAULT_PROVIDER_ID)
+                .orElseThrow(() -> new IllegalArgumentException("Default provider not found with ID: " + DEFAULT_PROVIDER_ID));
             user.setUserProvider(localProvider);
         }
 
         if (user.getUserRole() == null) {
-            // Default to CUSTOMER role (ID = 4)
-            UserRole customerRole = userRoleRepository.findById(4L)
-                .orElseThrow(() -> new IllegalArgumentException("Default CUSTOMER role not found"));
-            user.setUserRole(customerRole);
+            UserRole defaultRole = userRoleRepository.findById(DEFAULT_ROLE_ID)
+                .orElseThrow(() -> new IllegalArgumentException("Default role not found with ID: " + DEFAULT_ROLE_ID));
+            user.setUserRole(defaultRole);
         }
 
         if (user.getUserEnabled() == null) {
@@ -144,31 +144,9 @@ public class UserServiceImpl implements UserService {
             throw new IllegalArgumentException("Không tìm thấy người dùng cần xoá.");
         }
 
-        logger.debug("Checking references before deleting user, id={}", userId);
+        logger.debug("Cleaning up related records before deleting user, id={}", userId);
 
-        ensureNoReference("USER", userId, "REVIEW", "USER_ID",
-            reviewRepository.countByUser_UserId(userId),
-            reviewRepository.findSampleReviewIdByUserId(userId));
-
-        ensureNoReference("USER", userId, "PRODUCT_REVIEW_LIKE", "USER_ID",
-            productReviewLikeRepository.countByUser_UserId(userId),
-            productReviewLikeRepository.findSampleLikeIdByUserId(userId));
-
-        ensureNoReference("USER", userId, "WISHLIST", "USER_ID",
-            wishlistRepository.countByUserUserId(userId),
-            wishlistRepository.findSampleWishlistIdByUserId(userId));
-
-        ensureNoReference("USER", userId, "CART", "USER_ID",
-            cartRepository.countCartsByUser(userId),
-            cartRepository.findSampleCartIdByUserId(userId));
-
-        ensureNoReference("USER", userId, "ORDERS", "USER_ID",
-            orderRepository.countByUser_UserId(userId),
-            orderRepository.findSampleOrderIdByUserId(userId));
-
-        ensureNoReference("USER", userId, "ORDER_STATE_HISTORY", "CHANGED_BY_USER_ID",
-            orderStateHistoryRepository.countByChangedByUser_UserId(userId),
-            orderStateHistoryRepository.findSampleHistoryIdByChangedByUserId(userId));
+        cleanupRelatedRecords(userId);
 
         userRepository.deleteById(userId);
         logger.info("Deleted user successfully, id={}", userId);
@@ -440,21 +418,51 @@ public class UserServiceImpl implements UserService {
         }
     }
 
+    private void cleanupRelatedRecords(Long userId) {
+        ensureNoReference("USER", userId, "REVIEW", "USER_ID",
+                reviewRepository.countByUser_UserId(userId),
+                reviewRepository.findSampleReviewIdByUserId(userId),
+                () -> reviewRepository.deleteByUser_UserId(userId));
+
+        ensureNoReference("USER", userId, "PRODUCT_REVIEW_LIKE", "USER_ID",
+                productReviewLikeRepository.countByUser_UserId(userId),
+                productReviewLikeRepository.findSampleLikeIdByUserId(userId),
+                () -> productReviewLikeRepository.deleteByUser_UserId(userId));
+
+        ensureNoReference("USER", userId, "WISHLIST", "USER_ID",
+                wishlistRepository.countByUserUserId(userId),
+                wishlistRepository.findSampleWishlistIdByUserId(userId),
+                () -> wishlistRepository.deleteByUserUserId(userId));
+
+        ensureNoReference("USER", userId, "CART", "USER_ID",
+                cartRepository.countCartsByUser(userId),
+                cartRepository.findSampleCartIdByUserId(userId),
+                () -> cartRepository.deleteByUser_UserId(userId));
+
+        ensureNoReference("USER", userId, "ORDERS", "USER_ID",
+                orderRepository.countByUser_UserId(userId),
+                orderRepository.findSampleOrderIdByUserId(userId),
+                () -> orderRepository.deleteByUser_UserId(userId));
+
+        ensureNoReference("USER", userId, "ORDER_STATE_HISTORY", "CHANGED_BY_USER_ID",
+                orderStateHistoryRepository.countByChangedByUser_UserId(userId),
+                orderStateHistoryRepository.findSampleHistoryIdByChangedByUserId(userId),
+                () -> orderStateHistoryRepository.deleteByChangedByUser_UserId(userId));
+    }
+
     private void ensureNoReference(String entityName,
                                    Long entityId,
                                    String referencedTable,
                                    String referencedColumn,
                                    Long referencedCount,
-                                   Long sampleReferencedId) {
+                                   Long sampleReferencedId,
+                                   Runnable cleanupAction) {
         long count = referencedCount == null ? 0L : referencedCount;
         if (count > 0) {
             logger.warn(
-                    "Cannot delete {}, id={}, referencedTable={}, referencedColumn={}, referencedCount={}, sampleReferencedId={}",
-                    entityName, entityId, referencedTable, referencedColumn, count, sampleReferencedId);
-            String referenceDetail = String.format(
-                "Cannot delete %s, id=%s, referencedTable=%s, referencedColumn=%s, referencedCount=%s, sampleReferencedId=%s",
-                entityName, entityId, referencedTable, referencedColumn, count, sampleReferencedId);
-            throw new IllegalStateException(referenceDetail);
+                    "Removing {} reference(s) before deleting {}, id={}, referencedTable={}, referencedColumn={}, sampleReferencedId={}",
+                    count, entityName, entityId, referencedTable, referencedColumn, sampleReferencedId);
+            cleanupAction.run();
         }
     }
 }

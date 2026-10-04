@@ -152,4 +152,9 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
      */
     @Query("SELECT MIN(o.orderId) FROM Order o WHERE o.user.userId = :userId")
     Long findSampleOrderIdByUserId(@Param("userId") Long userId);
+
+    /**
+     * Delete all orders belonging to a user.
+     */
+    void deleteByUser_UserId(Long userId);
 }

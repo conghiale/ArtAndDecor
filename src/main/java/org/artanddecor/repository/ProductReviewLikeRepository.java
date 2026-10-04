@@ -66,6 +66,11 @@ public interface ProductReviewLikeRepository extends JpaRepository<ProductReview
     );
 
     /**
+     * Delete all likes by a user.
+     */
+    void deleteByUser_UserId(Long userId);
+
+    /**
      * Delete like by user and review
      */
     void deleteByUser_UserIdAndReview_ReviewId(Long userId, Long reviewId);

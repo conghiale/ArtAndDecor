@@ -52,4 +52,9 @@ public interface OrderStateHistoryRepository extends JpaRepository<OrderStateHis
         */
        @Query("SELECT MIN(osh.orderStateHistoryId) FROM OrderStateHistory osh WHERE osh.changedByUser.userId = :userId")
        Long findSampleHistoryIdByChangedByUserId(@Param("userId") Long userId);
+
+       /**
+        * Delete all order state history entries changed by a user.
+        */
+       void deleteByChangedByUser_UserId(Long userId);
 }

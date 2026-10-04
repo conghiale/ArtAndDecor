@@ -174,4 +174,9 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
         */
        @Query("SELECT MIN(c.cartId) FROM Cart c WHERE c.user.userId = :userId")
        Long findSampleCartIdByUserId(@Param("userId") Long userId);
+
+       /**
+        * Delete all carts belonging to a user.
+        */
+       void deleteByUser_UserId(Long userId);
 }

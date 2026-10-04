@@ -105,4 +105,9 @@ public interface WishlistRepository extends JpaRepository<Wishlist, Long> {
      */
     @Query("SELECT MIN(w.wishlistId) FROM Wishlist w WHERE w.user.userId = :userId")
     Long findSampleWishlistIdByUserId(@Param("userId") Long userId);
+
+    /**
+     * Delete all wishlist items associated with a user.
+     */
+    void deleteByUserUserId(Long userId);
 }

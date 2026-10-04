@@ -124,4 +124,9 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
      */
     @Query("SELECT MIN(r.reviewId) FROM Review r WHERE r.user.userId = :userId")
     Long findSampleReviewIdByUserId(@Param("userId") Long userId);
+
+    /**
+     * Delete all reviews created by a user.
+     */
+    void deleteByUser_UserId(Long userId);
 }

@@ -58,7 +58,7 @@ public class EmailServiceImpl implements EmailService {
                     StandardCharsets.UTF_8.name()
             );
 
-            helper.setFrom(fromAddress, "Maison Art System");
+            helper.setFrom(fromAddress, "Maison Art");
             helper.setTo(toEmail);
             helper.setSubject(subject);
 
@@ -108,7 +108,7 @@ public class EmailServiceImpl implements EmailService {
                     StandardCharsets.UTF_8.name()
             );
 
-            helper.setFrom(fromAddress, "Maison Art System");
+            helper.setFrom(fromAddress, "Maison Art");
             helper.setTo(toEmail);
             helper.setSubject(subject);
 
@@ -220,7 +220,7 @@ public class EmailServiceImpl implements EmailService {
                     false,
                     StandardCharsets.UTF_8.name()
             );
-            helper.setFrom(fromAddress, "Maison Art System");
+            helper.setFrom(fromAddress, "Maison Art");
             helper.setTo(toEmail);
             helper.setSubject(subject);
             helper.setText(content, false);
